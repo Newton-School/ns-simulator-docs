@@ -1,0 +1,1603 @@
+{
+  "id": "arch-notion-lite-multiregion-v1",
+  "name": "Notion-lite Real-time Collaboration (ap-south-1 primary, us-east-1 DR)",
+  "version": "1.0.0",
+  "global": {
+    "simulationDuration": 240000,
+    "seed": "notion-lite-collab-seed-2026-02-25",
+    "warmupDuration": 20000,
+    "timeResolution": "millisecond",
+    "defaultTimeout": 30000
+  },
+  "nodes": [
+    {
+      "id": "node-users",
+      "type": "user-source",
+      "category": "integration",
+      "label": "Global End Users",
+      "position": { "x": 80, "y": 320 },
+      "resources": { "cpu": 1, "memory": 1024, "replicas": 1, "maxReplicas": 1 },
+      "queue": { "workers": 1, "capacity": 0, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "constant", "value": 1 },
+        "timeout": 1000
+      },
+      "dependencies": { "critical": ["node-cloudfront"], "optional": [] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 1, "failureCount": 1000, "recoveryTimeout": 1000, "halfOpenRequests": 1 },
+        "retry": { "maxAttempts": 0, "baseDelay": 0, "maxDelay": 0, "multiplier": 1, "jitter": false },
+        "rateLimiter": { "maxTokens": 100000, "refillRate": 10000 },
+        "bulkhead": { "maxConcurrent": 50000 }
+      },
+      "slo": { "latencyP99": 50, "availabilityTarget": 0.9999, "errorBudget": 0.0001 },
+      "failureModes": [],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 5000,
+        "scaleDownThreshold": 500,
+        "cooldown": 60000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.0, "sigma": 0.3 } }
+      },
+      "config": {
+        "region": "global",
+        "provider": "aws"
+      }
+    },
+    {
+      "id": "node-cloudfront",
+      "type": "cdn",
+      "category": "network",
+      "label": "AWS CloudFront CDN",
+      "position": { "x": 260, "y": 320 },
+      "resources": { "cpu": 8, "memory": 8192, "replicas": 2, "maxReplicas": 4 },
+      "queue": { "workers": 20000, "capacity": 100000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.0, "sigma": 0.35 },
+        "timeout": 1000
+      },
+      "dependencies": { "critical": ["node-ws-ap", "node-ws-us"], "optional": [] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.3, "failureCount": 50, "recoveryTimeout": 3000, "halfOpenRequests": 20 },
+        "retry": { "maxAttempts": 1, "baseDelay": 20, "maxDelay": 200, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 50000, "refillRate": 5000 },
+        "bulkhead": { "maxConcurrent": 20000 }
+      },
+      "slo": { "latencyP99": 120, "availabilityTarget": 0.9999, "errorBudget": 0.0001 },
+      "failureModes": [
+        { "mode": "latency-spike", "severity": "degraded", "trigger": { "metric": "cpu", "operator": ">", "value": 0.9 } }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 20000,
+        "scaleDownThreshold": 5000,
+        "cooldown": 60000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.2, "sigma": 0.35 } }
+      },
+      "config": {
+        "provider": "cloudfront",
+        "originRegions": ["ap-south-1", "us-east-1"]
+      }
+    },
+    {
+      "id": "node-ws-ap",
+      "type": "websocket-gateway",
+      "category": "real-time",
+      "label": "WebSocket Gateway (ap-south-1)",
+      "position": { "x": 520, "y": 180 },
+      "resources": { "cpu": 16, "memory": 32768, "replicas": 3, "maxReplicas": 8 },
+      "queue": { "workers": 12000, "capacity": 40000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.4, "sigma": 0.5 },
+        "timeout": 800
+      },
+      "dependencies": {
+        "critical": ["node-presence-ap", "node-crdt-ap", "node-auth-ap"],
+        "optional": ["node-blob-ap", "node-search-ap"]
+      },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.2, "failureCount": 30, "recoveryTimeout": 5000, "halfOpenRequests": 20 },
+        "retry": { "maxAttempts": 2, "baseDelay": 20, "maxDelay": 250, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 40000, "refillRate": 4000 },
+        "bulkhead": { "maxConcurrent": 12000 }
+      },
+      "slo": { "latencyP99": 250, "availabilityTarget": 0.99995, "errorBudget": 0.00005 },
+      "failureModes": [
+        { "mode": "crash", "severity": "critical", "mtbf": 86400000, "mttr": 10000 }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 10000,
+        "scaleDownThreshold": 2000,
+        "cooldown": 45000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.3, "sigma": 0.4 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "ap-south-1",
+        "maxConcurrentConnections": 10000,
+        "protocol": "websocket"
+      }
+    },
+    {
+      "id": "node-presence-ap",
+      "type": "microservice",
+      "category": "compute",
+      "label": "Presence Service (ap-south-1)",
+      "position": { "x": 760, "y": 90 },
+      "resources": { "cpu": 8, "memory": 16384, "replicas": 3, "maxReplicas": 6 },
+      "queue": { "workers": 3000, "capacity": 10000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.2, "sigma": 0.45 },
+        "timeout": 500
+      },
+      "dependencies": { "critical": ["node-redis-ap"], "optional": [] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.25, "failureCount": 20, "recoveryTimeout": 6000, "halfOpenRequests": 10 },
+        "retry": { "maxAttempts": 1, "baseDelay": 15, "maxDelay": 100, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 10000, "refillRate": 1500 },
+        "bulkhead": { "maxConcurrent": 3000 }
+      },
+      "slo": { "latencyP99": 120, "availabilityTarget": 0.9999, "errorBudget": 0.0001 },
+      "failureModes": [
+        { "mode": "latency-spike", "severity": "degraded", "trigger": { "metric": "cpu", "operator": ">", "value": 0.85 } }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 2500,
+        "scaleDownThreshold": 500,
+        "cooldown": 30000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 5.8, "sigma": 0.35 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "ap-south-1",
+        "service": "presence"
+      }
+    },
+    {
+      "id": "node-redis-ap",
+      "type": "pubsub",
+      "category": "messaging",
+      "label": "Redis Pub/Sub (ap-south-1)",
+      "position": { "x": 980, "y": 90 },
+      "resources": { "cpu": 8, "memory": 32768, "replicas": 1, "maxReplicas": 3 },
+      "queue": { "workers": 10000, "capacity": 50000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 0.4, "sigma": 0.3 },
+        "timeout": 300
+      },
+      "dependencies": { "critical": [], "optional": [] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.4, "failureCount": 10, "recoveryTimeout": 4000, "halfOpenRequests": 5 },
+        "retry": { "maxAttempts": 0, "baseDelay": 0, "maxDelay": 0, "multiplier": 1, "jitter": false },
+        "rateLimiter": { "maxTokens": 25000, "refillRate": 5000 },
+        "bulkhead": { "maxConcurrent": 10000 }
+      },
+      "slo": { "latencyP99": 50, "availabilityTarget": 0.9995, "errorBudget": 0.0005 },
+      "failureModes": [
+        { "mode": "process-crash", "severity": "critical", "mtbf": 172800000, "mttr": 15000 }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 15000,
+        "scaleDownThreshold": 2000,
+        "cooldown": 60000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.0, "sigma": 0.3 } }
+      },
+      "config": {
+        "engine": "redis",
+        "mode": "pubsub",
+        "region": "ap-south-1"
+      }
+    },
+    {
+      "id": "node-crdt-ap",
+      "type": "microservice",
+      "category": "compute",
+      "label": "CRDT Sync Service (ap-south-1)",
+      "position": { "x": 760, "y": 240 },
+      "resources": { "cpu": 16, "memory": 24576, "replicas": 4, "maxReplicas": 10 },
+      "queue": { "workers": 6000, "capacity": 20000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.6, "sigma": 0.55 },
+        "timeout": 1000
+      },
+      "dependencies": {
+        "critical": ["node-dynamo-ap"],
+        "optional": ["node-search-ap", "node-blob-ap", "node-dynamo-us"]
+      },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.15, "failureCount": 25, "recoveryTimeout": 7000, "halfOpenRequests": 10 },
+        "retry": { "maxAttempts": 3, "baseDelay": 25, "maxDelay": 400, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 30000, "refillRate": 3000 },
+        "bulkhead": { "maxConcurrent": 6000 }
+      },
+      "slo": { "latencyP99": 200, "availabilityTarget": 0.99995, "errorBudget": 0.00005 },
+      "failureModes": [
+        { "mode": "latency-spike", "severity": "critical", "trigger": { "metric": "queue_depth", "operator": ">", "value": 8000 } }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 8000,
+        "scaleDownThreshold": 1500,
+        "cooldown": 30000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.1, "sigma": 0.35 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "ap-south-1",
+        "algorithm": "crdt",
+        "crossRegionReplicationLagMs": 15
+      }
+    },
+    {
+      "id": "node-dynamo-ap",
+      "type": "nosql-keyvalue",
+      "category": "storage",
+      "label": "DynamoDB Global Table (ap-south-1)",
+      "position": { "x": 980, "y": 240 },
+      "resources": { "cpu": 16, "memory": 32768, "replicas": 3, "maxReplicas": 6 },
+      "queue": { "workers": 12000, "capacity": 0, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.7, "sigma": 0.4 },
+        "timeout": 1200
+      },
+      "dependencies": { "critical": [], "optional": ["node-dynamo-us"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.2, "failureCount": 15, "recoveryTimeout": 5000, "halfOpenRequests": 5 },
+        "retry": { "maxAttempts": 2, "baseDelay": 30, "maxDelay": 500, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 40000, "refillRate": 5000 },
+        "bulkhead": { "maxConcurrent": 12000 }
+      },
+      "slo": { "latencyP99": 180, "availabilityTarget": 0.99995, "errorBudget": 0.00005 },
+      "failureModes": [
+        { "mode": "error-rate", "severity": "critical", "trigger": { "metric": "write_throttle", "operator": ">", "value": 0.2 } }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 15000,
+        "scaleDownThreshold": 3000,
+        "cooldown": 45000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.3, "sigma": 0.25 } }
+      },
+      "config": {
+        "engine": "dynamodb",
+        "region": "ap-south-1",
+        "tableMode": "global-active-active"
+      }
+    },
+    {
+      "id": "node-blob-ap",
+      "type": "microservice",
+      "category": "compute",
+      "label": "Blob Storage Service (ap-south-1)",
+      "position": { "x": 760, "y": 390 },
+      "resources": { "cpu": 8, "memory": 12288, "replicas": 2, "maxReplicas": 6 },
+      "queue": { "workers": 2000, "capacity": 8000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 2.2, "sigma": 0.7 },
+        "timeout": 5000
+      },
+      "dependencies": { "critical": ["node-s3-ap"], "optional": ["node-s3-us"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.2, "failureCount": 20, "recoveryTimeout": 8000, "halfOpenRequests": 8 },
+        "retry": { "maxAttempts": 2, "baseDelay": 100, "maxDelay": 1000, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 8000, "refillRate": 800 },
+        "bulkhead": { "maxConcurrent": 2000 }
+      },
+      "slo": { "latencyP99": 1500, "availabilityTarget": 0.9999, "errorBudget": 0.0001 },
+      "failureModes": [],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 2500,
+        "scaleDownThreshold": 500,
+        "cooldown": 60000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.5, "sigma": 0.45 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "ap-south-1",
+        "service": "blob"
+      }
+    },
+    {
+      "id": "node-s3-ap",
+      "type": "object-storage",
+      "category": "storage",
+      "label": "S3 Bucket (ap-south-1)",
+      "position": { "x": 980, "y": 390 },
+      "resources": { "cpu": 12, "memory": 24576, "replicas": 3, "maxReplicas": 6 },
+      "queue": { "workers": 8000, "capacity": 0, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 2.4, "sigma": 0.8 },
+        "timeout": 6000
+      },
+      "dependencies": { "critical": [], "optional": ["node-s3-us"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.3, "failureCount": 20, "recoveryTimeout": 9000, "halfOpenRequests": 6 },
+        "retry": { "maxAttempts": 2, "baseDelay": 100, "maxDelay": 1500, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 12000, "refillRate": 1200 },
+        "bulkhead": { "maxConcurrent": 8000 }
+      },
+      "slo": { "latencyP99": 1800, "availabilityTarget": 0.99995, "errorBudget": 0.00005 },
+      "failureModes": [],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 10000,
+        "scaleDownThreshold": 1500,
+        "cooldown": 60000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.5, "sigma": 0.35 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "ap-south-1",
+        "replication": "cross-region"
+      }
+    },
+    {
+      "id": "node-search-ap",
+      "type": "search-index",
+      "category": "storage",
+      "label": "Search Service (Elasticsearch, ap-south-1)",
+      "position": { "x": 760, "y": 540 },
+      "resources": { "cpu": 16, "memory": 32768, "replicas": 3, "maxReplicas": 6 },
+      "queue": { "workers": 4000, "capacity": 15000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 2.8, "sigma": 0.7 },
+        "timeout": 5000
+      },
+      "dependencies": { "critical": [], "optional": ["node-search-us"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.3, "failureCount": 25, "recoveryTimeout": 10000, "halfOpenRequests": 8 },
+        "retry": { "maxAttempts": 2, "baseDelay": 50, "maxDelay": 500, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 9000, "refillRate": 900 },
+        "bulkhead": { "maxConcurrent": 4000 }
+      },
+      "slo": { "latencyP99": 3000, "availabilityTarget": 0.999, "errorBudget": 0.001 },
+      "failureModes": [
+        { "mode": "stale-reads", "severity": "degraded", "trigger": { "metric": "replication_lag", "operator": ">", "value": 5000 } }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 5000,
+        "scaleDownThreshold": 1000,
+        "cooldown": 90000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.8, "sigma": 0.45 } }
+      },
+      "config": {
+        "engine": "elasticsearch",
+        "region": "ap-south-1",
+        "clusterNodes": 3,
+        "indexingLagTargetMs": 5000
+      }
+    },
+    {
+      "id": "node-auth-ap",
+      "type": "microservice",
+      "category": "compute",
+      "label": "Auth Service (ap-south-1)",
+      "position": { "x": 760, "y": 690 },
+      "resources": { "cpu": 8, "memory": 8192, "replicas": 3, "maxReplicas": 8 },
+      "queue": { "workers": 4000, "capacity": 12000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.3, "sigma": 0.4 },
+        "timeout": 500
+      },
+      "dependencies": { "critical": ["node-rds-ap"], "optional": ["node-rds-us"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.2, "failureCount": 20, "recoveryTimeout": 6000, "halfOpenRequests": 8 },
+        "retry": { "maxAttempts": 2, "baseDelay": 15, "maxDelay": 150, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 12000, "refillRate": 1800 },
+        "bulkhead": { "maxConcurrent": 4000 }
+      },
+      "slo": { "latencyP99": 150, "availabilityTarget": 0.99995, "errorBudget": 0.00005 },
+      "failureModes": [],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 3000,
+        "scaleDownThreshold": 600,
+        "cooldown": 45000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.0, "sigma": 0.3 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "ap-south-1",
+        "jwtValidation": true
+      }
+    },
+    {
+      "id": "node-rds-ap",
+      "type": "relational-db",
+      "category": "storage",
+      "label": "Postgres RDS (ap-south-1)",
+      "position": { "x": 980, "y": 690 },
+      "resources": { "cpu": 16, "memory": 32768, "replicas": 2, "maxReplicas": 4 },
+      "queue": { "workers": 6000, "capacity": 0, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.8, "sigma": 0.45 },
+        "timeout": 800
+      },
+      "dependencies": { "critical": [], "optional": ["node-rds-us"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.2, "failureCount": 15, "recoveryTimeout": 8000, "halfOpenRequests": 6 },
+        "retry": { "maxAttempts": 1, "baseDelay": 20, "maxDelay": 200, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 10000, "refillRate": 1200 },
+        "bulkhead": { "maxConcurrent": 6000 }
+      },
+      "slo": { "latencyP99": 250, "availabilityTarget": 0.9999, "errorBudget": 0.0001 },
+      "failureModes": [
+        { "mode": "db-failover", "severity": "critical", "mtbf": 259200000, "mttr": 30000 }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 7000,
+        "scaleDownThreshold": 1000,
+        "cooldown": 120000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 7.0, "sigma": 0.4 } }
+      },
+      "config": {
+        "engine": "postgres",
+        "region": "ap-south-1",
+        "role": "primary"
+      }
+    },
+    {
+      "id": "node-ws-us",
+      "type": "websocket-gateway",
+      "category": "real-time",
+      "label": "WebSocket Gateway (us-east-1)",
+      "position": { "x": 1520, "y": 180 },
+      "resources": { "cpu": 16, "memory": 32768, "replicas": 3, "maxReplicas": 8 },
+      "queue": { "workers": 12000, "capacity": 40000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.4, "sigma": 0.5 },
+        "timeout": 800
+      },
+      "dependencies": {
+        "critical": ["node-presence-us", "node-crdt-us", "node-auth-us"],
+        "optional": ["node-blob-us", "node-search-us"]
+      },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.2, "failureCount": 30, "recoveryTimeout": 5000, "halfOpenRequests": 20 },
+        "retry": { "maxAttempts": 2, "baseDelay": 20, "maxDelay": 250, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 40000, "refillRate": 4000 },
+        "bulkhead": { "maxConcurrent": 12000 }
+      },
+      "slo": { "latencyP99": 250, "availabilityTarget": 0.99995, "errorBudget": 0.00005 },
+      "failureModes": [
+        { "mode": "crash", "severity": "critical", "mtbf": 86400000, "mttr": 10000 }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 10000,
+        "scaleDownThreshold": 2000,
+        "cooldown": 45000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.3, "sigma": 0.4 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "us-east-1",
+        "maxConcurrentConnections": 10000,
+        "protocol": "websocket"
+      }
+    },
+    {
+      "id": "node-presence-us",
+      "type": "microservice",
+      "category": "compute",
+      "label": "Presence Service (us-east-1)",
+      "position": { "x": 1760, "y": 90 },
+      "resources": { "cpu": 8, "memory": 16384, "replicas": 3, "maxReplicas": 6 },
+      "queue": { "workers": 3000, "capacity": 10000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.2, "sigma": 0.45 },
+        "timeout": 500
+      },
+      "dependencies": { "critical": ["node-redis-us"], "optional": [] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.25, "failureCount": 20, "recoveryTimeout": 6000, "halfOpenRequests": 10 },
+        "retry": { "maxAttempts": 1, "baseDelay": 15, "maxDelay": 100, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 10000, "refillRate": 1500 },
+        "bulkhead": { "maxConcurrent": 3000 }
+      },
+      "slo": { "latencyP99": 120, "availabilityTarget": 0.9999, "errorBudget": 0.0001 },
+      "failureModes": [
+        { "mode": "latency-spike", "severity": "degraded", "trigger": { "metric": "cpu", "operator": ">", "value": 0.85 } }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 2500,
+        "scaleDownThreshold": 500,
+        "cooldown": 30000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 5.8, "sigma": 0.35 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "us-east-1",
+        "service": "presence"
+      }
+    },
+    {
+      "id": "node-redis-us",
+      "type": "pubsub",
+      "category": "messaging",
+      "label": "Redis Pub/Sub (us-east-1)",
+      "position": { "x": 1980, "y": 90 },
+      "resources": { "cpu": 8, "memory": 32768, "replicas": 1, "maxReplicas": 3 },
+      "queue": { "workers": 10000, "capacity": 50000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 0.4, "sigma": 0.3 },
+        "timeout": 300
+      },
+      "dependencies": { "critical": [], "optional": [] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.4, "failureCount": 10, "recoveryTimeout": 4000, "halfOpenRequests": 5 },
+        "retry": { "maxAttempts": 0, "baseDelay": 0, "maxDelay": 0, "multiplier": 1, "jitter": false },
+        "rateLimiter": { "maxTokens": 25000, "refillRate": 5000 },
+        "bulkhead": { "maxConcurrent": 10000 }
+      },
+      "slo": { "latencyP99": 50, "availabilityTarget": 0.9995, "errorBudget": 0.0005 },
+      "failureModes": [
+        { "mode": "process-crash", "severity": "critical", "mtbf": 172800000, "mttr": 15000 }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 15000,
+        "scaleDownThreshold": 2000,
+        "cooldown": 60000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.0, "sigma": 0.3 } }
+      },
+      "config": {
+        "engine": "redis",
+        "mode": "pubsub",
+        "region": "us-east-1"
+      }
+    },
+    {
+      "id": "node-crdt-us",
+      "type": "microservice",
+      "category": "compute",
+      "label": "CRDT Sync Service (us-east-1)",
+      "position": { "x": 1760, "y": 240 },
+      "resources": { "cpu": 16, "memory": 24576, "replicas": 4, "maxReplicas": 10 },
+      "queue": { "workers": 6000, "capacity": 20000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.6, "sigma": 0.55 },
+        "timeout": 1000
+      },
+      "dependencies": {
+        "critical": ["node-dynamo-us"],
+        "optional": ["node-search-us", "node-blob-us", "node-dynamo-ap"]
+      },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.15, "failureCount": 25, "recoveryTimeout": 7000, "halfOpenRequests": 10 },
+        "retry": { "maxAttempts": 3, "baseDelay": 25, "maxDelay": 400, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 30000, "refillRate": 3000 },
+        "bulkhead": { "maxConcurrent": 6000 }
+      },
+      "slo": { "latencyP99": 200, "availabilityTarget": 0.99995, "errorBudget": 0.00005 },
+      "failureModes": [
+        { "mode": "latency-spike", "severity": "critical", "trigger": { "metric": "queue_depth", "operator": ">", "value": 8000 } }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 8000,
+        "scaleDownThreshold": 1500,
+        "cooldown": 30000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.1, "sigma": 0.35 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "us-east-1",
+        "algorithm": "crdt",
+        "crossRegionReplicationLagMs": 15
+      }
+    },
+    {
+      "id": "node-dynamo-us",
+      "type": "nosql-keyvalue",
+      "category": "storage",
+      "label": "DynamoDB Global Table (us-east-1)",
+      "position": { "x": 1980, "y": 240 },
+      "resources": { "cpu": 16, "memory": 32768, "replicas": 3, "maxReplicas": 6 },
+      "queue": { "workers": 12000, "capacity": 0, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.7, "sigma": 0.4 },
+        "timeout": 1200
+      },
+      "dependencies": { "critical": [], "optional": ["node-dynamo-ap"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.2, "failureCount": 15, "recoveryTimeout": 5000, "halfOpenRequests": 5 },
+        "retry": { "maxAttempts": 2, "baseDelay": 30, "maxDelay": 500, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 40000, "refillRate": 5000 },
+        "bulkhead": { "maxConcurrent": 12000 }
+      },
+      "slo": { "latencyP99": 180, "availabilityTarget": 0.99995, "errorBudget": 0.00005 },
+      "failureModes": [
+        { "mode": "error-rate", "severity": "critical", "trigger": { "metric": "write_throttle", "operator": ">", "value": 0.2 } }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 15000,
+        "scaleDownThreshold": 3000,
+        "cooldown": 45000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.3, "sigma": 0.25 } }
+      },
+      "config": {
+        "engine": "dynamodb",
+        "region": "us-east-1",
+        "tableMode": "global-active-active"
+      }
+    },
+    {
+      "id": "node-blob-us",
+      "type": "microservice",
+      "category": "compute",
+      "label": "Blob Storage Service (us-east-1)",
+      "position": { "x": 1760, "y": 390 },
+      "resources": { "cpu": 8, "memory": 12288, "replicas": 2, "maxReplicas": 6 },
+      "queue": { "workers": 2000, "capacity": 8000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 2.2, "sigma": 0.7 },
+        "timeout": 5000
+      },
+      "dependencies": { "critical": ["node-s3-us"], "optional": ["node-s3-ap"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.2, "failureCount": 20, "recoveryTimeout": 8000, "halfOpenRequests": 8 },
+        "retry": { "maxAttempts": 2, "baseDelay": 100, "maxDelay": 1000, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 8000, "refillRate": 800 },
+        "bulkhead": { "maxConcurrent": 2000 }
+      },
+      "slo": { "latencyP99": 1500, "availabilityTarget": 0.9999, "errorBudget": 0.0001 },
+      "failureModes": [],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 2500,
+        "scaleDownThreshold": 500,
+        "cooldown": 60000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.5, "sigma": 0.45 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "us-east-1",
+        "service": "blob"
+      }
+    },
+    {
+      "id": "node-s3-us",
+      "type": "object-storage",
+      "category": "storage",
+      "label": "S3 Bucket (us-east-1)",
+      "position": { "x": 1980, "y": 390 },
+      "resources": { "cpu": 12, "memory": 24576, "replicas": 3, "maxReplicas": 6 },
+      "queue": { "workers": 8000, "capacity": 0, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 2.4, "sigma": 0.8 },
+        "timeout": 6000
+      },
+      "dependencies": { "critical": [], "optional": ["node-s3-ap"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.3, "failureCount": 20, "recoveryTimeout": 9000, "halfOpenRequests": 6 },
+        "retry": { "maxAttempts": 2, "baseDelay": 100, "maxDelay": 1500, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 12000, "refillRate": 1200 },
+        "bulkhead": { "maxConcurrent": 8000 }
+      },
+      "slo": { "latencyP99": 1800, "availabilityTarget": 0.99995, "errorBudget": 0.00005 },
+      "failureModes": [],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 10000,
+        "scaleDownThreshold": 1500,
+        "cooldown": 60000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.5, "sigma": 0.35 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "us-east-1",
+        "replication": "cross-region"
+      }
+    },
+    {
+      "id": "node-search-us",
+      "type": "search-index",
+      "category": "storage",
+      "label": "Search Service (Elasticsearch, us-east-1)",
+      "position": { "x": 1760, "y": 540 },
+      "resources": { "cpu": 16, "memory": 32768, "replicas": 3, "maxReplicas": 6 },
+      "queue": { "workers": 4000, "capacity": 15000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 2.8, "sigma": 0.7 },
+        "timeout": 5000
+      },
+      "dependencies": { "critical": [], "optional": ["node-search-ap"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.3, "failureCount": 25, "recoveryTimeout": 10000, "halfOpenRequests": 8 },
+        "retry": { "maxAttempts": 2, "baseDelay": 50, "maxDelay": 500, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 9000, "refillRate": 900 },
+        "bulkhead": { "maxConcurrent": 4000 }
+      },
+      "slo": { "latencyP99": 3000, "availabilityTarget": 0.999, "errorBudget": 0.001 },
+      "failureModes": [
+        { "mode": "stale-reads", "severity": "degraded", "trigger": { "metric": "replication_lag", "operator": ">", "value": 5000 } }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 5000,
+        "scaleDownThreshold": 1000,
+        "cooldown": 90000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.8, "sigma": 0.45 } }
+      },
+      "config": {
+        "engine": "elasticsearch",
+        "region": "us-east-1",
+        "clusterNodes": 3,
+        "indexingLagTargetMs": 5000
+      }
+    },
+    {
+      "id": "node-auth-us",
+      "type": "microservice",
+      "category": "compute",
+      "label": "Auth Service (us-east-1)",
+      "position": { "x": 1760, "y": 690 },
+      "resources": { "cpu": 8, "memory": 8192, "replicas": 3, "maxReplicas": 8 },
+      "queue": { "workers": 4000, "capacity": 12000, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.3, "sigma": 0.4 },
+        "timeout": 500
+      },
+      "dependencies": { "critical": ["node-rds-us"], "optional": ["node-rds-ap"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.2, "failureCount": 20, "recoveryTimeout": 6000, "halfOpenRequests": 8 },
+        "retry": { "maxAttempts": 2, "baseDelay": 15, "maxDelay": 150, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 12000, "refillRate": 1800 },
+        "bulkhead": { "maxConcurrent": 4000 }
+      },
+      "slo": { "latencyP99": 150, "availabilityTarget": 0.99995, "errorBudget": 0.00005 },
+      "failureModes": [],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 3000,
+        "scaleDownThreshold": 600,
+        "cooldown": 45000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 6.0, "sigma": 0.3 } }
+      },
+      "config": {
+        "provider": "aws",
+        "region": "us-east-1",
+        "jwtValidation": true
+      }
+    },
+    {
+      "id": "node-rds-us",
+      "type": "relational-db",
+      "category": "storage",
+      "label": "Postgres RDS (us-east-1)",
+      "position": { "x": 1980, "y": 690 },
+      "resources": { "cpu": 16, "memory": 32768, "replicas": 2, "maxReplicas": 4 },
+      "queue": { "workers": 6000, "capacity": 0, "discipline": "fifo" },
+      "processing": {
+        "distribution": { "type": "log-normal", "mu": 1.8, "sigma": 0.45 },
+        "timeout": 800
+      },
+      "dependencies": { "critical": [], "optional": ["node-rds-ap"] },
+      "resilience": {
+        "circuitBreaker": { "failureThreshold": 0.2, "failureCount": 15, "recoveryTimeout": 8000, "halfOpenRequests": 6 },
+        "retry": { "maxAttempts": 1, "baseDelay": 20, "maxDelay": 200, "multiplier": 2, "jitter": true },
+        "rateLimiter": { "maxTokens": 10000, "refillRate": 1200 },
+        "bulkhead": { "maxConcurrent": 6000 }
+      },
+      "slo": { "latencyP99": 250, "availabilityTarget": 0.9999, "errorBudget": 0.0001 },
+      "failureModes": [
+        { "mode": "db-failover", "severity": "critical", "mtbf": 259200000, "mttr": 30000 }
+      ],
+      "scaling": {
+        "type": "horizontal",
+        "metric": "queue-depth",
+        "scaleUpThreshold": 7000,
+        "scaleDownThreshold": 1000,
+        "cooldown": 120000,
+        "coldStartPenalty": { "distribution": { "type": "log-normal", "mu": 7.0, "sigma": 0.4 } }
+      },
+      "config": {
+        "engine": "postgres",
+        "region": "us-east-1",
+        "role": "replica"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-users-to-cloudfront",
+      "source": "node-users",
+      "target": "node-cloudfront",
+      "label": "Client HTTPS",
+      "mode": "synchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 3.2, "sigma": 0.7 },
+        "pathType": "internet"
+      },
+      "bandwidth": 2000,
+      "maxConcurrentRequests": 20000,
+      "packetLossRate": 0.002,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-cloudfront-to-ws-ap",
+      "source": "node-cloudfront",
+      "target": "node-ws-ap",
+      "label": "Route to ap-south-1",
+      "mode": "conditional",
+      "protocol": "websocket",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 2.4, "sigma": 0.6 },
+        "pathType": "internet"
+      },
+      "bandwidth": 5000,
+      "maxConcurrentRequests": 15000,
+      "packetLossRate": 0.001,
+      "errorRate": 0,
+      "weight": 0.55,
+      "condition": "request.preferredRegion == 'ap-south-1' || request.failoverRegion == 'ap-south-1'",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-cloudfront-to-ws-us",
+      "source": "node-cloudfront",
+      "target": "node-ws-us",
+      "label": "Route to us-east-1",
+      "mode": "conditional",
+      "protocol": "websocket",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 2.4, "sigma": 0.6 },
+        "pathType": "internet"
+      },
+      "bandwidth": 5000,
+      "maxConcurrentRequests": 15000,
+      "packetLossRate": 0.001,
+      "errorRate": 0,
+      "weight": 0.45,
+      "condition": "request.preferredRegion == 'us-east-1' || request.failoverRegion == 'us-east-1'",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-ws-ap-to-presence-ap",
+      "source": "node-ws-ap",
+      "target": "node-presence-ap",
+      "label": "Presence updates",
+      "mode": "streaming",
+      "protocol": "websocket",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.3, "sigma": 0.25 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 2000,
+      "maxConcurrentRequests": 12000,
+      "packetLossRate": 0.0002,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-presence-ap-to-redis-ap",
+      "source": "node-presence-ap",
+      "target": "node-redis-ap",
+      "label": "Redis Pub/Sub",
+      "mode": "asynchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.1, "sigma": 0.2 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 5000,
+      "maxConcurrentRequests": 20000,
+      "packetLossRate": 0.0001,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-ws-ap-to-crdt-ap",
+      "source": "node-ws-ap",
+      "target": "node-crdt-ap",
+      "label": "Edit operation stream",
+      "mode": "streaming",
+      "protocol": "websocket",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.35, "sigma": 0.25 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 2500,
+      "maxConcurrentRequests": 12000,
+      "packetLossRate": 0.0002,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-crdt-ap-to-dynamo-ap",
+      "source": "node-crdt-ap",
+      "target": "node-dynamo-ap",
+      "label": "CRDT write",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.9, "sigma": 0.3 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1500,
+      "maxConcurrentRequests": 10000,
+      "packetLossRate": 0.0001,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-dynamo-ap-to-dynamo-us",
+      "source": "node-dynamo-ap",
+      "target": "node-dynamo-us",
+      "label": "Global table replication ap->us",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "constant", "value": 15 },
+        "pathType": "cross-region"
+      },
+      "bandwidth": 1200,
+      "maxConcurrentRequests": 6000,
+      "packetLossRate": 0.0005,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-dynamo-us-to-dynamo-ap",
+      "source": "node-dynamo-us",
+      "target": "node-dynamo-ap",
+      "label": "Global table replication us->ap",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "constant", "value": 15 },
+        "pathType": "cross-region"
+      },
+      "bandwidth": 1200,
+      "maxConcurrentRequests": 6000,
+      "packetLossRate": 0.0005,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-ws-ap-to-blob-ap",
+      "source": "node-ws-ap",
+      "target": "node-blob-ap",
+      "label": "Asset upload metadata",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.8, "sigma": 0.3 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 2500,
+      "maxConcurrentRequests": 5000,
+      "packetLossRate": 0.0003,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-blob-ap-to-s3-ap",
+      "source": "node-blob-ap",
+      "target": "node-s3-ap",
+      "label": "S3 write",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 1.0, "sigma": 0.35 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 5000,
+      "maxConcurrentRequests": 6000,
+      "packetLossRate": 0.0002,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-s3-ap-to-s3-us",
+      "source": "node-s3-ap",
+      "target": "node-s3-us",
+      "label": "Cross-region replication ap->us",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 4.2, "sigma": 0.5 },
+        "pathType": "cross-region"
+      },
+      "bandwidth": 1500,
+      "maxConcurrentRequests": 3000,
+      "packetLossRate": 0.0008,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-s3-us-to-s3-ap",
+      "source": "node-s3-us",
+      "target": "node-s3-ap",
+      "label": "Cross-region replication us->ap",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 4.2, "sigma": 0.5 },
+        "pathType": "cross-region"
+      },
+      "bandwidth": 1500,
+      "maxConcurrentRequests": 3000,
+      "packetLossRate": 0.0008,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-crdt-ap-to-search-ap",
+      "source": "node-crdt-ap",
+      "target": "node-search-ap",
+      "label": "Index update",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 1.3, "sigma": 0.45 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 4000,
+      "packetLossRate": 0.0003,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-search-ap-to-search-us",
+      "source": "node-search-ap",
+      "target": "node-search-us",
+      "label": "Search replication ap->us",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 4.0, "sigma": 0.4 },
+        "pathType": "cross-region"
+      },
+      "bandwidth": 800,
+      "maxConcurrentRequests": 2000,
+      "packetLossRate": 0.001,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-search-us-to-search-ap",
+      "source": "node-search-us",
+      "target": "node-search-ap",
+      "label": "Search replication us->ap",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 4.0, "sigma": 0.4 },
+        "pathType": "cross-region"
+      },
+      "bandwidth": 800,
+      "maxConcurrentRequests": 2000,
+      "packetLossRate": 0.001,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-ws-ap-to-auth-ap",
+      "source": "node-ws-ap",
+      "target": "node-auth-ap",
+      "label": "JWT validation",
+      "mode": "synchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.35, "sigma": 0.25 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1800,
+      "maxConcurrentRequests": 9000,
+      "packetLossRate": 0.0002,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-auth-ap-to-rds-ap",
+      "source": "node-auth-ap",
+      "target": "node-rds-ap",
+      "label": "Auth metadata read/write",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.7, "sigma": 0.3 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1200,
+      "maxConcurrentRequests": 5000,
+      "packetLossRate": 0.0001,
+      "errorRate": 0,
+      "weight": 0.95,
+      "condition": "nodeStatus('node-rds-ap') != 'failed'",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-auth-ap-to-rds-us-failover",
+      "source": "node-auth-ap",
+      "target": "node-rds-us",
+      "label": "Auth DB failover path",
+      "mode": "conditional",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 4.1, "sigma": 0.45 },
+        "pathType": "cross-region"
+      },
+      "bandwidth": 800,
+      "maxConcurrentRequests": 2000,
+      "packetLossRate": 0.001,
+      "errorRate": 0,
+      "weight": 0.05,
+      "condition": "nodeStatus('node-rds-ap') == 'failed'",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-rds-ap-to-rds-us",
+      "source": "node-rds-ap",
+      "target": "node-rds-us",
+      "label": "RDS replication ap->us",
+      "mode": "asynchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 4.1, "sigma": 0.45 },
+        "pathType": "cross-region"
+      },
+      "bandwidth": 900,
+      "maxConcurrentRequests": 3000,
+      "packetLossRate": 0.001,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-rds-us-to-rds-ap",
+      "source": "node-rds-us",
+      "target": "node-rds-ap",
+      "label": "RDS replication us->ap",
+      "mode": "asynchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 4.1, "sigma": 0.45 },
+        "pathType": "cross-region"
+      },
+      "bandwidth": 900,
+      "maxConcurrentRequests": 3000,
+      "packetLossRate": 0.001,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-ws-us-to-presence-us",
+      "source": "node-ws-us",
+      "target": "node-presence-us",
+      "label": "Presence updates",
+      "mode": "streaming",
+      "protocol": "websocket",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.3, "sigma": 0.25 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 2000,
+      "maxConcurrentRequests": 12000,
+      "packetLossRate": 0.0002,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-presence-us-to-redis-us",
+      "source": "node-presence-us",
+      "target": "node-redis-us",
+      "label": "Redis Pub/Sub",
+      "mode": "asynchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.1, "sigma": 0.2 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 5000,
+      "maxConcurrentRequests": 20000,
+      "packetLossRate": 0.0001,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-ws-us-to-crdt-us",
+      "source": "node-ws-us",
+      "target": "node-crdt-us",
+      "label": "Edit operation stream",
+      "mode": "streaming",
+      "protocol": "websocket",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.35, "sigma": 0.25 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 2500,
+      "maxConcurrentRequests": 12000,
+      "packetLossRate": 0.0002,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-crdt-us-to-dynamo-us",
+      "source": "node-crdt-us",
+      "target": "node-dynamo-us",
+      "label": "CRDT write",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.9, "sigma": 0.3 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1500,
+      "maxConcurrentRequests": 10000,
+      "packetLossRate": 0.0001,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": true
+    },
+    {
+      "id": "edge-ws-us-to-blob-us",
+      "source": "node-ws-us",
+      "target": "node-blob-us",
+      "label": "Asset upload metadata",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.8, "sigma": 0.3 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 2500,
+      "maxConcurrentRequests": 5000,
+      "packetLossRate": 0.0003,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-blob-us-to-s3-us",
+      "source": "node-blob-us",
+      "target": "node-s3-us",
+      "label": "S3 write",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 1.0, "sigma": 0.35 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 5000,
+      "maxConcurrentRequests": 6000,
+      "packetLossRate": 0.0002,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-crdt-us-to-search-us",
+      "source": "node-crdt-us",
+      "target": "node-search-us",
+      "label": "Index update",
+      "mode": "asynchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 1.3, "sigma": 0.45 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 4000,
+      "packetLossRate": 0.0003,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-ws-us-to-auth-us",
+      "source": "node-ws-us",
+      "target": "node-auth-us",
+      "label": "JWT validation",
+      "mode": "synchronous",
+      "protocol": "https",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.35, "sigma": 0.25 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1800,
+      "maxConcurrentRequests": 9000,
+      "packetLossRate": 0.0002,
+      "errorRate": 0,
+      "weight": 1,
+      "condition": null,
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-auth-us-to-rds-us",
+      "source": "node-auth-us",
+      "target": "node-rds-us",
+      "label": "Auth metadata read/write",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 0.7, "sigma": 0.3 },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1200,
+      "maxConcurrentRequests": 5000,
+      "packetLossRate": 0.0001,
+      "errorRate": 0,
+      "weight": 0.95,
+      "condition": "nodeStatus('node-rds-us') != 'failed'",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    },
+    {
+      "id": "edge-auth-us-to-rds-ap-failover",
+      "source": "node-auth-us",
+      "target": "node-rds-ap",
+      "label": "Auth DB failover path",
+      "mode": "conditional",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": { "type": "log-normal", "mu": 4.1, "sigma": 0.45 },
+        "pathType": "cross-region"
+      },
+      "bandwidth": 800,
+      "maxConcurrentRequests": 2000,
+      "packetLossRate": 0.001,
+      "errorRate": 0,
+      "weight": 0.05,
+      "condition": "nodeStatus('node-rds-us') == 'failed'",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "animated": false
+    }
+  ],
+  "workload": {
+    "sourceNodeId": "node-users",
+    "pattern": "spike",
+    "baseRps": 800,
+    "spike": {
+      "spikeTime": 60000,
+      "spikeRps": 4000,
+      "spikeDuration": 45000
+    },
+    "requestDistribution": [
+      { "type": "CRDT_EDIT", "weight": 0.7, "sizeBytes": 900 },
+      { "type": "PRESENCE_HEARTBEAT", "weight": 0.15, "sizeBytes": 120 },
+      { "type": "CURSOR_MOVE", "weight": 0.1, "sizeBytes": 180 },
+      { "type": "ASSET_UPLOAD", "weight": 0.05, "sizeBytes": 262144 }
+    ]
+  },
+  "faults": [
+    {
+      "id": "fault-dynamo-ap-readonly",
+      "targetId": "node-dynamo-ap",
+      "faultType": "error-rate",
+      "timing": {
+        "type": "deterministic",
+        "mode": "deterministic",
+        "atTime": 60000
+      },
+      "duration": {
+        "type": "fixed",
+        "policy": "fixed",
+        "duration": 60000
+      },
+      "params": {
+        "rate": 1,
+        "scope": "writes-only",
+        "errorCode": "READ_ONLY"
+      }
+    },
+    {
+      "id": "fault-redis-ap-crash",
+      "targetId": "node-redis-ap",
+      "faultType": "process-crash",
+      "timing": {
+        "type": "deterministic",
+        "mode": "deterministic",
+        "atTime": 120000
+      },
+      "duration": {
+        "type": "fixed",
+        "policy": "fixed",
+        "duration": 15000
+      },
+      "params": {
+        "mttr": 15000
+      }
+    },
+    {
+      "id": "fault-crdt-ap-10s-lag",
+      "targetId": "node-crdt-ap",
+      "faultType": "latency-spike",
+      "timing": {
+        "type": "deterministic",
+        "mode": "deterministic",
+        "atTime": 170000
+      },
+      "duration": {
+        "type": "fixed",
+        "policy": "fixed",
+        "duration": 40000
+      },
+      "params": {
+        "addedMs": 10000,
+        "multiplier": 8
+      }
+    }
+  ],
+  "invariants": [
+    {
+      "id": "inv-crdt-convergence-normal",
+      "condition": "when(faults.active == 0, crdt.maxReplicaDivergenceMs <= 500)",
+      "severity": "critical",
+      "message": "Two users editing the same document must converge within 500ms under normal network conditions."
+    },
+    {
+      "id": "inv-global-availability-slo",
+      "condition": "global.availability >= 0.9999",
+      "severity": "critical",
+      "message": "Overall availability must meet 99.99% SLO."
+    },
+    {
+      "id": "inv-cross-region-failover-rto",
+      "condition": "regionalFailover.rtoMs <= 30000",
+      "severity": "critical",
+      "message": "Cross-region failover must complete in under 30s RTO."
+    },
+    {
+      "id": "inv-dynamo-write-takeover",
+      "condition": "during('fault-dynamo-ap-readonly', region('us-east-1').dynamodb.writeSuccessRate >= 0.99)",
+      "severity": "critical",
+      "message": "If ap-south-1 DynamoDB goes read-only, us-east-1 should sustain writes cleanly."
+    },
+    {
+      "id": "inv-presence-graceful-degradation",
+      "condition": "during('fault-redis-ap-crash', region('ap-south-1').websocket.reconnectStormRate <= 0.05)",
+      "severity": "warning",
+      "message": "Redis crash should degrade presence gracefully without reconnect storm."
+    },
+    {
+      "id": "inv-crdt-divergence-window",
+      "condition": "during('fault-crdt-ap-10s-lag', crdt.userVisibleDivergenceWindowMs <= 10000)",
+      "severity": "critical",
+      "message": "CRDT lag fault should keep user-visible divergence bounded and measurable."
+    },
+    {
+      "id": "inv-search-indexing-lag",
+      "condition": "search.maxIndexingLagMs <= 5000",
+      "severity": "warning",
+      "message": "Search indexing lag should remain within 5 seconds."
+    }
+  ],
+  "scenarios": []
+}

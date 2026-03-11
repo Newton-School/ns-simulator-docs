@@ -1,0 +1,4 @@
+"hypothesis","observed_metric_1","observed_metric_2","pass_rule","result"
+"Dynamo read-only takeover","","","write_success_rate>=0.99 AND failover_rto_ms<=30000","UNKNOWN"
+"Redis crash graceful degradation","","","reconnect_storm_rate<=0.05","UNKNOWN"
+"CRDT lag divergence window","","","divergence_window_ms<=10000","UNKNOWN"
