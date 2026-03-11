@@ -1,0 +1,4 @@
+interface:
+  display_name: "DSDS UI Spec to Component"
+  short_description: "Turn DSDS UI specs into implementation components."
+  default_prompt: "Convert DSDS UI documentation and mocks into concrete frontend component implementation tasks."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ticket Implementation Copilot"
+  short_description: "Implement DSDS roadmap tickets with AC-first execution."
+  default_prompt: "Pick the next unblocked DSDS ticket, implement it, and verify acceptance criteria."

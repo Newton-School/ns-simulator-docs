@@ -1,0 +1,4 @@
+interface:
+  display_name: "Chaos Experiment Designer"
+  short_description: "Design DSDS chaos experiments with clear hypotheses."
+  default_prompt: "Design a DSDS chaos experiment with hypothesis, setup, faults, and pass/fail criteria."

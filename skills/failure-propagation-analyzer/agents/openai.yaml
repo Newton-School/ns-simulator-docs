@@ -1,0 +1,4 @@
+interface:
+  display_name: "Failure Propagation Analyzer"
+  short_description: "Analyze cascade paths and failure propagation risk."
+  default_prompt: "Analyze likely failure propagation paths and recommend containment actions."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Component Taxonomy Selector"
+  short_description: "Map requirements to valid DSDS component types."
+  default_prompt: "Select DSDS component types from requirements and justify the mapping."

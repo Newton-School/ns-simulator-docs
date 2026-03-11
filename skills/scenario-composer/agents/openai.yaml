@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scenario Composer"
+  short_description: "Compose deterministic DSDS chaos scenarios and presets."
+  default_prompt: "Design deterministic DSDS scenarios with workload, faults, expected outcomes, and validation checks."

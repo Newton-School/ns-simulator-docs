@@ -1,0 +1,4 @@
+interface:
+  display_name: "Schema Catalog Sync Guard"
+  short_description: "Detect drift between schema and canonical catalogue."
+  default_prompt: "Check DSDS TypeScript schema against canonical CSV catalogue and report drift."

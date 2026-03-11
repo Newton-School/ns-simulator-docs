@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cost and Provider Mapper"
+  short_description: "Map DSDS designs across clouds with cost tradeoffs."
+  default_prompt: "Map architecture to AWS/GCP/Azure equivalents and estimate tradeoff implications."

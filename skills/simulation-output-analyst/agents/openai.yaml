@@ -1,0 +1,4 @@
+interface:
+  display_name: "Simulation Output Analyst"
+  short_description: "Analyze DSDS traces, metrics, and causal outputs."
+  default_prompt: "Interpret DSDS simulation outputs and produce root-cause, bottleneck, and mitigation analysis."

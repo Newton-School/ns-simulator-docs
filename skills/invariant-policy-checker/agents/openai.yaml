@@ -1,0 +1,4 @@
+interface:
+  display_name: "Invariant Policy Checker"
+  short_description: "Define and check DSDS invariants and policy rules."
+  default_prompt: "Define simulation invariants and evaluate policy compliance from run outputs."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Topology JSON Author"
+  short_description: "Author DSDS TopologyJSON from architecture input."
+  default_prompt: "Produce valid DSDS TopologyJSON from system descriptions, with assumptions and validation notes."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Resilience Pattern Tuner"
+  short_description: "Tune retries, breakers, limits, and bulkheads."
+  default_prompt: "Tune DSDS resilience settings for retries, timeouts, breakers, and load shedding."
