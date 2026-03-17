@@ -143,4 +143,4 @@ The [`design-decisions/`](design-decisions/) directory contains architecture dec
 
 - [**No Custom Change Detection**](design-decisions/adr-no-custom-change-detection.md) — Why no mutation observer or custom reactivity is needed. BUILD-phase state uses Zustand selector subscriptions. SIMULATE-phase data uses Web Worker `postMessage`. Both feed into React's standard re-render cycle.
 
-- [**Canonical Node Architecture Refactor**](design-decisions/adr-canonical-node-architecture-refactor.md) — Engine-first node modeling plan using a canonical topology store, discriminated union renderer data, UI-only container semantics for VPC/AZ/Subnet, and backward-compatible migration from legacy React Flow saves.
+- [**Canonical Node Architecture Refactor**](design-decisions/adr-canonical-node-architecture-refactor.md) — Engine-first node modeling plus production-grade semantic naming and domain-first folder structure standards (Component vs Node vocabulary, typed boundaries, workspace persistence contract, and migration path from legacy React Flow saves).
