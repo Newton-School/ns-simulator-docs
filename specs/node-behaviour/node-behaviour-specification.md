@@ -705,10 +705,22 @@ The OSI model is Week 1–2 material in the Computer Networks course. The simula
 | OSI Layer | Layer Name | Simulator Nodes That Should Operate Here | What They Should Do at This Layer | What They Actually Do |
 |---|---|---|---|---|
 | **L7** | Application | L7 Load Balancer, API Gateway, WAF, CDN, Reverse Proxy, Ingress Controller | Inspect HTTP/gRPC content: URL path, headers, cookies, request body. Route by content. Modify requests (rewrite, transform). Terminate SSL. | Same as L4. No content inspection. |
+| **L6** | Presentation | *(No dedicated nodes — see note below)* | Data encoding (JSON/protobuf), encryption (TLS), compression (gzip). | N/A |
+| **L5** | Session | *(No dedicated nodes — see note below)* | Session establishment, maintenance, teardown. | N/A |
 | **L4** | Transport | L4 Load Balancer, NAT Gateway, Firewall Rule, Security Group | Forward TCP/UDP connections without inspecting payload. Route by IP:port tuple. Track connections (stateful) or not (stateless). Cannot see HTTP headers or URL paths. | Same as L7. No transport-layer constraints. |
 | **L3** | Network | Edge Router, VPN Gateway, NAT Gateway | Route by IP address. Apply routing tables. Perform NAT (address translation). | Same as L4/L7. No IP-level logic. |
 | **L2/L1** | Data Link / Physical | Network Interface | Frame-level operations, bandwidth limits. | Same as everything else. |
 | **Application Protocol** | (Within L7) | gRPC edges, AMQP edges, Kafka edges, WebSocket edges | Different serialisation overhead, connection model (long-lived vs per-request), multiplexing behaviour. | All identical. Protocol label ignored. |
+
+**Why L5 (Session) and L6 (Presentation) have no simulator nodes:**
+
+The OSI model defines 7 layers, but L5 and L6 have no distinct representation in modern infrastructure — and therefore no dedicated node in the simulator:
+
+- **L5 — Session Layer:** Manages connection sessions (open, close, resume). In theory, this is a separate concern. In practice, TCP (L4) already handles connection lifecycle (3-way handshake, keepalive, teardown), and application-level session management (cookies, JWT tokens, OAuth flows) is handled by L7 services. No real-world infrastructure component operates purely as a "session layer device." In the simulator, session-like behaviour appears as a property of L7 nodes (e.g., `stickySessionEnabled` on load balancers) and edge properties (e.g., persistent connections / keepalive), not as a separate node.
+
+- **L6 — Presentation Layer:** Handles data format translation, encryption, and compression. In practice, TLS encryption runs between L4 and L7 and is modeled as an edge property in the simulator (`protocol: https` implies TLS termination at the receiving node). Serialization format (JSON vs protobuf vs Avro) is an application concern inside L7 nodes. Compression (gzip, brotli) is a feature of L7 proxies like Nginx or CDNs. None of these justify a standalone node — they're properties of existing nodes and edges.
+
+This matches how the TCP/IP model (which the real world actually uses) collapses L5, L6, and L7 into a single "Application" layer. The simulator follows the same practical reality: L5/L6 concerns exist but are absorbed into L4 edge properties (TCP connections), L7 node configurations (session stickiness, TLS termination), and edge protocol settings.
 
 ### 4.3 What Layer-Awareness Means for Teaching
 
