@@ -2,8 +2,10 @@
 
 This document explains how the simulator calculates the values shown in the screen you shared:
 
-- edge labels such as `10.0 rps / 0.2% fail`
-- the node saturation card such as `0.0 / 8 workers`
+- the canvas metric lenses:
+  - pre-run: `Concurrency / Queue Capacity / Timeout`
+  - post-run: `Traffic / Saturation / Latency / Errors / Throughput`
+- node-card values such as `Completed / Received`, `Rejected / Timed Out`, and `0.0 / 8 workers`
 - the selected node **Results** panel on the right
 - the **Nodes** table at the bottom (`Arrived`, `Done`, `Reject`, `T.O.`, `Avg Q`, `Util`, `p50`, `p95`, `p99`, `λ`, `W`, `L`)
 
@@ -12,6 +14,8 @@ The formulas below are taken from the current implementation in:
 - `src/engine/metrics.ts`
 - `src/engine/analysis/output.ts`
 - `src/renderer/src/components/layout/WorkspaceLayout.tsx`
+- `src/renderer/src/components/canvas/MetricLensSwitcher.tsx`
+- `src/renderer/src/components/nodes/RuntimeNodeMetrics.tsx`
 - `src/renderer/src/components/nodes/nodePresentation.ts`
 - `src/renderer/src/components/canvas/PacketEdge.tsx`
 - `src/renderer/src/store/useStore.ts`
@@ -35,6 +39,80 @@ Important detail:
 That means a request created before warmup ends but arriving at a node after warmup can still count for that node's post-warmup metrics.
 
 ## 2. Which Screen Uses Which Metrics
+
+### Canvas metric lenses
+
+`MetricLensSwitcher.tsx` selects one metric family for all node cards on the canvas.
+
+- **Pre-run** lenses show configured values directly from node config.
+- **Post-run** lenses show observed runtime metrics collected during the simulation.
+
+The important UI rule is:
+
+```text
+Lens name = operational category
+Node content = native metric for that node type
+```
+
+So the lens stays generic (`Concurrency`), while the node shows the concrete thing it actually has (`Workers 8`, `Connections 16`, `Consumers 4`).
+
+### Pre-run lens terms and calculations
+
+These are not derived from runtime samples. They are direct reads from the node's serialized config.
+
+| Lens | Meaning | Raw source | Calculation / display rule |
+| --- | --- | --- | --- |
+| Concurrency | How many units of work the node can handle simultaneously. | `data.sim.queue.workers` | Direct config read. Displayed with a node-specific label and unit. |
+| Queue Capacity | How much work can wait before the node starts rejecting, dropping, or blocking arrivals. | `data.sim.queue.capacity` | Direct config read. Displayed with a node-specific label and unit. |
+| Timeout | The configured deadline or failure threshold for work at the node. | `data.sim.processing.timeout` | Direct config read. Displayed as whole milliseconds: `{timeout} ms`. |
+
+The current renderer maps the same raw fields to different native labels depending on node type:
+
+| Node type family | Concurrency label | Queue Capacity label | Display example |
+| --- | --- | --- | --- |
+| `load-balancer`, `load-balancer-l4`, `load-balancer-l7` | `Connections` | `Connection Queue` | `16 connections`, `14 connections` |
+| `api-gateway`, `ingress-controller`, `reverse-proxy` | `Request Slots` | `Request Queue` | `8 req`, `20 req` |
+| `relational-db`, `primary-db`, `read-replica` | `Connections` | `Query Queue` | `32 connections`, `100 queries` |
+| `in-memory-cache`, `redis-cache` | `Operations` | `Operation Queue` | `64 ops`, `200 ops` |
+| `queue`, `message-queue` | `Consumers` | `Backlog` | `4 consumers`, `500 msg` |
+| `service-registry`, `dns-server` | `Lookups` | `Lookup Queue` | `8 lookups`, `40 lookups` |
+| default fallback | `Workers` | `Queue` | `8 workers`, `20 req` |
+
+Dynamic singular/plural is applied when the unit is a count noun:
+
+```text
+formatCount(value, noun) =
+  "{roundedValue} {singular if value = 1 else plural}"
+```
+
+Examples:
+
+- `1 worker`
+- `8 workers`
+- `1 connection`
+- `16 connections`
+
+### Post-run lens terms and calculations
+
+These lenses show observed metrics after the run has populated `simulationMetricsByNode`.
+
+| Lens | Meaning | Raw source | Calculation / display rule |
+| --- | --- | --- | --- |
+| Traffic | Absolute request-flow counts through the node. | `postWarmupProcessed`, `postWarmupArrived`, `postWarmupRejected`, `postWarmupTimedOut` | Primary row: `Completed / Received = postWarmupProcessed / postWarmupArrived`. Secondary row: `Rejected / Timed Out = postWarmupRejected / postWarmupTimedOut`. |
+| Saturation | How close the node got to exhausting its processing capacity. | `utilization`, `data.sim.queue.workers` | `displayedActiveWorkers = min(workers, (uiUtilizationPercent / 100) * workers)` and the card renders `{displayedActiveWorkers.toFixed(1)} / {workers} workers`. |
+| Latency | Node-local processing latency percentiles, with optional SLO context. | `latencyP95`, `latencyP50`, `latencyP99`, `data.sim.slo.latencyP99` | Primary value: `{latencyP95.toFixed(1)}ms p95`. Secondary text includes `p50` and whether `latencyP99` is within or above the configured p99 SLO. |
+| Errors | Failure rate plus the most important rejection reason. | `errorRate`, `totalRejected`, `rejectionsByReason` | Primary value: `{errorRate.toFixed(1)}%`. Limit text: `{totalRejected} rejected`. Secondary text: highest-count rejection reason, if any. |
+| Throughput | Successful work rate after warmup. | `throughput` | Primary value: `{throughput.toFixed(1)}` with limit `req/s`. Secondary text may show stream lag or cache-hit context. |
+
+Two important distinctions:
+
+- **Traffic is counts**, not a rate.
+- **Throughput is a rate**, not a count.
+
+Important caveat on the current `Errors` lens:
+
+- The primary percentage includes both post-warmup rejections and post-warmup timeouts.
+- The small limit text currently uses `totalRejected` only, so it does **not** separately surface timed-out counts on that card.
 
 ### Selected node Results panel
 
@@ -72,10 +150,19 @@ The core formulas live in `src/engine/metrics.ts`.
 
 ### Per-node counts
 
+In the new canvas **Traffic** lens, these same counts are shown as:
+
 ```text
-Arrived   = postWarmupArrived
-Done      = postWarmupProcessed
-Reject    = postWarmupRejected
+Completed / Received
+Rejected / Timed Out
+```
+
+Older table/panel copy may still say `Done` / `Arrived`, but the underlying metrics are the same.
+
+```text
+Received  = postWarmupArrived
+Completed = postWarmupProcessed
+Rejected  = postWarmupRejected
 Timed Out = postWarmupTimedOut
 ```
 
@@ -334,9 +421,9 @@ and compares observed `L` vs expected `L`.
 Using the numbers visible in your screenshot:
 
 ```text
-Arrived   = 600
-Done      = 599
-Reject    = 1
+Received  = 600
+Completed = 599
+Rejected  = 1
 Timed Out = 0
 Error Rate = 0.17%
 Availability = 99.8%
@@ -429,8 +516,17 @@ If you want to reproduce the numbers by hand, use this checklist:
 ```text
 effectiveDurationSec = (simulationDuration - warmupDuration) / 1000
 
-throughput = completed / effectiveDurationSec
-errorRate = (rejected + timedOut) / arrived
+preRunConcurrency = sim.queue.workers
+preRunQueueCapacity = sim.queue.capacity
+preRunTimeoutMs = sim.processing.timeout
+
+trafficCompleted = postWarmupProcessed
+trafficReceived = postWarmupArrived
+trafficRejected = postWarmupRejected
+trafficTimedOut = postWarmupTimedOut
+
+throughput = trafficCompleted / effectiveDurationSec
+errorRate = (trafficRejected + trafficTimedOut) / trafficReceived
 availability = 1 - errorRate
 
 p50/p95/p99 = sorted latency sample at floor(p * (n - 1))
