@@ -363,6 +363,90 @@ and a `--force-with-lease` history rewrite.
 
 ---
 
+## D16 — Seal submissions with a non-cryptographic integrity checksum
+
+**Decision.** Each evaluation envelope is sealed with `canonicalChecksum` — a wide
+(128-bit, multi-lane) content hash over its canonical serialization.
+
+**Criteria.** Determinism, Honesty.
+
+**Alternatives.** No checksum (trust the store); a cryptographic signature.
+
+**Why this choice.** A checksum makes a persisted submission **tamper-evident** —
+accidental drift or a hand-edit of `localStorage` is caught on read. It is
+deliberately *not* sold as security: defeating it needs a server-side signature,
+which is out of scope for a client-side artifact. An honest "tamper-evident" beats
+a checksum that only *looks* like tamper-proofing.
+
+**Trade-off.** Detects casual tampering and drift, not a motivated adversary.
+
+*See: doc 06, §4.*
+
+---
+
+## D17 — Digest replay by default; bind the full trace by hash
+
+**Decision.** Every envelope embeds a bounded **replay digest** (counts +
+`eventStreamChecksum`); the full per-request replay is optional and **excluded
+from the envelope checksum**.
+
+**Criteria.** Shippability, Honesty.
+
+**Alternatives.** Embed the full replay in every envelope; omit replay entirely.
+
+**Why this choice.** Full replays are large; embedding them everywhere would
+exhaust storage. Binding the trace by *hash* (in the sealed digest) proves what the
+replay was without paying to store it, and excluding the heavy blob from the
+checksum means attaching/detaching it never breaks the seal.
+
+**Trade-off.** The full trace isn't present in every record; it is re-attached on
+demand.
+
+*See: doc 06, §5.*
+
+---
+
+## D18 — Append-only submission archive
+
+**Decision.** Submissions are stored immutably: a repeat write of the same
+`submissionId` is refused, reads verify the checksum, and corrupt rows are reported
+but never deleted.
+
+**Criteria.** Honesty.
+
+**Alternatives.** Overwrite like the attempt cache; delete corrupt rows.
+
+**Why this choice.** A submitted grade is a historical fact; an audit archive must
+not overwrite or erase the very evidence an auditor needs. Verify-on-read keeps a
+tampered row from being silently trusted.
+
+**Trade-off.** Storage grows with submissions; a retention/pruning policy is a
+separate, deliberate decision.
+
+*See: doc 06, §8.*
+
+---
+
+## D19 — Derive envelope identity from the sealed contract
+
+**Decision.** An envelope's `questionId`/`topologyId` are copied from the contract
+it seals, not accepted as independent inputs, and re-checked on parse/verify.
+
+**Criteria.** Honesty.
+
+**Alternatives.** Let callers label the envelope independently.
+
+**Why this choice.** The envelope is a claim ("this grade is for question X"). One
+source of truth for that identity (the contract) makes a mislabelled envelope
+impossible by construction — the same reasoning as central flattening (D11) and
+host-alignment (D3).
+
+**Trade-off.** Callers cannot set identity independently — which is the point.
+
+*See: doc 06, §6.*
+
+---
+
 ## Decision map at a glance
 
 ```mermaid
@@ -376,11 +460,14 @@ mindmap
       D3 Host-alignment
       D9 Check kinds
       D10 Skip semantics
+      D18 Append-only archive
+      D19 Identity from contract
     Determinism
       D4 Deterministic output
       D7 Frozen fixtures
       D11 Central flattening
       D12 Hashed IDs
+      D16 Integrity checksum
     Operational
       D5 Exit-code taxonomy
       D13 postMessage origin
@@ -388,6 +475,7 @@ mindmap
       D8 Two grading axes
       D14 Best-effort persistence
       D15 Stacked PRs
+      D17 Replay digest
 ```
 
 ---
@@ -398,7 +486,10 @@ These were consciously deferred, not overlooked:
 
 - **Explicit, validated iframe origins** (inbound `event.origin` check; remove the
   `'*'` outbound fallback) — D13.
-- **Durable, immutable attempt/replay archive** — D14.
+- ~~**Durable, immutable attempt/replay archive** — D14.~~ ✅ **Addressed** by the
+  evaluation envelope + append-only archive — see [doc 06](06-grading-safe-persistence-and-the-evaluation-envelope.md)
+  (D16–D19). *Remaining:* wire it into the submit flow and move storage
+  server-side.
 - **`EnvironmentProfile`** (the presentation layer: author / contest / learn) —
   the fourth layer in the mental model, still to be built.
 - **Authoring/distribution model** beyond the local sample question.

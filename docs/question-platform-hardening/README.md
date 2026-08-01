@@ -26,6 +26,7 @@ actually built, in what order, and why each decision was made.
 | 03 | [PR #214 — Rubric Engine Hardening](03-pr214-rubric-engine-hardening.md) | Check kinds & statuses, execution rows, short-circuit skip semantics, hashed test IDs |
 | 04 | [Rebase & Contract Reconciliation](04-rebase-and-contract-reconciliation.md) | How #214 was restacked onto #213 and the overlap resolved (the operational story) |
 | 05 | [Design Decisions & Trade-offs](05-design-decisions-and-tradeoffs.md) | A consolidated decision log with the criteria behind each choice |
+| 06 | [Grading-Safe Persistence & the Evaluation Envelope](06-grading-safe-persistence-and-the-evaluation-envelope.md) | The immutable, tamper-evident submission record: envelope, integrity checksum, replay digest, append-only archive |
 
 Read them in order for a narrative, or jump to a PR you care about — each stands
 alone, with the glossary below as a shared reference.
@@ -167,6 +168,10 @@ noted in the last column.
 | **Stable hashed test ID** | A deterministic, host-safe ID like `case.baseline-1bps56q.simulation.err-u4ovu4`, combining a slug and a content hash. | 03, 05 |
 | **`rebase --onto`** | The Git operation used to replay #214's commits onto the post-#213 tree. | 04 |
 | **`--force-with-lease`** | A safer force-push that aborts if the remote moved unexpectedly. | 04 |
+| **EvaluationEnvelope** | The sealed, immutable record of one submission: frozen topology snapshot + verdicts + replay digest + contract + checksum. | 06 |
+| **Integrity checksum** | A wide, non-cryptographic content hash (`canonicalChecksum`) that makes an envelope tamper-*evident* (drift/casual edits), not tamper-*proof*. | 06 |
+| **Replay digest** | A bounded per-case summary of the request trace (counts + an event-stream checksum) that binds the full replay by reference rather than storing it. | 06 |
+| **Append-only archive** | Durable submission storage that never overwrites, verifies on read, and never deletes corrupt rows. | 06 |
 
 ---
 

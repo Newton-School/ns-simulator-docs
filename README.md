@@ -18,7 +18,8 @@ hld-simulator-docs/
 │   ├── 02-simulation-fundamentals.md # Part 2: Events, time, the event loop
 │   ├── 03-data-structures-and-mechanics.md  # Part 3: Min-heap, PRNG, distributions, G/G/c/K
 │   ├── 04-distributed-systems-and-failures.md # Part 4: Network physics, failure propagation
-│   └── 05-devs-chaos-and-analysis.md # Part 5: DEVS formalism, chaos engineering, output analysis
+│   ├── 05-devs-chaos-and-analysis.md # Part 5: DEVS formalism, chaos engineering, output analysis
+│   └── question-platform-hardening/  # Implementation guide: the question & grading platform (PRs #212–#214 + follow-ups)
 ├── schema/
 │   ├── complete_simulator_schema.ts # Full TypeScript type definitions (2300+ lines)
 │   └── README.md                    # Schema documentation
@@ -89,6 +90,21 @@ Formalizes the simulator and adds validation:
 - **DEVS formalism** — atomic and coupled DEVS models, time advance functions, hierarchical composition
 - **Chaos engineering** — structured experiment workflow, fault injection catalog, pre-built experiments
 - **Output analysis** — metrics collection, waterfall traces, heatmaps, causal failure graphs, bottleneck identification
+
+### [Question & Grading Platform Hardening](docs/question-platform-hardening/README.md)
+
+A PR-by-PR, concept-first implementation guide to how the simulator became a
+deterministic **question and grading platform**. It is the learning companion to
+[`specs/rubric-engine-and-question-platform-architecture.md`](specs/rubric-engine-and-question-platform-architecture.md):
+the spec is the blueprint; this guide is the field notes on what was built and
+why. Each document follows **What → How → Why → Trade-offs**.
+
+- **[01 — Question Platform Foundation](docs/question-platform-hardening/01-pr212-question-platform-foundation.md)** — `QuestionPackage`, `AttemptState` lifecycle, structural & invariant checks, iframe-embed security
+- **[02 — Evaluation Contract & CLI](docs/question-platform-hardening/02-pr213-evaluation-contract-and-cli.md)** — versioned contract, parser invariants, exit-code taxonomy, Game Playground adapter
+- **[03 — Rubric Engine Hardening](docs/question-platform-hardening/03-pr214-rubric-engine-hardening.md)** — check kinds & statuses, execution rows, short-circuit skip semantics, hashed test IDs
+- **[04 — Rebase & Contract Reconciliation](docs/question-platform-hardening/04-rebase-and-contract-reconciliation.md)** — restacking overlapping PRs and regenerating frozen fixtures safely
+- **[05 — Design Decisions & Trade-offs](docs/question-platform-hardening/05-design-decisions-and-tradeoffs.md)** — a consolidated decision log (D1–D19) with the criteria behind each choice
+- **[06 — Grading-Safe Persistence & the Evaluation Envelope](docs/question-platform-hardening/06-grading-safe-persistence-and-the-evaluation-envelope.md)** — the immutable, tamper-evident submission record: integrity checksum, replay digest, append-only archive
 
 ## Canonical Catalogue
 
