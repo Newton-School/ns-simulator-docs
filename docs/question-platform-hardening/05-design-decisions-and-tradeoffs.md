@@ -507,6 +507,66 @@ trust or receiving replies.
 
 ---
 
+## D23 — EnvironmentProfile is a lens, not a question variant
+
+**Decision.** Presentation (visibility + capabilities + graded + chrome) lives in a
+separate `EnvironmentProfile` applied over one `QuestionPackage`, never baked into
+the content or the grader.
+
+**Criteria.** Isolation, Evolvability.
+
+**Alternatives.** Per-mode question variants; mode flags scattered in the UI.
+
+**Why this choice.** One question runs as author/interview/learn without forking
+content or grading. Gated surfaces consult the profile, keeping the four layers
+cleanly separated.
+
+**Trade-off.** Each gated surface must read the profile rather than hardcode a
+mode.
+
+*See: doc 08, §1–2.*
+
+---
+
+## D24 — resolveEnvironmentProfile is total and safe
+
+**Decision.** Any input (mode string, partial override, or malformed/unknown)
+resolves to a complete profile; invalid input falls back to the default rather
+than throwing.
+
+**Criteria.** Honesty, Shippability.
+
+**Alternatives.** Throw on invalid profile input.
+
+**Why this choice.** A malformed launch payload must never break a student's
+session; degrading to the default profile is safer than erroring.
+
+**Trade-off.** A bad profile silently degrades to AUTHOR (logged upstream if
+needed) instead of surfacing loudly.
+
+*See: doc 08, §4.*
+
+---
+
+## D25 — AUTHOR is graded (deviates from the spec matrix)
+
+**Decision.** The AUTHOR preset sets `graded: true`, unlike the spec matrix which
+lists AUTHOR as ungraded.
+
+**Criteria.** Shippability.
+
+**Alternatives.** Follow the spec (AUTHOR ungraded).
+
+**Why this choice.** AUTHOR doubles as the standalone dev/testing mode, where
+exercising the grade → seal → archive path is exactly what a setter needs.
+
+**Trade-off.** A documented divergence from the spec; INTERVIEW remains the
+canonical graded contest mode.
+
+*See: doc 08, §3.*
+
+---
+
 ## Decision map at a glance
 
 ```mermaid
@@ -535,11 +595,14 @@ mindmap
       D22 Lock trusted origin
     Isolation
       D20 Hybrid origin trust
+      D23 Profile is a lens
     Shippability
       D8 Two grading axes
       D14 Best-effort persistence
       D15 Stacked PRs
       D17 Replay digest
+      D24 Safe profile resolve
+      D25 AUTHOR graded
 ```
 
 ---
@@ -557,8 +620,11 @@ These were consciously deferred, not overlooked:
   see [doc 06](06-grading-safe-persistence-and-the-evaluation-envelope.md)
   (D16–D19, §11). *Remaining:* move storage server-side and capture full replay
   (not just the digest).
-- **`EnvironmentProfile`** (the presentation layer: author / contest / learn) —
-  the fourth layer in the mental model, still to be built.
+- ~~**`EnvironmentProfile`** (the presentation layer: author / contest / learn) —
+  the fourth layer in the mental model, still to be built.~~ ✅ **Core built** — see
+  [doc 08](08-environment-profile-presentation-layer.md) (D23–D25). *Remaining:*
+  apply the deferred fields (palette allowlist, canvas scaffold-lock, chromeDensity
+  layouts, live-metrics/suite-detail gating) and host lifecycle commands.
 - **Authoring/distribution model** beyond the local sample question.
 
 *See the architecture spec
