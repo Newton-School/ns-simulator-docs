@@ -133,24 +133,30 @@ Applied in `QuestionPanel`:
 | **Test-run limit** | The Test button disables at the cap and shows "N left"; unlimited modes show no suffix. |
 | **Graded submit** | The Submit button only renders when `graded` — LEARN has no submit-for-grade, and only graded modes seal + archive an envelope. |
 | **Prompt visibility** | When `visibility.prompt` is false the Brief tab and its content are hidden and the panel shows Tests only. |
+| **Palette allowlist** | `capabilities.editPaletteList` filters the component library (`LibrarySidebar`) to the allowed node types/ids; `null` = all. Curates the palette for INTERVIEW. |
+| **Chrome density** | `chromeDensity: 'minimal'` drops the authoring file operations (Open/Save/Auto-Layout + file status) from the header for a cleaner INTERVIEW/LEARN surface. |
 
 ---
 
 ## 7. What is intentionally *not* applied yet
 
-These fields exist in the contract but their UI application is deferred (this slice
-was scoped to the highest-signal gates):
+These fields exist in the contract but their UI application is still deferred:
 
-- **`capabilities.editPaletteList`** — palette allowlist filtering.
-- **`capabilities.canEditScaffoldNodes`** — locking scaffold nodes on the canvas.
-- **`chromeDensity`** — full vs minimal panel layouts.
-- **`visibility.liveMetrics` / `scaffoldSourceNodes` / `gradingSuiteDetails`** —
-  the corresponding surfaces aren't gated yet.
+- **`capabilities.canEditScaffoldNodes` + `visibility.scaffoldSourceNodes`** —
+  require a new *node-provenance* mechanism (tag which nodes came from the
+  scaffold) before they can lock/badge those nodes on the canvas.
+- **`visibility.liveMetrics`** — entangled with the metric-lens/canvas overlay
+  system.
+- **`visibility.gradingSuiteDetails`** — no suite-scenario surface is shown in the
+  student panel yet, so there is nothing to gate.
 - **Host-driven lifecycle commands** (`reset` / `lock` / `reveal`) — the profile
   covers reveal-timing; explicit host commands are still open (doc 07 §8).
 
-The contract is complete, so these become "apply an existing flag" follow-ups, not
-redesigns.
+The contract is complete, so these become "apply an existing flag" follow-ups
+(once their prerequisite exists), not redesigns.
+
+> **Applied in a later slice:** `editPaletteList` (palette allowlist) and
+> `chromeDensity` (minimal header) are now wired — see §6.
 
 ---
 

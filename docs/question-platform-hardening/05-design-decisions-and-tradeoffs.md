@@ -622,9 +622,10 @@ These were consciously deferred, not overlooked:
   (not just the digest).
 - ~~**`EnvironmentProfile`** (the presentation layer: author / contest / learn) —
   the fourth layer in the mental model, still to be built.~~ ✅ **Core built** — see
-  [doc 08](08-environment-profile-presentation-layer.md) (D23–D25). *Remaining:*
-  apply the deferred fields (palette allowlist, canvas scaffold-lock, chromeDensity
-  layouts, live-metrics/suite-detail gating) and host lifecycle commands.
+  [doc 08](08-environment-profile-presentation-layer.md) (D23–D25); palette
+  allowlist and chromeDensity are now applied too (doc 08 §6). *Remaining:*
+  scaffold-lock (needs node provenance), live-metrics/suite-detail gating, and
+  host lifecycle commands.
 - **Authoring/distribution model** beyond the local sample question.
 
 *See the architecture spec
