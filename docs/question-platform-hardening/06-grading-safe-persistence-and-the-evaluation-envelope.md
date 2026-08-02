@@ -275,23 +275,71 @@ These are logged there as **D16–D19**.
 
 ---
 
-## 11. What is intentionally *not* done yet
+## 11. Wiring it into the submit flow (now live)
+
+The machinery above is only useful if a real submission actually produces and
+archives an envelope. That wiring now exists end-to-end.
+
+The hard part was **getting the per-case verdict and replay digest out of the
+grader** — grading runs in a Web Worker, and the events that a digest is built
+from (`SimulationOutput.eventStream`) live *inside* that worker. Posting whole
+event streams back to the main thread would be exactly the "bind by value"
+mistake §5 warns against. So the digest is computed **where the events already
+are**, and only the small result crosses the boundary:
+
+```mermaid
+flowchart LR
+  subgraph Worker
+    GA["gradeAttemptWithArtifacts()<br/>→ grade + per-case<br/>verdict + replayDigest"]
+  end
+  subgraph Main thread
+    H["useQuestionGrader<br/>(exposes runs)"]
+    P["QuestionPanel (on submit)"]
+    A["submissionArchive"]
+  end
+  GA -->|"grade-complete<br/>{ grade, cases }"| H --> P
+  P -->|"buildQuestionEvaluationContract<br/>+ buildEvaluationEnvelope"| P
+  P -->|archiveSubmission| A
+```
+
+The pieces:
+
+- **`gradeAttemptWithArtifacts(pkg, topology, runTopology)`** (engine) grades as
+  before but also returns one `AttemptCaseRun` per case — `{ caseId,
+  executionStatus, verdict?, replayDigest? }`. It reuses `evaluateSuite`'s
+  verdicts and captures each run's output via a wrapping `runTopology` (keyed by
+  the prepared-topology object, so it stays correct even when a case throws).
+  `gradeAttempt` is now a thin wrapper (`.grade`) — the CLI pays nothing for
+  artifacts it ignores.
+- **The worker** returns `{ grade, cases }` in `grade-complete`; **the grader
+  hook** exposes `runs` alongside `grade`.
+- **`QuestionPanel`** on *submit* (never on dry-run) builds the contract, seals
+  the envelope (`buildEvaluationEnvelope`), and calls `archiveSubmission` — all in
+  a `try/catch` so archiving can never block the submit/host handshake. A small
+  "Archived: N" indicator surfaces the count.
+
+Two deliberate guards worth noting: the digest is only built when an event stream
+is actually present (a case that never ran, or a fake output in a test, yields no
+digest — never a crash), and archiving is best-effort by design (see §8).
+
+---
+
+## 12. What is intentionally *not* done yet
 
 Being honest about the boundary (a habit of this codebase):
 
-- **Not wired into the submit flow.** Nothing calls `buildEvaluationEnvelope` /
-  `archiveSubmission` at submit time yet — the attempt submit lifecycle
-  (`QuestionPanel` / host messaging) still only autosaves the mutable
-  `AttemptState`. Hooking the envelope into submit is the natural next slice.
 - **Client-side storage only.** `localStorage` is not durable across devices or
   tamper-proof against a determined user. The envelope is *designed* for a
   server/DB backend; moving it there is transport, not redesign.
 - **No retention/pruning policy.** Append-only means unbounded growth until a
   policy is defined.
+- **Full replay is never captured yet** — only the digest. The schema supports
+  attaching it later (§5) without breaking the seal, but no code path stores the
+  full trace today.
 
 ---
 
-## 12. What to take away
+## 13. What to take away
 
 1. **A grade is only as trustworthy as your ability to reproduce it.** The
    envelope makes a submission self-contained and tamper-evident.
