@@ -27,6 +27,7 @@ actually built, in what order, and why each decision was made.
 | 04 | [Rebase & Contract Reconciliation](04-rebase-and-contract-reconciliation.md) | How #214 was restacked onto #213 and the overlap resolved (the operational story) |
 | 05 | [Design Decisions & Trade-offs](05-design-decisions-and-tradeoffs.md) | A consolidated decision log with the criteria behind each choice |
 | 06 | [Grading-Safe Persistence & the Evaluation Envelope](06-grading-safe-persistence-and-the-evaluation-envelope.md) | The immutable, tamper-evident submission record: envelope, integrity checksum, replay digest, append-only archive |
+| 07 | [Production Embed Runtime & Origin Security](07-production-embed-runtime-and-origin-security.md) | Hardening the iframe seam: trusted-origin handshake, configured-allowlist-vs-TOFU policy, no `'*'` for sensitive messages |
 
 Read them in order for a narrative, or jump to a PR you care about — each stands
 alone, with the glossary below as a shared reference.
@@ -172,6 +173,9 @@ noted in the last column.
 | **Integrity checksum** | A wide, non-cryptographic content hash (`canonicalChecksum`) that makes an envelope tamper-*evident* (drift/casual edits), not tamper-*proof*. | 06 |
 | **Replay digest** | A bounded per-case summary of the request trace (counts + an event-stream checksum) that binds the full replay by reference rather than storing it. | 06 |
 | **Append-only archive** | Durable submission storage that never overwrites, verifies on read, and never deletes corrupt rows. | 06 |
+| **Trusted host origin** | The single parent origin a framed simulator locks onto (via config or first valid launch) and thereafter targets/accepts. | 07 |
+| **Trust-on-first-use (TOFU)** | Trusting the origin of the first valid launch-context when no allowlist is configured. | 07 |
+| **`targetOrigin`** | The `postMessage` argument that restricts which origin may receive a message; `'*'` means "any", a data-leak risk for sensitive payloads. | 07 |
 
 ---
 

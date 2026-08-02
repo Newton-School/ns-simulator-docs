@@ -447,6 +447,66 @@ host-alignment (D3).
 
 ---
 
+## D20 — Hybrid iframe origin trust (configured allowlist, else TOFU)
+
+**Decision.** A framed simulator trusts host origins from a `?hostOrigin=` allowlist
+when present (strict), otherwise trust-on-first-use against the first valid
+launch-context.
+
+**Criteria.** Isolation, Shippability.
+
+**Alternatives.** Strict allowlist only (breaks the config-free preview);
+TOFU only (raceable).
+
+**Why this choice.** Backward compatible with the preview flow while letting
+production opt into a declarative allowlist. Both sides validate each other
+(defense-in-depth).
+
+**Trade-off.** TOFU alone can be raced by a page that sends a launch-context
+first; `?hostOrigin=` removes that risk.
+
+*See: doc 07, §5.*
+
+---
+
+## D21 — Never broadcast sensitive messages
+
+**Decision.** `submit`/`error` target the trusted host origin only and are dropped
+if none is established; `'*'` survives only for the content-less `ready` bootstrap.
+
+**Criteria.** Isolation, Honesty.
+
+**Alternatives.** Fall back to `'*'`/referrer for all messages (the prior
+behaviour — a data leak).
+
+**Why this choice.** `submit` carries a student's grade; broadcasting it to any
+framing page is a leak. Dropping-with-a-warning is safer than leaking.
+
+**Trade-off.** If no host is ever established, sensitive messages are silently
+dropped (a warning is logged).
+
+*See: doc 07, §6.*
+
+---
+
+## D22 — Lock the trusted origin once
+
+**Decision.** The trusted host origin is set on the first valid launch and never
+reassigned for the session.
+
+**Criteria.** Isolation.
+
+**Alternatives.** Re-derive the host per message.
+
+**Why this choice.** Prevents a later message from a different origin hijacking
+trust or receiving replies.
+
+**Trade-off.** A legitimate host-origin change mid-session needs a reload.
+
+*See: doc 07, §4.*
+
+---
+
 ## Decision map at a glance
 
 ```mermaid
@@ -471,6 +531,10 @@ mindmap
     Operational
       D5 Exit-code taxonomy
       D13 postMessage origin
+      D21 No sensitive broadcast
+      D22 Lock trusted origin
+    Isolation
+      D20 Hybrid origin trust
     Shippability
       D8 Two grading axes
       D14 Best-effort persistence
@@ -484,12 +548,15 @@ mindmap
 
 These were consciously deferred, not overlooked:
 
-- **Explicit, validated iframe origins** (inbound `event.origin` check; remove the
-  `'*'` outbound fallback) — D13.
+- ~~**Explicit, validated iframe origins** (inbound `event.origin` check; remove the
+  `'*'` outbound fallback) — D13.~~ ✅ **Addressed** by the production embed runtime —
+  see [doc 07](07-production-embed-runtime-and-origin-security.md) (D20–D22).
+  *Remaining:* host-driven lifecycle commands and frame sandboxing / CSP.
 - ~~**Durable, immutable attempt/replay archive** — D14.~~ ✅ **Addressed** by the
-  evaluation envelope + append-only archive — see [doc 06](06-grading-safe-persistence-and-the-evaluation-envelope.md)
-  (D16–D19). *Remaining:* wire it into the submit flow and move storage
-  server-side.
+  evaluation envelope + append-only archive, now **wired into the submit flow** —
+  see [doc 06](06-grading-safe-persistence-and-the-evaluation-envelope.md)
+  (D16–D19, §11). *Remaining:* move storage server-side and capture full replay
+  (not just the digest).
 - **`EnvironmentProfile`** (the presentation layer: author / contest / learn) —
   the fourth layer in the mental model, still to be built.
 - **Authoring/distribution model** beyond the local sample question.
