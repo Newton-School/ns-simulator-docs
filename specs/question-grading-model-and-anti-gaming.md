@@ -1,0 +1,420 @@
+# Question Grading Model & Anti-Gaming
+
+> **Purpose.** Reverse-engineer a *generalized* question + grading model for the
+> HLD simulator from two faculty inputs, and design it so students **cannot game
+> it** — i.e. cannot exploit the grading rules to score without the understanding
+> the question is meant to test.
+>
+> **Sources.**
+> 1. *HLD System Design Simulator — Lab & Exam Question Bank* (faculty spec: 5
+>    labs, 3 exams, grading logic, Section C dev-team notes).
+> 2. *System Design Interview Prep* (the "answer key": URL Shortener, Chat, News
+>    Feed, Google Docs — fully worked, plus the Cross-Cutting Patterns cheat
+>    sheet).
+
+This spec is the design authority for the grading model. The implementation
+companion lives in `docs/question-platform-hardening/`.
+
+---
+
+## 0. The central finding: a grading-model mismatch is the root of gaming
+
+The faculty grade a design on **three axes**; the simulator today covers mainly
+one.
+
+| Axis | What the docs grade | What the simulator does today |
+|------|---------------------|-------------------------------|
+| **Topology correctness** | node & edge *presence*, *placement/ordering*, *direction*, *fan-out shape*, *storage-type-for-access-pattern* | `structuralRules` (presence + a few path checks) |
+| **Reasoning** | a **required, gradeable justification** — "choosing X because *[number]*, tradeoff is Y" | **nothing** — no justification field exists |
+| **Behaviour under load** | implied by the scale numbers | ✅ `rubric.checks` over simulation metrics |
+
+**Gaming is what happens when a design is graded on only one axis**, because any
+single axis is exploitable:
+
+- Grade only on **simulation metrics** → the student cranks a single node's (or
+  edge's) capacity/timeout/bandwidth until the metric passes, with the wrong
+  architecture. (Lab 4's "200K writes to a single SQL" *passes a lenient sim*.)
+- Grade only on **node/edge presence** → the *kitchen-sink*: drop every node and
+  wire everything to everything to satisfy every `requires_X`. (Exactly the
+  "cargo-cult a CDN" mistake Lab 5 exists to catch.)
+- Grade justification by **keyword match** → keyword-stuffing.
+
+The faculty already encode the defense implicitly — **hard-fail vs partial
+credit**, a **required justification**, and *"justify omission as much as
+inclusion."* So anti-gaming is not a feature bolted on; it is the **organising
+principle**: grade on **≥3 orthogonal axes + a graph-consistent justification + a
+global cost budget**, so that gaming one axis is caught by another.
+
+---
+
+## 1. The reasoning spine (what a good answer looks like)
+
+Both docs share one spine, which the generalized question must elicit and grade:
+
+```
+Requirements (FR + NFR) → API / Data Model → Capacity (the numbers)
+        → HLD, node-by-node "why each box exists" → Bottlenecks & Tradeoffs
+```
+
+The target sentence, verbatim from the prep doc, is the reasoning unit we grade:
+
+> **"I'm choosing X because [number], the tradeoff is Y."**
+
+and its closing frame:
+
+> **"The workload is [read-heavy / write-heavy / connection-heavy /
+> correctness-heavy], so I optimized for [X] and accepted [Y] as the tradeoff."**
+
+Every grading mechanism below exists to check some instance of that pattern —
+against **both the graph and the numbers**, not against prose alone.
+
+---
+
+## 2. The generalized question schema
+
+Every question in both docs collapses to one record (the faculty confirm this in
+Section C: *"each question follows the same schema … additional questions can be
+authored later using the same JSON/data shape without engine changes"*).
+
+```
+Question
+├── meta        id, title, mode(lab|exam), difficulty, timeLimitSec?, totalPoints
+├── prompt      text
+│               FR[]      { id, text }                       // functional reqs
+│               NFR[]     { id, metric, op, target, unit }   // measurable targets
+│               scale     { dau?, writesPerSec?, readsPerSec?, rwRatio?,
+│                           retention?, objectSize?, derived[] }
+│               constraintsPanel   // display strings for the numbers
+├── scaffold    given nodes/edges (Lab 1 gives Client + 3 App Servers)
+├── rubric      criteria[]  { id, points, kind, hardFail?, ...kind-specific... }
+│               where kind ∈ CHECK_KINDS (§4)
+├── justify     prompts[]   { id, decision, boundTo, requires{choice,number,tradeoff} }
+├── budget      { unit: 'cost'|'nodes'|'edges', cap }        // anti-kitchen-sink
+└── instructorNotes         // hidden from student
+```
+
+Mapping to the current `QuestionPackage` (see gap analysis, §8):
+
+| Schema part | Current field | Status |
+|-------------|---------------|--------|
+| meta.mode (lab/exam) | `EnvironmentProfile` LEARN/INTERVIEW | ✅ have |
+| prompt.FR / NFR / scale | `prompt.functionalRequirements` / `nonFunctionalRequirements` / `scale` | ✅ have |
+| scaffold | `scaffold` | ✅ have |
+| rubric (metric checks) | `rubric.checks` | ✅ have (simulation kind) |
+| structural checks | `structuralRules` | ✅ have (presence/path) |
+| **justify** | — | ❌ new |
+| **budget** | — | ❌ new (see `cost-calculation-and-budgeting.md`) |
+| weighted points + hardFail | partial (`points`) | ⚠️ extend |
+
+---
+
+## 3. How each evaluation dimension is graded
+
+Grounded in specific questions. "Axis" = which grading axis the dimension lives
+on (T = topology, S = scale-fit semantics, Σ = simulation, J = justification,
+$ = budget).
+
+| Dimension | Evidence | Mechanism | Axis | New? |
+|-----------|----------|-----------|------|------|
+| **FR** | Exam 1: match / track / surge / pay | each FR → a required sub-path/node-set | T | extend |
+| **NFR — latency/throughput** | Exam 1 "<3s match"; Exam 2 "<5ms" | simulation check vs target under load | Σ | have |
+| **NFR — consistency/durability** | Exam 1 payment strongly consistent | semantic: payment path must be SQL (not Σ) | S | new |
+| **Scale (numbers)** | prep doc pins *every* decision to a number | drives 3 things: panel display, sim workload, scale-aware checks | S+Σ | plumbing |
+| **Storage-type for access pattern** | Lab 4: 200K writes + time-series → wide-column, SQL = anti-pattern | `storageFit` check | S | **new** |
+| **READ:WRITE ratio** | URL 100:1; Feed 50:1; Lab 2 20:1 | drives sim workload mix + "must cache when read-heavy" check | S+Σ | new |
+| **Fan-out / messaging** | Lab 3: 1 broker + 3 consumers ✅; 1 queue→3 = hard fail; 3 queues = partial | `fanout` check (node-type-aware) | T | **new** |
+| **Placement / ordering** | Lab 2: cache between AppServer & DB, *not* before LB | `placement` check (adjacency/order/forbidden position) | T | extend |
+| **Edge direction / data flow** | prep flows are directional; DB→Client is wrong | directional path check, not adjacency | T | extend |
+| **Tradeoffs / core hard problem** | prep "choosing X because [n], tradeoff Y" | `justification` check (structured, graph-consistent) | J | **new** |
+| **Omission (anti-cargo-cult)** | Lab 5: CDN wasteful for Service B; justify *not* adding | `forbidUnjustified` check | T+J | **new** |
+| **Hot/cold path separation** | Exam 1: geospatial cache vs SQL (20 pts) | placement + latency-budget sim | T+Σ | extend |
+| **Async vs sync** | Exam 3: sync violates 15s SLA at 50K/min | sim fails SLA + queue/worker present | Σ+T | have |
+| **Autoscaling / cost** | Exam 3: autoscale (20 pts); kitchen-sink costs more | `budget`/cost | $ | **new** |
+
+---
+
+## 4. The check-kind taxonomy
+
+Every rubric criterion is one of these kinds. Each is a **pure function of the
+graph (+ scale + justification)**, returns pass / partial / fail, and may set
+`hardFail` (a hard fail zeroes the whole question regardless of other credit —
+faculty are explicit that some mistakes are *architecturally naive*, not merely
+*suboptimal*).
+
+| kind | Inputs | Passes when | Example |
+|------|--------|-------------|---------|
+| `structural` | graph, node types | required nodes present (min/max counts) | Lab 1: API Gateway present |
+| `placement` | graph, ordering/adjacency rules | node sits in the required position; forbidden positions absent | Lab 2: cache between AppServer↔DB, not before LB |
+| `direction` | graph, directed path spec | traffic path exists **in the correct direction**; no reverse/bypass edge | redirect path Client→…→DB, no Client→DB shortcut |
+| `fanout` | graph, node-type semantics | a *broker* fans out to N independent consumers (a *queue* to N ≠ fan-out) | Lab 3 |
+| `storageFit` | scale, access pattern, chosen DB type | DB type matches the access pattern; flags anti-patterns | Lab 4 (wide-column), Exam 1 payment (SQL) |
+| `simulation` | verdict metrics vs NFR targets under the scale-derived workload | metric meets target | Exam 3 15s SLA |
+| `justification` | text, bound decision, graph | names choice + cites a scale number + states a tradeoff, **consistent with the graph** | every "justify" prompt |
+| `forbidUnjustified` | graph, node/edge, bound justification | node/edge absent, OR present *and* defended by a valid justification | Lab 5 CDN-for-Service-B |
+| `budget` | graph, cost model | total cost / node count / edge count ≤ cap | anti-kitchen-sink |
+
+`structural`, `placement`, `direction`, `fanout` all operate on **nodes *and*
+edges** — see §6 for why edges need their own defenses.
+
+---
+
+## 5. The justification model (structured, graph-consistent)
+
+**Decision: structured, graph-consistent justification — not free-prose keyword
+matching, and not an LLM judge.** Deterministic, un-stuffable, no per-grade cost.
+
+A justification prompt is **bound to a decision** and graded on three
+requirements, each checkable against the graph and the numbers:
+
+```
+justify prompt
+  decision:  "Why this database type for the write path?"
+  boundTo:   { node: 'primary-store' }        // ties the answer to a real node
+  requires:
+    choice:   the student must reference the actual chosen node/type in the graph
+    number:   the student must cite a scale number from THIS question (e.g. 200K w/s)
+    tradeoff: the student must state what is given up ("lose ad-hoc joins")
+```
+
+Grading:
+
+1. **Graph-consistency (the anti-stuffing core).** The claimed choice must match
+   what is *actually in the graph*. If the text says "I used Cassandra for
+   throughput" but the graph has a SQL node on that path → the justification
+   **fails** and the mismatch is surfaced. You cannot write a correct-sounding
+   justification for a wrong graph.
+2. **Number-citation.** Must reference a number the question actually defines
+   (randomized per attempt — §7), so memorized prose from a reference answer
+   doesn't fit.
+3. **Tradeoff presence.** Must name a cost/limitation, matched against an
+   authored set of acceptable tradeoff tokens *plus* a "not a non-answer" check
+   (empty/echo-the-prompt rejected).
+
+This makes the justification a **cross-check on the topology**, not a parallel
+prose channel — which is exactly what defeats keyword-stuffing.
+
+---
+
+## 6. Edge gaming — first-class, not an afterthought
+
+Nodes are the obvious target; **edges are the subtle one**, because edges encode
+the data flow. Every graph-based check must consider edges, direction, and edge
+properties — not just node sets.
+
+| Edge gaming vector | Exploit | Defense |
+|--------------------|---------|---------|
+| **Complete graph / edge kitchen-sink** | wire everything→everything to satisfy any `requires_edge`/connectivity | `budget` on edge count/cost; require *specific directional* paths, not mere adjacency; penalize unused edges |
+| **Wrong-direction edges** | connectivity passes but data flows backwards (DB→Client) | `direction` check on directed paths (we already model edge direction / `request-flow-direction-and-topology-rules`) |
+| **Fake fan-out** | 3 edges off a single **Message Queue** to look like a broker | `fanout` is **node-type-aware**: a queue with N out-edges is *not* fan-out; only a broker with N consumer groups is |
+| **Edge-property tuning** | set edge `errorRate=0`, `latency=0`, `bandwidth=∞`, `maxConcurrentRequests=∞` to pass the sim | faithful edge-property **bounds + defaults** (`edge-properties-and-defaults`, `default-driven-simplification-layer`); **edge cost** (`cost-calculation-and-budgeting`); in exam mode, lock/validate edge props against realistic ranges |
+| **Bypass / shortcut edges** | add a hidden `Client→DB` edge that skips the required cache/gateway while keeping the correct path present | forbidden-edge checks; **"all traffic must traverse the required path"** (a stronger `direction` check than "a path exists") |
+| **Self-loops / duplicate edges** | pad to satisfy counts | normalize graph before grading; reject/ignore self-loops & duplicates |
+
+**Principle:** the grading target is the **directed, typed, property-bearing
+graph**, and edge-level exploits are defended by the *same* defense-in-depth —
+budget (edge cost), faithful simulation (edge-property ceilings), and topology
+semantics (direction + node-type-aware fan-out).
+
+---
+
+## 7. Anti-gaming — the full model
+
+Grade on **≥3 orthogonal axes + justification + budget**, so gaming one fails
+another.
+
+### 7.1 Who controls what — the test/architecture split
+
+The single most important structural rule: **the question owns the test
+conditions; the student owns only the architecture.**
+
+| Surface | Owner | Anti-gaming rationale |
+|---------|-------|-----------------------|
+| **Workload** (RPS, traffic pattern, read/write mix, request types/sizes) | **question** | injected at grade time, overriding any student value — else a student sets a 1-RPS, all-cache-hit workload and passes trivially. A read-heavy question **must** inject a read-heavy load so the cache is actually stressed. |
+| **Global run config** (seed, simulationDuration, warmupDuration) | **question** | else a student shortens the run to dodge steady-state, or **cherry-picks a lucky seed** by re-running until one passes. Fixed, question-authored seed(s) + `maxTestRuns` (exam) kill seed-farming. |
+| **Fault injection** (chaos/HA scenarios) | **question** | Exam-mode HA questions inject the failures; the student can't opt out of the scenario they're graded on. |
+| **Node design config** (queue capacity, workers, processing dist/timeout) | **student** (bounded) | the student *should* design node sizing — but each unit is **priced (cost)** and **bounded to realistic ranges/defaults**, so `workers=10000` is caught by `budget` + faithful sim, not by being forbidden. |
+| **Edge design config** (bandwidth, latency, maxConcurrentRequests, errorRate) | **student** (bounded) | same: real ceilings + edge cost, so `bandwidth=∞`/`errorRate=0` is caught by `budget` + faithful sim (§6). |
+
+**This split is already how our engine works** — `QuestionSuiteCase` carries
+`global` / `workload` / `faults` overrides that `gradeAttempt` injects via
+`mergeTopologyWithOverrides(studentTopology, …)`. So the graded scenario is
+authored, not student-supplied. The work remaining is on the *bounded student
+config* side: realistic ceilings + cost (§4, §6).
+
+### 7.2 The gaming matrix
+
+| Gaming vector | Exploit | Caught by |
+|---------------|---------|-----------|
+| Node kitchen-sink | pass all `requires_X` | `budget` · `forbidUnjustified` · `max_component_count` · sim ignores unwired nodes |
+| Edge kitchen-sink | pass all connectivity | `budget` (edge cost) · `direction` (specific paths) |
+| Node-config tuning | crank capacity/workers/timeout so one box absorbs impossible load | node cost (`budget`) · realistic ceilings/defaults · `storageFit` is config-independent |
+| Edge-config tuning | `bandwidth=∞`, `errorRate=0`, `latency=0` | edge cost · faithful edge-property bounds (§6) |
+| **Workload tampering** | set a trivial/benign source workload | **question injects the workload**, overriding the student's (§7.1) |
+| **Seed / run tampering** | shorten run or farm seeds until one passes | **question fixes seed + duration**; `maxTestRuns` caps attempts (§7.1) |
+| Keyword-stuffing | pass keyword match | graph-consistent `justification` (§5) |
+| Wrong-but-passes-sim | under-loaded scenario | sim workload **derived from the scale numbers** so load genuinely stresses the design; independent S-axis checks |
+| Copy a reference diagram | memorize the 4 worked systems | **randomize scale numbers per attempt** + novel prompts |
+| Decorative/disconnected | node/edge present but unwired/off-path | `direction`/connectivity · unwired elements cost but give no metric benefit |
+
+### 7.3 The two missing levers + load faithfulness
+
+Two levers make all of the above robust and are **not built yet**: a
+**graph-consistent justification** (§5) and a **cost/budget model** (§4, already
+specced in `cost-calculation-and-budgeting.md`). This analysis reframes both as
+**anti-gaming infrastructure**, not just features.
+
+**Load faithfulness.** For metric-tuning to be un-gameable, a single node/edge
+must **realistically break at its limit** — a single SQL node must not absorb
+200K writes/s, an edge's bandwidth must have a real ceiling and cost.
+Cross-reference `no-point-sampled-scalars` (reported scalars must be
+time-weighted integrals) — a lenient/averaged metric is itself a gaming surface.
+
+---
+
+## 8. Reverse-engineering to the simulator — gap analysis
+
+| Capability | Status | Note |
+|------------|--------|------|
+| Question schema (prompt/scaffold/suite/rubric/constraints) | ✅ have | `QuestionPackage` |
+| Lab vs Exam mode | ✅ have | `EnvironmentProfile` LEARN/INTERVIEW; hints + timer are the only gaps |
+| Simulation-metric checks | ✅ have | `rubric.checks` |
+| Structural presence/path checks | ✅ have | `structuralRules` |
+| Hard-fail vs partial + weighted points | ⚠️ extend | need explicit `hardFail` overrides-all + point allocation |
+| **Justification field (graph-consistent)** | ❌ new | §5 — biggest gap; faculty explicitly demand it |
+| **`storageFit` (scale→DB-type)** | ❌ new | Lab 4, Exam 1 |
+| **`fanout` (node-type-aware)** | ❌ new | Lab 3 |
+| **`placement` / `direction`** | ⚠️ extend | extend `requires_path`; add forbidden-position/edge + directed-all-traffic |
+| **Cost / budget model** | ⚠️ specced | `cost-calculation-and-budgeting.md` exists; wire as `budget` check |
+| **Question-authored test conditions** (workload/seed/duration/faults injected, overriding student) | ✅ have | `QuestionSuiteCase` overrides via `mergeTopologyWithOverrides` — the anti-gaming test/architecture split (§7.1) |
+| **Scale numbers → sim workload** | ⚠️ plumbing | derive the injected workload from `scale` so numbers force architecture |
+| **Bounded student config** (node/edge config ceilings + cost) | ⚠️ extend | realistic defaults + pricing so config-tuning is caught, not forbidden (§6, §7.1) |
+| **Faithful node/edge ceilings** | ⚠️ verify | see load-faithfulness (§7.3) |
+| Hints (cost points, exam) + timer | ❌ new | Lab/Exam detail |
+| Scale randomization per attempt | ❌ new | anti-memorization (§7) |
+
+---
+
+## 9. Phased plan
+
+1. **Lock the schema** — extend `QuestionPackage` with `justify[]`, `budget`,
+   weighted/`hardFail` rubric, and the new check *kinds as typed contracts* (no
+   grading logic yet). Small, high-leverage, unblocks everything.
+2. **Graph-consistent justification** (§5) — the biggest anti-gaming lever.
+3. **Scale-fit semantic checks** — `storageFit`, `fanout`, `placement`,
+   `direction`. Pure, testable, scale-aware; cover node **and** edge exploits.
+4. **Cost / budget model** — wire `cost-calculation-and-budgeting` as the
+   `budget` axis (anti-kitchen-sink for nodes and edges).
+5. **Scale → simulation-workload derivation + ceiling faithfulness** — make the
+   numbers force the architecture; audit node/edge property bounds.
+6. **Author the 8 questions** (5 labs + 3 exams) as real `QuestionPackage`s to
+   validate the schema end-to-end, plus a few **fetched-from-the-web** canonical
+   questions (Ticketmaster / payment / notification) to stress the generalization.
+7. **Exam-mode details** — hints-cost-points, timer, scale randomization.
+
+---
+
+## 10. Worked encodings (proof the schema holds)
+
+### Lab 4 — Read-heavy vs write-heavy DB (storage)
+
+```
+meta:   { mode: lab, difficulty: intermediate, totalPoints: 100 }
+prompt.scale: { writesPerSec: 200000, accessPattern: 'time-series',
+                joins: false, consistency: 'none-stated' }
+rubric:
+  - storageFit  points 60  hardFail:true
+      expect: wide-column (partitionKey=sensor_id, clustering=timestamp)
+      antiPattern: relational  // SQL at 200K w/s → hard fail unless justified
+  - justification points 40
+      decision: "Why this DB type?"  boundTo:{ node:'store' }
+      requires: { choice, number:200000, tradeoff }
+budget: { unit: cost, cap: <IoT-store budget> }   // KV/relational padding costs
+```
+Gaming caught: SQL-and-tune-the-sim → `storageFit` hard-fails independent of sim;
+kitchen-sink DBs → `budget`; correct-prose-wrong-graph → `justification`
+graph-consistency.
+
+### Exam 2 — Distributed rate limiter
+
+```
+meta:   { mode: exam, difficulty: advanced, totalPoints: 70, timeLimitSec: 1800 }
+rubric:
+  - structural  points 30  hardFail:true
+      expect: RateLimiter node connected to a SHARED Cache (Redis)
+      forbid: per-instance in-memory counters (RateLimiter with no shared-store edge)
+  - direction   points 0   // guard: RateLimiter → shared Cache edge must exist
+  - justification points 20   decision:"Which algorithm and why?"  // token bucket / sliding window
+  - justification points 20   decision:"Why cache not DB for counters?"  requires:{number:5 /*ms*/, tradeoff}
+```
+Gaming caught: the faculty's exact hard-fail — *"detect graphs where the Rate
+Limiter has no connection to a shared Cache/DB node"* — is the `structural` +
+`direction` guard; "vague we-check-a-counter" → `justification` requiring the
+named algorithm.
+
+---
+
+## 11. Web-question validation — solving 3 novel questions
+
+To stress-test the generalization beyond the 8 authored questions, three
+canonical questions were fetched and encoded. They were chosen to hit dimensions
+*absent* from URL/Chat/Feed/Docs: **correctness-under-contention**, **exactly-once**,
+and **batch/throughput**.
+
+| Question | New dimension it stresses | Core hard problem |
+|----------|---------------------------|-------------------|
+| **Ticketmaster** | correctness-under-contention | no double-booking (distributed lock + TTL + OCC); virtual waiting queue |
+| **Web Crawler** | batch / throughput + async pipeline | URL/content dedup; per-domain politeness; frontier→fetch→process pipeline with DLQ |
+| **Payment System** | exactly-once + auditability | idempotency keys; immutable double-entry ledger; reconciliation |
+
+**Encodings held** in the §2 schema. But solving them surfaced **five concrete
+refinements** that Phase 1 must fold in:
+
+1. **The "guarded path" is one generalized check, not four.** Exam-2
+   rate-limiter→shared-cache, Ticketmaster booking→lock-store, Payment
+   write→idempotency-key-store, Crawler enqueue→dedup-index are **the same check**:
+   *"all traffic of type T must traverse guard node G (in the correct
+   direction)."* Promote §6's "all traffic must traverse the required path" into a
+   first-class `guardedPath` check kind (a strengthened `direction`). This is the
+   most reused anti-gaming primitive across real questions.
+2. **The simulation axis grades *performance* invariants, not *correctness*
+   invariants.** Latency/throughput/utilization are simulatable; *mutual
+   exclusion / exactly-once / immutability / no-double-book* are **not** (our
+   metrics engine doesn't model contention or dedup). Therefore correctness-heavy
+   questions are graded on **topology (`guardedPath` + `structural`) + `justification`** —
+   which is exactly the ≥3-axis anti-gaming model doing its job when the sim can't
+   help. This boundary must be explicit so authors don't write un-gradeable
+   simulation checks for correctness.
+3. **`storageFit` needs an access-pattern enum, not just "SQL vs NoSQL".** The
+   real spread is: point-lookup (URL→KV), time-series (Lab 4→wide-column),
+   **append-only-immutable-ledger** (Payment), transactional-relational
+   (Ticketmaster/payment path→SQL), search-index (Ticketmaster→Elasticsearch).
+   The check maps `(scale, accessPattern) → acceptable node types + anti-patterns`.
+4. **Async-pipeline / DLQ / dedup / admission-queue are structural-pattern
+   checks.** Many NFRs (fault-tolerance, politeness, no-lost-progress) are graded
+   by *topology shape*, not simulation — reinforcing #2. A `placement`/`direction`
+   *ordered-pipeline* variant covers frontier→fetch→process→extract.
+5. **A fourth workload category exists.** The prep-doc cheat sheet names
+   read-/write-/connection-/correctness-heavy. The crawler is **batch /
+   throughput-heavy** (10B pages / 5 days = ~23K pages/s aggregate, latency
+   irrelevant). Add it to the workload taxonomy so the "the workload is [X]"
+   framing and the derived sim scenario cover batch systems.
+
+**Net:** the schema is sound; Phase 1 should add the `guardedPath` check kind, the
+`storageFit` access-pattern enum, an ordered-pipeline `placement` variant, the
+performance-vs-correctness axis note, and the batch workload category.
+
+Sources:
+[Ticketmaster (HelloInterview)](https://www.hellointerview.com/learn/system-design/problem-breakdowns/ticketmaster),
+[Web Crawler (HelloInterview)](https://www.hellointerview.com/learn/system-design/problem-breakdowns/web-crawler),
+[Payment System design (survey)](https://prachub.com/concepts/payment-systems-ledgers-idempotency-and-reconciliation).
+
+---
+
+## 12. Open items
+
+- **Justification grading = structured + graph-consistent** (decided). Revisit an
+  optional LLM *assist* only for author-time hint generation, never for scoring.
+- **Fetch-and-solve web questions** (Ticketmaster, payment, notification) to
+  validate the schema — pending (Phase 6).
+- **Scale randomization** ranges per question — authoring concern; define bounds
+  that keep the *correct architecture* invariant while moving thresholds.
