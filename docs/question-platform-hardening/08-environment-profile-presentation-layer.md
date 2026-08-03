@@ -136,6 +136,8 @@ Applied in `QuestionPanel`:
 | **Palette allowlist** | `capabilities.editPaletteList` filters the component library (`LibrarySidebar`) to the allowed node types/ids; `null` = all. Curates the palette for INTERVIEW. |
 | **Chrome density** | `chromeDensity: 'minimal'` drops the authoring file operations (Open/Save/Auto-Layout + file status) from the header for a cleaner INTERVIEW/LEARN surface. |
 | **Scaffold lock** | `capabilities.canEditScaffoldNodes: false` locks the question's scaffold nodes — the store drops their deletions and no-ops their edits (unbypassable); `visibility.scaffoldSourceNodes` badges them. See §6.5. |
+| **Live metrics** | `visibility.liveMetrics: false` suppresses the runtime metric overlays via one chokepoint (`useNodeMetrics` reports no runtime) and hides the metric-lens switcher/legend. |
+| **Grading-suite details** | `visibility.gradingSuiteDetails` (AND the author's `suite.visibleToStudent`) reveals a compact list of the suite cases + their condition overrides in the brief; hidden in INTERVIEW. |
 
 ### 6.5 Scaffold lock — provenance + unbypassable enforcement
 
@@ -159,25 +161,50 @@ editing is allowed), and the properties panel shows a **locked banner**.
 Dragging a locked node is left free — position is cosmetic and doesn't affect
 grading.
 
+### 6.6 Host lifecycle commands — `reset` / `lock` / `reveal`
+
+The profile decides the *initial* posture; the host can drive the attempt
+mid-session with a single origin-validated inbound message
+(`ns-simulator:command`, `command: 'reset' | 'lock' | 'reveal'`), parsed by
+`parseQuestionCommandMessage` and handled in `WorkspaceLayout` **only after the
+launch handshake locked a trusted origin** (doc 07):
+
+- **`reveal`** — force rubric results visible regardless of the profile's timing
+  (a store `resultsRevealed` flag OR-ed into `shouldShowRubricResults`). Used to
+  release results after a contest ends.
+- **`lock`** — freeze the attempt (`lockAttempt` → status `LOCKED`). Test/Submit
+  disable, autosave stops, and the **whole canvas freezes** — the same store
+  chokepoints that enforce the scaffold lock (§6.5) also block *all*
+  delete/edit/add while `LOCKED`. Used at "time's up."
+- **`reset`** — reload the scaffold topology and start a fresh, unlocked `DRAFT`
+  attempt (clearing reveal). Used to let a student start over.
+
+`reset` and `reveal` clear on the next launch and on question close, so a reused
+frame never carries stale lifecycle state.
+
 ---
 
-## 7. What is intentionally *not* applied yet
+## 7. Coverage — every field is now applied
 
-These fields exist in the contract but their UI application is still deferred:
+The layer started as a typed contract with only the highest-signal gates wired
+(§6); the rest were applied in follow-up slices. **All `EnvironmentProfile` fields
+are now respected in the UI:**
 
-- **`visibility.liveMetrics`** — entangled with the metric-lens/canvas overlay
-  system.
-- **`visibility.gradingSuiteDetails`** — no suite-scenario surface is shown in the
-  student panel yet, so there is nothing to gate.
-- **Host-driven lifecycle commands** (`reset` / `lock` / `reveal`) — the profile
-  covers reveal-timing; explicit host commands are still open (doc 07 §8).
+| Field | Where |
+|-------|-------|
+| `visibility.prompt` / `rubricChecks` | §6 (brief tab, rubric timing) |
+| `visibility.liveMetrics` | §6 (metric overlays + lens switcher) |
+| `visibility.gradingSuiteDetails` | §6 (grading-suite section) |
+| `visibility.scaffoldSourceNodes` | §6.5 (scaffold badge) |
+| `capabilities.editPaletteList` | §6 (palette allowlist) |
+| `capabilities.canEditScaffoldNodes` | §6.5 (scaffold lock) |
+| `capabilities.canTriggerTestRuns` / `maxTestRuns` | §6 (test-run gate) |
+| `graded` | §6 (graded submit) |
+| `chromeDensity` | §6 (minimal header) |
+| host lifecycle (`reset`/`lock`/`reveal`) | §6.6 |
 
-The contract is complete, so these become "apply an existing flag" follow-ups
-(once their prerequisite exists), not redesigns.
-
-> **Applied in later slices:** `editPaletteList` (palette allowlist),
-> `chromeDensity` (minimal header), and `canEditScaffoldNodes` /
-> `scaffoldSourceNodes` (scaffold lock, §6.5) are now wired.
+Deeper follow-ups remain possible (e.g. richer minimal-chrome layouts, or locking
+scaffold-node *dragging*), but no field is unwired.
 
 ---
 
