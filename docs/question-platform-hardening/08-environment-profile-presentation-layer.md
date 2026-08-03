@@ -135,6 +135,29 @@ Applied in `QuestionPanel`:
 | **Prompt visibility** | When `visibility.prompt` is false the Brief tab and its content are hidden and the panel shows Tests only. |
 | **Palette allowlist** | `capabilities.editPaletteList` filters the component library (`LibrarySidebar`) to the allowed node types/ids; `null` = all. Curates the palette for INTERVIEW. |
 | **Chrome density** | `chromeDensity: 'minimal'` drops the authoring file operations (Open/Save/Auto-Layout + file status) from the header for a cleaner INTERVIEW/LEARN surface. |
+| **Scaffold lock** | `capabilities.canEditScaffoldNodes: false` locks the question's scaffold nodes — the store drops their deletions and no-ops their edits (unbypassable); `visibility.scaffoldSourceNodes` badges them. See §6.5. |
+
+### 6.5 Scaffold lock — provenance + unbypassable enforcement
+
+`canEditScaffoldNodes` and `scaffoldSourceNodes` needed a **node-provenance**
+mechanism first: a node is "scaffold-provided" iff its id is in the active
+question's partial-scaffold topology. That set (`scaffoldNodeIds`) is derived
+canonically in the store's `setActiveQuestion`, so it is independent of whatever a
+resumed attempt happened to load.
+
+Enforcement lives at the **store chokepoints**, not the UI, so no interaction path
+can bypass it:
+
+- `onNodesChange` drops `remove` changes for a locked scaffold node.
+- `updateNodeData` no-ops for a locked scaffold node.
+
+A node is *locked* when it is a scaffold node **and** the profile's
+`canEditScaffoldNodes` is false. The cues: `BaseNode` shows a **lock badge** on
+locked nodes (and a subtler "scaffold" badge when `scaffoldSourceNodes` is on but
+editing is allowed), and the properties panel shows a **locked banner**.
+
+Dragging a locked node is left free — position is cosmetic and doesn't affect
+grading.
 
 ---
 
@@ -142,9 +165,6 @@ Applied in `QuestionPanel`:
 
 These fields exist in the contract but their UI application is still deferred:
 
-- **`capabilities.canEditScaffoldNodes` + `visibility.scaffoldSourceNodes`** —
-  require a new *node-provenance* mechanism (tag which nodes came from the
-  scaffold) before they can lock/badge those nodes on the canvas.
 - **`visibility.liveMetrics`** — entangled with the metric-lens/canvas overlay
   system.
 - **`visibility.gradingSuiteDetails`** — no suite-scenario surface is shown in the
@@ -155,8 +175,9 @@ These fields exist in the contract but their UI application is still deferred:
 The contract is complete, so these become "apply an existing flag" follow-ups
 (once their prerequisite exists), not redesigns.
 
-> **Applied in a later slice:** `editPaletteList` (palette allowlist) and
-> `chromeDensity` (minimal header) are now wired — see §6.
+> **Applied in later slices:** `editPaletteList` (palette allowlist),
+> `chromeDensity` (minimal header), and `canEditScaffoldNodes` /
+> `scaffoldSourceNodes` (scaffold lock, §6.5) are now wired.
 
 ---
 
