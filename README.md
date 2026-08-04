@@ -106,7 +106,7 @@ why. Each document follows **What → How → Why → Trade-offs**.
 - **[05 — Design Decisions & Trade-offs](docs/question-platform-hardening/05-design-decisions-and-tradeoffs.md)** — a consolidated decision log (D1–D19) with the criteria behind each choice
 - **[06 — Grading-Safe Persistence & the Evaluation Envelope](docs/question-platform-hardening/06-grading-safe-persistence-and-the-evaluation-envelope.md)** — the immutable, tamper-evident submission record: integrity checksum, replay digest, append-only archive
 - **[07 — Production Embed Runtime & Origin Security](docs/question-platform-hardening/07-production-embed-runtime-and-origin-security.md)** — hardening the iframe seam: trusted-origin handshake, configured-allowlist-vs-TOFU, no wildcard for sensitive messages
-- **[08 — The Presentation Layer: EnvironmentProfile](docs/question-platform-hardening/08-environment-profile-presentation-layer.md)** — the visibility + capability lens (AUTHOR/INTERVIEW/LEARN) over one QuestionPackage: presets, safe resolver, applied gates
+- **[08 — The Presentation Layer: EnvironmentProfile](docs/question-platform-hardening/08-environment-profile-presentation-layer.md)** — the visibility + capability lens (AUTHOR/ASSIGNMENT/PRACTICE) over one QuestionPackage: presets, safe resolver, applied gates
 
 ## Canonical Catalogue
 

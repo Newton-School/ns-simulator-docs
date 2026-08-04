@@ -23,8 +23,8 @@ forking the question or the grader.
 ```
 QuestionPackage("Design a URL shortener")
   + EnvironmentProfile(AUTHOR)    → authoring / testing surface
-  + EnvironmentProfile(INTERVIEW) → graded contest, rubric hidden until submit
-  + EnvironmentProfile(LEARN)     → self-paced practice, live feedback, ungraded
+  + EnvironmentProfile(ASSIGNMENT) → graded contest, rubric hidden until submit
+  + EnvironmentProfile(PRACTICE)     → self-paced practice, live feedback, ungraded
 ```
 
 ---
@@ -35,7 +35,7 @@ QuestionPackage("Design a URL shortener")
 
 ```ts
 interface EnvironmentProfile {
-  mode: 'AUTHOR' | 'INTERVIEW' | 'LEARN'
+  mode: 'AUTHOR' | 'ASSIGNMENT' | 'PRACTICE'
   visibility: {
     prompt: boolean
     scaffoldSourceNodes: boolean
@@ -61,7 +61,7 @@ they can *do*) — plus `graded` and `chromeDensity`.
 
 ## 3. The three presets
 
-| Field | AUTHOR | INTERVIEW | LEARN |
+| Field | AUTHOR | ASSIGNMENT | PRACTICE |
 |-------|--------|-----------|-------|
 | `visibility.rubricChecks` | LIVE_DURING_BUILD | **POST_SUBMIT_ONLY** | LIVE_DURING_BUILD |
 | `visibility.gradingSuiteDetails` | true | **false** | true |
@@ -79,15 +79,15 @@ want. This is a deliberate, documented deviation.
 
 ## 4. Resolving a profile — total and safe
 
-Hosts send either a mode string (`"INTERVIEW"`) or a partial override
-(`{ mode: 'INTERVIEW', capabilities: { maxTestRuns: 1 } }`). `resolveEnvironmentProfile`
+Hosts send either a mode string (`"ASSIGNMENT"`) or a partial override
+(`{ mode: 'ASSIGNMENT', capabilities: { maxTestRuns: 1 } }`). `resolveEnvironmentProfile`
 turns *anything* — including `unknown` / malformed input — into a complete
 profile:
 
 ```ts
 resolveEnvironmentProfile()                              // → AUTHOR (default)
-resolveEnvironmentProfile('LEARN')                       // → LEARN preset
-resolveEnvironmentProfile({ mode: 'LEARN', graded: true })// → LEARN, graded flipped
+resolveEnvironmentProfile('PRACTICE')                       // → PRACTICE preset
+resolveEnvironmentProfile({ mode: 'PRACTICE', graded: true })// → PRACTICE, graded flipped
 resolveEnvironmentProfile(42)                            // → AUTHOR (safe fallback)
 ```
 
@@ -102,7 +102,7 @@ keys are stripped, so a richer future host payload still resolves.
 
 ```mermaid
 flowchart LR
-  Host["Host launch-context<br/>environmentProfile: 'INTERVIEW'"] --> WL[WorkspaceLayout]
+  Host["Host launch-context<br/>environmentProfile: 'ASSIGNMENT'"] --> WL[WorkspaceLayout]
   WL -->|resolveEnvironmentProfile| Store[(store.environmentProfile)]
   Store --> QP[QuestionPanel gates]
 ```
@@ -129,15 +129,15 @@ Applied in `QuestionPanel`:
 
 | Gate | Behaviour |
 |------|-----------|
-| **Rubric timing** | In INTERVIEW the checklist + summary are masked ("revealed after you submit") until a submission exists; HIDDEN hides them entirely; LIVE shows them as before. |
+| **Rubric timing** | In ASSIGNMENT the checklist + summary are masked ("revealed after you submit") until a submission exists; HIDDEN hides them entirely; LIVE shows them as before. |
 | **Test-run limit** | The Test button disables at the cap and shows "N left"; unlimited modes show no suffix. |
-| **Graded submit** | The Submit button only renders when `graded` — LEARN has no submit-for-grade, and only graded modes seal + archive an envelope. |
+| **Graded submit** | The Submit button only renders when `graded` — PRACTICE has no submit-for-grade, and only graded modes seal + archive an envelope. |
 | **Prompt visibility** | When `visibility.prompt` is false the Brief tab and its content are hidden and the panel shows Tests only. |
-| **Palette allowlist** | `capabilities.editPaletteList` filters the component library (`LibrarySidebar`) to the allowed node types/ids; `null` = all. Curates the palette for INTERVIEW. |
-| **Chrome density** | `chromeDensity: 'minimal'` drops the authoring file operations (Open/Save/Auto-Layout + file status) from the header for a cleaner INTERVIEW/LEARN surface. |
+| **Palette allowlist** | `capabilities.editPaletteList` filters the component library (`LibrarySidebar`) to the allowed node types/ids; `null` = all. Curates the palette for ASSIGNMENT. |
+| **Chrome density** | `chromeDensity: 'minimal'` drops the authoring file operations (Open/Save/Auto-Layout + file status) from the header for a cleaner ASSIGNMENT/PRACTICE surface. |
 | **Scaffold lock** | `capabilities.canEditScaffoldNodes: false` locks the question's scaffold nodes — the store drops their deletions and no-ops their edits (unbypassable); `visibility.scaffoldSourceNodes` badges them. See §6.5. |
 | **Live metrics** | `visibility.liveMetrics: false` suppresses the runtime metric overlays via one chokepoint (`useNodeMetrics` reports no runtime) and hides the metric-lens switcher/legend. |
-| **Grading-suite details** | `visibility.gradingSuiteDetails` (AND the author's `suite.visibleToStudent`) reveals a compact list of the suite cases + their condition overrides in the brief; hidden in INTERVIEW. |
+| **Grading-suite details** | `visibility.gradingSuiteDetails` (AND the author's `suite.visibleToStudent`) reveals a compact list of the suite cases + their condition overrides in the brief; hidden in ASSIGNMENT. |
 
 ### 6.5 Scaffold lock — provenance + unbypassable enforcement
 

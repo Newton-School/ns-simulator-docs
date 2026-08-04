@@ -560,7 +560,7 @@ lists AUTHOR as ungraded.
 **Why this choice.** AUTHOR doubles as the standalone dev/testing mode, where
 exercising the grade → seal → archive path is exactly what a setter needs.
 
-**Trade-off.** A documented divergence from the spec; INTERVIEW remains the
+**Trade-off.** A documented divergence from the spec; ASSIGNMENT remains the
 canonical graded contest mode.
 
 *See: doc 08, §3.*

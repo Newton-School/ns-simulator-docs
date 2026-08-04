@@ -120,7 +120,7 @@ It means the next tickets are not about inventing the platform from zero. They a
 
 **Why now**
 
-The rest of the student-mode product depends on a first-class environment lens. Without this, `LEARN`, `INTERVIEW`, and `AUTHOR` remain only document concepts.
+The rest of the student-mode product depends on a first-class environment lens. Without this, `PRACTICE`, `ASSIGNMENT`, and `AUTHOR` remain only document concepts.
 
 **Scope**
 
@@ -131,7 +131,7 @@ The rest of the student-mode product depends on a first-class environment lens. 
 
 **Acceptance criteria**
 
-- A question can be launched with `AUTHOR`, `INTERVIEW`, or `LEARN`.
+- A question can be launched with `AUTHOR`, `ASSIGNMENT`, or `PRACTICE`.
 - The active profile is available to all gating surfaces without prop-drilling.
 - If the host omits the profile, the runtime falls back safely to a deterministic default.
 
@@ -163,8 +163,8 @@ Environment profile data is useless until it actually changes what the learner c
 
 **Acceptance criteria**
 
-- `LEARN`, `INTERVIEW`, and `AUTHOR` render meaningfully different surfaces from the same `QuestionPackage`.
-- `INTERVIEW` hides grading-suite details.
+- `PRACTICE`, `ASSIGNMENT`, and `AUTHOR` render meaningfully different surfaces from the same `QuestionPackage`.
+- `ASSIGNMENT` hides grading-suite details.
 - `AUTHOR` retains full visibility.
 
 **Likely files**
@@ -316,8 +316,8 @@ Without curated results, student modes still feel like the full simulator and di
 
 **Acceptance criteria**
 
-- `LEARN` can show live high-signal feedback.
-- `INTERVIEW` can show only the intended dry-run or post-submit signals.
+- `PRACTICE` can show live high-signal feedback.
+- `ASSIGNMENT` can show only the intended dry-run or post-submit signals.
 - `AUTHOR` retains full trays and drilldowns.
 
 **Likely files**
@@ -540,7 +540,7 @@ The worked example should become a real runnable exemplar before expanding the f
 
 **Acceptance criteria**
 
-- The question can run in `LEARN` and `INTERVIEW`.
+- The question can run in `PRACTICE` and `ASSIGNMENT`.
 - It uses partial scaffold, curated palette, curated results, and layered evaluation.
 - Good and bad student attempts produce meaningfully different outcomes.
 
@@ -796,7 +796,7 @@ Django owns the student-facing launch decision: which question, which prior atte
 **Scope**
 
 - Resolve the active question package.
-- Resolve the appropriate environment profile (`LEARN`, `INTERVIEW`, `AUTHOR` preview).
+- Resolve the appropriate environment profile (`PRACTICE`, `ASSIGNMENT`, `AUTHOR` preview).
 - Attach prior attempt if one exists.
 - Normalize the payload sent to the iframe.
 
@@ -913,7 +913,7 @@ Django owns question authoring and needs explicit storage for which scenarios an
 
 **Acceptance criteria**
 
-- A setter can choose whether a question launches in `LEARN`, `INTERVIEW`, or author preview.
+- A setter can choose whether a question launches in `PRACTICE`, `ASSIGNMENT`, or author preview.
 - Scenario metadata is durable and editable in backend-owned UI.
 
 ### DJQ-09 — Assignment lifecycle integration for simulator questions

@@ -97,7 +97,7 @@ Mapping to the current `QuestionPackage` (see gap analysis, §8):
 
 | Schema part | Current field | Status |
 |-------------|---------------|--------|
-| meta.mode (lab/exam) | `EnvironmentProfile` LEARN/INTERVIEW | ✅ have |
+| meta.mode (lab/exam) | `EnvironmentProfile` PRACTICE/ASSIGNMENT | ✅ have |
 | prompt.FR / NFR / scale | `prompt.functionalRequirements` / `nonFunctionalRequirements` / `scale` | ✅ have |
 | scaffold | `scaffold` | ✅ have |
 | rubric (metric checks) | `rubric.checks` | ✅ have (simulation kind) |
@@ -155,6 +155,31 @@ faculty are explicit that some mistakes are *architecturally naive*, not merely
 
 `structural`, `placement`, `direction`, `fanout` all operate on **nodes *and*
 edges** — see §6 for why edges need their own defenses.
+
+### 4.1 Evaluation algorithms (implemented)
+
+The semantic axis ships in `src/engine/analysis/semanticCriteria.ts` —
+`evaluateSemanticCriteria(topology, criteria, ctx)`. Every evaluator is a
+deterministic graph computation over the submitted topology (the same BFS /
+reachability toolkit as `structural.ts`), returning `passed | partial | failed`
+plus a `detail` string. Points are awarded **full** (passed), **floor(points/2)**
+(partial), or **zero** (failed); a `hardFail` criterion that fails sets
+`hardFailed`, which drops the host contract's `allPassed`.
+
+| kind | Exact computation | Fails when |
+|------|-------------------|-----------|
+| **guardedPath** (`from`,`guard`,`to?`) | Confirm `to` is reachable from `from` on the directed graph; then **rebuild the graph with the guard nodes removed** and re-run reachability. | A `from→to` path survives guard removal (an unguarded **bypass** exists), or `from`/`guard`/`to` is missing, or `from`→`to` is unreachable even with the guard. When `to` is omitted: fails if the guard isn't reachable from `from`. |
+| **placement** (`between?`,`notBefore?`,`orderedPipeline?`) | `between[A,B]`: some component node is reachable from an `A` **and** reaches a `B`. `notBefore X`: no component node reaches an `X`. `orderedPipeline[T₁..Tₙ]`: layered reachability — the frontier of `Tᵢ` nodes must reach a `Tᵢ₊₁` node at each stage. | The component is absent, or off the A→B path, or upstream of a `notBefore` type, or the pipeline order breaks. |
+| **fanout** (`broker`,`minConsumers`,`forbiddenBroker?`) | For each `broker` node, count **distinct** out-edge targets; pass if any ≥ `minConsumers`. | No broker meets the count. If a `forbiddenBroker` node (queue semantics) meets the count instead, fail with the "queue ≠ fan-out" detail (the hard-fail case). |
+| **storageFit** (`accessPattern`,`accept`,`partial?`,`antiPattern?`) | Classify the store types **present** in the graph: any `antiPattern` present → fail; else any `accept` present → pass; else any `partial` present → partial; else fail. | An anti-pattern store is present (e.g. `relational-db` at a point-lookup), or no fitting store exists. |
+| **forbidUnjustified** (`componentType`,`justifyId?`) | Absent ⇒ pass. Present ⇒ pass only if `ctx.justificationPassed(justifyId)` is `true`. | Present with no bound justification, or an undefended/unevaluated justification (conservative: undefined justification result ⇒ fail). |
+
+**Ordering & dependency.** Semantic criteria run **after** the structural gate
+passes (a structurally-broken topology short-circuits before simulation *and*
+semantics). The `forbidUnjustified` evaluator's justification lookup is injected
+via `SemanticContext`, so the module stays pure and unit-tested; until graded
+justification answers are threaded in (Phase 2b), a present-but-undefended
+component conservatively fails.
 
 ---
 
@@ -258,10 +283,13 @@ config* side: realistic ceilings + cost (§4, §6).
 
 ### 7.3 The two missing levers + load faithfulness
 
-Two levers make all of the above robust and are **not built yet**: a
-**graph-consistent justification** (§5) and a **cost/budget model** (§4, already
-specced in `cost-calculation-and-budgeting.md`). This analysis reframes both as
-**anti-gaming infrastructure**, not just features.
+Two levers make all of the above robust: a **graph-consistent justification**
+(§5) — now **implemented** (`justification.ts`; UI answer capture is the only
+remaining piece, Phase 2b) — and a **cost/budget model** (§4, specced in
+`cost-calculation-and-budgeting.md`) — **still to build** (the `budget` axis).
+This analysis reframes both as **anti-gaming infrastructure**, not just features.
+(The scale-fit semantic checks that back several rows above — `guardedPath`,
+`storageFit`, `fanout`, `placement` — are now implemented too; see §4.1.)
 
 **Load faithfulness.** For metric-tuning to be un-gameable, a single node/edge
 must **realistically break at its limit** — a single SQL node must not absorb
@@ -276,7 +304,7 @@ time-weighted integrals) — a lenient/averaged metric is itself a gaming surfac
 | Capability | Status | Note |
 |------------|--------|------|
 | Question schema (prompt/scaffold/suite/rubric/constraints) | ✅ have | `QuestionPackage` |
-| Lab vs Exam mode | ✅ have | `EnvironmentProfile` LEARN/INTERVIEW; hints + timer are the only gaps |
+| Lab vs Exam mode | ✅ have | `EnvironmentProfile` PRACTICE/ASSIGNMENT; hints + timer are the only gaps |
 | Simulation-metric checks | ✅ have | `rubric.checks` |
 | Structural presence/path checks | ✅ have | `structuralRules` |
 | Hard-fail vs partial + weighted points | ⚠️ extend | need explicit `hardFail` overrides-all + point allocation |
@@ -296,12 +324,25 @@ time-weighted integrals) — a lenient/averaged metric is itself a gaming surfac
 
 ## 9. Phased plan
 
-1. **Lock the schema** — extend `QuestionPackage` with `justify[]`, `budget`,
-   weighted/`hardFail` rubric, and the new check *kinds as typed contracts* (no
-   grading logic yet). Small, high-leverage, unblocks everything.
-2. **Graph-consistent justification** (§5) — the biggest anti-gaming lever.
-3. **Scale-fit semantic checks** — `storageFit`, `fanout`, `placement`,
-   `direction`. Pure, testable, scale-aware; cover node **and** edge exploits.
+1. ✅ **Lock the schema** — `gradingCriteria.ts` adds the semantic-criterion
+   union, `JustifyPrompt`, `Budget`, `AccessPattern`, `WorkloadCategory` as typed
+   contracts + Zod; `QuestionPackage` gains optional `semanticCriteria` / `justify`
+   / `budget` / `workloadCategory` (non-breaking).
+2. ✅ **Graph-consistent justification** (§5) — `justification.ts` grades each
+   prompt deterministically: the **graph-consistency gate** (the answer must
+   reference the component actually in the student's graph, else fail — this is
+   what defeats keyword-stuffing), plus number-citation and tradeoff for graded
+   credit. Pure/injectable (`JustificationContext`), fully unit-tested. *Remaining
+   for this axis:* store the student's answers on the attempt/submission and wire
+   the text fields in the UI (Phase 2b).
+3. ✅ **Scale-fit semantic checks** — `semanticCriteria.ts` implements all five
+   evaluators (`guardedPath`, `placement`, `fanout`, `storageFit`,
+   `forbidUnjustified`) as pure graph computations, aggregates points
+   (full/partial/zero) with `hardFail` support, and is wired into `gradeAttempt`
+   (surfaced as `topology.semantic.*` host-contract rows). See §4.1 for the
+   algorithms. *Remaining for this axis:* thread graded justification results
+   into `forbidUnjustified` (depends on Phase 2b answer capture); optionally zero
+   the total rubric score on a semantic `hardFail`.
 4. **Cost / budget model** — wire `cost-calculation-and-budgeting` as the
    `budget` axis (anti-kitchen-sink for nodes and edges).
 5. **Scale → simulation-workload derivation + ceiling faithfulness** — make the
