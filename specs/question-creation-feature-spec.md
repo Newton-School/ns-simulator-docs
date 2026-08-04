@@ -315,7 +315,7 @@ Scenarios run **sequentially** in the same process (the engine is deterministic 
 
 - **NS Simulator side:** A new `evaluate` command in `src/cli/` that accepts `--scenarios` and orchestrates batch execution. Reuses the existing `SimulationEngine` and `validateTopology`.
 - **Shared layer:** A `ScenarioOverride` type and a `mergeTopologyWithOverrides(base, overrides)` utility.
-- **Backend side:** A Celery task that invokes `nssim evaluate` as a subprocess, reads the JSON output, and stores results. Lives in Django, not in ns-simulator.
+- **Backend side (later version — not V1):** A Celery task that invokes `nssim evaluate` as a subprocess, reads the JSON output, and stores results. Lives in Django, not in ns-simulator. **In the current version the backend does NOT do this** — grading runs entirely in the browser (the iframe), and newton-api stores the client-reported result verbatim via the Game Playground rails. Server-side re-grading with this Celery task is the deferred anti-gaming lever. See `newton-api-backend-integration.md` (§0, §6).
 
 ### Explored in
 
