@@ -610,7 +610,7 @@ The environment layer is not a separate product — it's a **capability and visi
 ```typescript
 interface EnvironmentProfile {
   /** The operating mode. */
-  mode: 'AUTHOR' | 'INTERVIEW' | 'LEARN'
+  mode: 'AUTHOR' | 'ASSIGNMENT' | 'PRACTICE'
   
   /** What the student can see. */
   visibility: {
@@ -621,7 +621,7 @@ interface EnvironmentProfile {
     scaffoldSourceNodes: boolean
     
     /** Show the detailed grading suite scenarios. */
-    gradingSuiteDetails: boolean   // true in LEARN, false in INTERVIEW
+    gradingSuiteDetails: boolean   // true in PRACTICE, false in ASSIGNMENT
     
     /** Show live RPS/metrics while building (before submit). */
     liveMetrics: boolean
@@ -655,7 +655,7 @@ interface EnvironmentProfile {
 
 ### 3.2 The Three Modes
 
-| Aspect | AUTHOR (Today's full UI) | INTERVIEW (Contest/Evaluation) | LEARN (Minimal guided) |
+| Aspect | AUTHOR (Today's full UI) | ASSIGNMENT (Contest/Evaluation) | PRACTICE (Minimal guided) |
 |--------|--------------------------|-------------------------------|----------------------|
 | **Palette** | The full palette (~60 node types) | Curated allowlist per question | Curated + explanations |
 | **Prompt** | Not shown (author is the setter) | FR/NFR panel visible | Prompt + guided hints |
@@ -666,7 +666,7 @@ interface EnvironmentProfile {
 | **Grading** | Not graded | Graded on submit → score | Not graded, streamlined |
 | **Chrome** | Full panels, debugger, terminal | Clean interview panel | Minimal, distraction-free |
 
-> **Key insight:** Mode 2 (INTERVIEW) and Mode 3 (LEARN) differ primarily in `graded` + `rubricChecks` + `chromeDensity`. They share the same underlying content and grading pipeline — the environment profile just controls what's exposed.
+> **Key insight:** Mode 2 (ASSIGNMENT) and Mode 3 (PRACTICE) differ primarily in `graded` + `rubricChecks` + `chromeDensity`. They share the same underlying content and grading pipeline — the environment profile just controls what's exposed.
 
 ### 3.3 Environment Applied to Question Types
 
@@ -674,8 +674,8 @@ The same `QuestionPackage` can be deployed in different environments by swapping
 
 ```
 QuestionPackage("Design a URL shortener")
-  ├── + EnvironmentProfile(INTERVIEW) → Graded contest question
-  ├── + EnvironmentProfile(LEARN)     → Self-paced learning exercise
+  ├── + EnvironmentProfile(ASSIGNMENT) → Graded contest question
+  ├── + EnvironmentProfile(PRACTICE)     → Self-paced learning exercise
   └── + EnvironmentProfile(AUTHOR)    → Question authoring/testing mode
 ```
 
@@ -812,8 +812,8 @@ These five decisions were evaluated and resolved to maintain momentum while keep
 
 | Mode | Rubric visibility |
 |------|------------------|
-| LEARN | `LIVE_DURING_BUILD` — checks turn green/red as student designs, tight feedback loop |
-| INTERVIEW | `HIDDEN` or `POST_SUBMIT_ONLY` — forces reasoning about design constraints |
+| PRACTICE | `LIVE_DURING_BUILD` — checks turn green/red as student designs, tight feedback loop |
+| ASSIGNMENT | `HIDDEN` or `POST_SUBMIT_ONLY` — forces reasoning about design constraints |
 | AUTHOR | Full visibility — sees all checks and how they evaluate |
 
 **Rationale:** Learning benefits from immediate feedback. Evaluation benefits from forcing the student to reason without hints. The same rubric works in both modes — only the visibility changes.
@@ -822,7 +822,7 @@ These five decisions were evaluated and resolved to maintain momentum while keep
 
 **Resolution: Yes, use a hidden grading suite.**
 
-**Design:** In INTERVIEW mode, the student gets a "Dry Run" button that tests against a representative load (e.g., 50% of peak). On Submit, the system evaluates against the full, hidden grading suite (including failure conditions).
+**Design:** In ASSIGNMENT mode, the student gets a "Dry Run" button that tests against a representative load (e.g., 50% of peak). On Submit, the system evaluates against the full, hidden grading suite (including failure conditions).
 
 **Rationale:** Prevents students from "over-fitting" their design to pass a specific visible test. The dry-run gives enough signal to iterate without revealing the exact grading criteria.
 
@@ -918,7 +918,7 @@ The Game Playground host (the Newton platform iframe wrapper) only understands a
 
 | Game Playground concept | NS Simulator equivalent |
 |---|---|
-| Iframe-hosted simulator | NS Simulator embedded in `INTERVIEW` or `LEARN` environment mode |
+| Iframe-hosted simulator | NS Simulator embedded in `ASSIGNMENT` or `PRACTICE` environment mode |
 | Seeded starting state | `QuestionPackage.scaffold` (the topology the student opens) |
 | Durable attempt-state blob | `AttemptState` (JSON envelope — student topology, status, timestamps) |
 | N test cases, each with a boolean pass/fail | `GradedEvaluationBatch.cases[]` — each case has `ran` and `rubric.passed` |

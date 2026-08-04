@@ -560,7 +560,7 @@ lists AUTHOR as ungraded.
 **Why this choice.** AUTHOR doubles as the standalone dev/testing mode, where
 exercising the grade → seal → archive path is exactly what a setter needs.
 
-**Trade-off.** A documented divergence from the spec; INTERVIEW remains the
+**Trade-off.** A documented divergence from the spec; ASSIGNMENT remains the
 canonical graded contest mode.
 
 *See: doc 08, §3.*
@@ -622,9 +622,12 @@ These were consciously deferred, not overlooked:
   (not just the digest).
 - ~~**`EnvironmentProfile`** (the presentation layer: author / contest / learn) —
   the fourth layer in the mental model, still to be built.~~ ✅ **Core built** — see
-  [doc 08](08-environment-profile-presentation-layer.md) (D23–D25). *Remaining:*
-  apply the deferred fields (palette allowlist, canvas scaffold-lock, chromeDensity
-  layouts, live-metrics/suite-detail gating) and host lifecycle commands.
+  [doc 08](08-environment-profile-presentation-layer.md) (D23–D25); palette
+  allowlist, chromeDensity, scaffold-lock (node provenance +
+  `canEditScaffoldNodes`/`scaffoldSourceNodes`), the host lifecycle commands
+  (`reset`/`lock`/`reveal`), and live-metrics + grading-suite-detail gating are all
+  applied now — **every profile field is wired** (doc 08 §6–§7). Deeper polish
+  (richer minimal chrome, scaffold drag-lock) remains optional.
 - **Authoring/distribution model** beyond the local sample question.
 
 *See the architecture spec

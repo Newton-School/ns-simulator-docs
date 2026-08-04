@@ -27,7 +27,7 @@ This is intentionally more concrete than [system-design-leetcode-environment-mod
 The purpose of this document is to answer three questions before implementation:
 
 1. What is a good example of a simulator-native system design problem?
-2. How should that problem be exposed differently in `LEARN`, `INTERVIEW`, and `AUTHOR` environments?
+2. How should that problem be exposed differently in `PRACTICE`, `ASSIGNMENT`, and `AUTHOR` environments?
 3. How do we evaluate the submission behaviorally and structurally without collapsing into snapshot topology matching?
 
 This document assumes the current date is July 28, 2026 and uses the current example assets already present in the repo:
@@ -99,7 +99,7 @@ This worked example follows the core separation used throughout the question-pla
 | Layer | Role in this example |
 |---|---|
 | `QuestionPackage` | defines the prompt, scaffold, constraints, suite, and rubric |
-| `EnvironmentProfile` | determines whether the problem is shown as `LEARN`, `INTERVIEW`, or `AUTHOR` |
+| `EnvironmentProfile` | determines whether the problem is shown as `PRACTICE`, `ASSIGNMENT`, or `AUTHOR` |
 | `AttemptState` | stores the student topology, test-run count, and grade state |
 
 The important product rule is:
@@ -114,11 +114,11 @@ This same problem should be deployable in three modes.
 
 | Mode | Primary goal | Student experience |
 |---|---|---|
-| `LEARN` | concept acquisition | guided, curated, explanatory |
-| `INTERVIEW` | evaluation signal | constrained, quieter, less revealing |
+| `PRACTICE` | concept acquisition | guided, curated, explanatory |
+| `ASSIGNMENT` | evaluation signal | constrained, quieter, less revealing |
 | `AUTHOR` | question verification | unrestricted preview of the problem |
 
-### `LEARN`
+### `PRACTICE`
 
 - Prompt visible
 - Scaffold visibly marked
@@ -128,7 +128,7 @@ This same problem should be deployable in three modes.
 - Curated result cards
 - Editorial unlocked after completion
 
-### `INTERVIEW`
+### `ASSIGNMENT`
 
 - Prompt visible
 - Scaffold visible but fixed
@@ -158,7 +158,7 @@ This example uses the following isolation levers.
 | Locked scaffold | fixed source and API gateway | removes edge-ingress churn from the learning objective |
 | Editability | scaffold nodes are not removable or editable in student modes | prevents wasting time on the wrong layer |
 | Curated results | summary, service tier, cache / replica / primary DB / queue cards | shows only the components that matter to the lesson |
-| Feedback timing | live in `LEARN`, post-submit in `INTERVIEW` | supports learning without trivializing contest mode |
+| Feedback timing | live in `PRACTICE`, post-submit in `ASSIGNMENT` | supports learning without trivializing contest mode |
 | Structural invariants | broad family checks, not exact graph equality | constrains the solution family without nitpicking |
 | Budget box | node count and worker ceiling | makes overbuilding visible and bounded |
 
@@ -216,8 +216,8 @@ These constrain how the student can explore and what is shown while doing so.
 
 For this example:
 
-- `LEARN` allows live testing and live rubric feedback
-- `INTERVIEW` allows only a small number of dry runs
+- `PRACTICE` allows live testing and live rubric feedback
+- `ASSIGNMENT` allows only a small number of dry runs
 - full traces and raw suite details are withheld from student modes
 
 ### Anti-goals
@@ -248,11 +248,11 @@ interface LaunchContextPayload {
 }
 ```
 
-### Example `LEARN` profile
+### Example `PRACTICE` profile
 
 ```json
 {
-  "mode": "LEARN",
+  "mode": "PRACTICE",
   "visibility": {
     "prompt": true,
     "scaffoldSourceNodes": true,
@@ -277,11 +277,11 @@ interface LaunchContextPayload {
 }
 ```
 
-### Example `INTERVIEW` profile
+### Example `ASSIGNMENT` profile
 
 ```json
 {
-  "mode": "INTERVIEW",
+  "mode": "ASSIGNMENT",
   "visibility": {
     "prompt": true,
     "scaffoldSourceNodes": true,
@@ -338,7 +338,7 @@ interface LaunchContextPayload {
 | `FlowCanvas` | locks scaffold nodes and edges, enforces max node count |
 | `PropertiesPanel` | renders scaffold nodes read-only in student modes |
 | `QuestionPanel` | hides or disables dry-run controls based on `canTriggerTestRuns` and `maxTestRuns` |
-| `ResultsTray` | switches to curated student view in `LEARN` and `INTERVIEW` |
+| `ResultsTray` | switches to curated student view in `PRACTICE` and `ASSIGNMENT` |
 
 ### 2. Palette allowlist and scaffold locks
 
@@ -360,8 +360,8 @@ The student does not need the entire family exposed as drag-and-drop tiles becau
 
 | Surface | Exposed palette |
 |---|---|
-| `LEARN` | `load-balancer-l7`, `microservice`, `in-memory-cache`, `relational-db`, `queue` |
-| `INTERVIEW` | same as `LEARN` |
+| `PRACTICE` | `load-balancer-l7`, `microservice`, `in-memory-cache`, `relational-db`, `queue` |
+| `ASSIGNMENT` | same as `PRACTICE` |
 | `AUTHOR` | full palette |
 
 ### Scaffold
@@ -408,15 +408,15 @@ In student modes, the results surface should show only:
 
 - raw trace explorer
 - full per-edge debugging
-- entire suite case definitions in `INTERVIEW`
+- entire suite case definitions in `ASSIGNMENT`
 - full author diagnostics
 
 ### Feedback timing
 
 | Mode | Dry-run feedback | Submit feedback |
 |---|---|---|
-| `LEARN` | live metrics + live rubric checks | full summary + explanation |
-| `INTERVIEW` | curated metrics only, limited runs | post-submit rubric only |
+| `PRACTICE` | live metrics + live rubric checks | full summary + explanation |
+| `ASSIGNMENT` | curated metrics only, limited runs | post-submit rubric only |
 | `AUTHOR` | full live everything | full author view |
 
 ### 4. Structural invariant checks

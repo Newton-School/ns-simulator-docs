@@ -460,7 +460,7 @@ export interface ResourceCriterion extends CriterionBase {
 
 ```ts
 export interface EvaluationEnvironmentPolicy {
-  mode: 'AUTHOR' | 'INTERVIEW' | 'LEARN'
+  mode: 'AUTHOR' | 'ASSIGNMENT' | 'PRACTICE'
 
   paletteAllowlist: string[] | null
 

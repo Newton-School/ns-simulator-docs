@@ -129,10 +129,10 @@ in the platform.
 
 ## 8. What is intentionally *not* done yet
 
-- **Host-driven lifecycle commands.** The host can launch and receive results,
-  but there is no inbound `reset` / `lock` / `reveal` command set for the host to
-  drive the attempt lifecycle mid-session. That pairs naturally with the
-  still-unbuilt `EnvironmentProfile` layer.
+- ~~**Host-driven lifecycle commands.**~~ ✅ **Added** — the host can drive the
+  attempt mid-session with an origin-validated `ns-simulator:command`
+  (`reset`/`lock`/`reveal`); see
+  [doc 08 §6.6](08-environment-profile-presentation-layer.md).
 - **Frame sandboxing / CSP.** Origin trust is enforced at the message layer;
   `sandbox` attributes and a `frame-ancestors` CSP on the host are complementary
   and out of scope here.

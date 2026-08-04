@@ -23,8 +23,8 @@ forking the question or the grader.
 ```
 QuestionPackage("Design a URL shortener")
   + EnvironmentProfile(AUTHOR)    → authoring / testing surface
-  + EnvironmentProfile(INTERVIEW) → graded contest, rubric hidden until submit
-  + EnvironmentProfile(LEARN)     → self-paced practice, live feedback, ungraded
+  + EnvironmentProfile(ASSIGNMENT) → graded contest, rubric hidden until submit
+  + EnvironmentProfile(PRACTICE)     → self-paced practice, live feedback, ungraded
 ```
 
 ---
@@ -35,7 +35,7 @@ QuestionPackage("Design a URL shortener")
 
 ```ts
 interface EnvironmentProfile {
-  mode: 'AUTHOR' | 'INTERVIEW' | 'LEARN'
+  mode: 'AUTHOR' | 'ASSIGNMENT' | 'PRACTICE'
   visibility: {
     prompt: boolean
     scaffoldSourceNodes: boolean
@@ -61,7 +61,7 @@ they can *do*) — plus `graded` and `chromeDensity`.
 
 ## 3. The three presets
 
-| Field | AUTHOR | INTERVIEW | LEARN |
+| Field | AUTHOR | ASSIGNMENT | PRACTICE |
 |-------|--------|-----------|-------|
 | `visibility.rubricChecks` | LIVE_DURING_BUILD | **POST_SUBMIT_ONLY** | LIVE_DURING_BUILD |
 | `visibility.gradingSuiteDetails` | true | **false** | true |
@@ -79,15 +79,15 @@ want. This is a deliberate, documented deviation.
 
 ## 4. Resolving a profile — total and safe
 
-Hosts send either a mode string (`"INTERVIEW"`) or a partial override
-(`{ mode: 'INTERVIEW', capabilities: { maxTestRuns: 1 } }`). `resolveEnvironmentProfile`
+Hosts send either a mode string (`"ASSIGNMENT"`) or a partial override
+(`{ mode: 'ASSIGNMENT', capabilities: { maxTestRuns: 1 } }`). `resolveEnvironmentProfile`
 turns *anything* — including `unknown` / malformed input — into a complete
 profile:
 
 ```ts
 resolveEnvironmentProfile()                              // → AUTHOR (default)
-resolveEnvironmentProfile('LEARN')                       // → LEARN preset
-resolveEnvironmentProfile({ mode: 'LEARN', graded: true })// → LEARN, graded flipped
+resolveEnvironmentProfile('PRACTICE')                       // → PRACTICE preset
+resolveEnvironmentProfile({ mode: 'PRACTICE', graded: true })// → PRACTICE, graded flipped
 resolveEnvironmentProfile(42)                            // → AUTHOR (safe fallback)
 ```
 
@@ -102,7 +102,7 @@ keys are stripped, so a richer future host payload still resolves.
 
 ```mermaid
 flowchart LR
-  Host["Host launch-context<br/>environmentProfile: 'INTERVIEW'"] --> WL[WorkspaceLayout]
+  Host["Host launch-context<br/>environmentProfile: 'ASSIGNMENT'"] --> WL[WorkspaceLayout]
   WL -->|resolveEnvironmentProfile| Store[(store.environmentProfile)]
   Store --> QP[QuestionPanel gates]
 ```
@@ -129,28 +129,82 @@ Applied in `QuestionPanel`:
 
 | Gate | Behaviour |
 |------|-----------|
-| **Rubric timing** | In INTERVIEW the checklist + summary are masked ("revealed after you submit") until a submission exists; HIDDEN hides them entirely; LIVE shows them as before. |
+| **Rubric timing** | In ASSIGNMENT the checklist + summary are masked ("revealed after you submit") until a submission exists; HIDDEN hides them entirely; LIVE shows them as before. |
 | **Test-run limit** | The Test button disables at the cap and shows "N left"; unlimited modes show no suffix. |
-| **Graded submit** | The Submit button only renders when `graded` — LEARN has no submit-for-grade, and only graded modes seal + archive an envelope. |
+| **Graded submit** | The Submit button only renders when `graded` — PRACTICE has no submit-for-grade, and only graded modes seal + archive an envelope. |
 | **Prompt visibility** | When `visibility.prompt` is false the Brief tab and its content are hidden and the panel shows Tests only. |
+| **Palette allowlist** | `capabilities.editPaletteList` filters the component library (`LibrarySidebar`) to the allowed node types/ids; `null` = all. Curates the palette for ASSIGNMENT. |
+| **Chrome density** | `chromeDensity: 'minimal'` drops the authoring file operations (Open/Save/Auto-Layout + file status) from the header for a cleaner ASSIGNMENT/PRACTICE surface. |
+| **Scaffold lock** | `capabilities.canEditScaffoldNodes: false` locks the question's scaffold nodes — the store drops their deletions and no-ops their edits (unbypassable); `visibility.scaffoldSourceNodes` badges them. See §6.5. |
+| **Live metrics** | `visibility.liveMetrics: false` suppresses the runtime metric overlays via one chokepoint (`useNodeMetrics` reports no runtime) and hides the metric-lens switcher/legend. |
+| **Grading-suite details** | `visibility.gradingSuiteDetails` (AND the author's `suite.visibleToStudent`) reveals a compact list of the suite cases + their condition overrides in the brief; hidden in ASSIGNMENT. |
+
+### 6.5 Scaffold lock — provenance + unbypassable enforcement
+
+`canEditScaffoldNodes` and `scaffoldSourceNodes` needed a **node-provenance**
+mechanism first: a node is "scaffold-provided" iff its id is in the active
+question's partial-scaffold topology. That set (`scaffoldNodeIds`) is derived
+canonically in the store's `setActiveQuestion`, so it is independent of whatever a
+resumed attempt happened to load.
+
+Enforcement lives at the **store chokepoints**, not the UI, so no interaction path
+can bypass it:
+
+- `onNodesChange` drops `remove` changes for a locked scaffold node.
+- `updateNodeData` no-ops for a locked scaffold node.
+
+A node is *locked* when it is a scaffold node **and** the profile's
+`canEditScaffoldNodes` is false. The cues: `BaseNode` shows a **lock badge** on
+locked nodes (and a subtler "scaffold" badge when `scaffoldSourceNodes` is on but
+editing is allowed), and the properties panel shows a **locked banner**.
+
+Dragging a locked node is left free — position is cosmetic and doesn't affect
+grading.
+
+### 6.6 Host lifecycle commands — `reset` / `lock` / `reveal`
+
+The profile decides the *initial* posture; the host can drive the attempt
+mid-session with a single origin-validated inbound message
+(`ns-simulator:command`, `command: 'reset' | 'lock' | 'reveal'`), parsed by
+`parseQuestionCommandMessage` and handled in `WorkspaceLayout` **only after the
+launch handshake locked a trusted origin** (doc 07):
+
+- **`reveal`** — force rubric results visible regardless of the profile's timing
+  (a store `resultsRevealed` flag OR-ed into `shouldShowRubricResults`). Used to
+  release results after a contest ends.
+- **`lock`** — freeze the attempt (`lockAttempt` → status `LOCKED`). Test/Submit
+  disable, autosave stops, and the **whole canvas freezes** — the same store
+  chokepoints that enforce the scaffold lock (§6.5) also block *all*
+  delete/edit/add while `LOCKED`. Used at "time's up."
+- **`reset`** — reload the scaffold topology and start a fresh, unlocked `DRAFT`
+  attempt (clearing reveal). Used to let a student start over.
+
+`reset` and `reveal` clear on the next launch and on question close, so a reused
+frame never carries stale lifecycle state.
 
 ---
 
-## 7. What is intentionally *not* applied yet
+## 7. Coverage — every field is now applied
 
-These fields exist in the contract but their UI application is deferred (this slice
-was scoped to the highest-signal gates):
+The layer started as a typed contract with only the highest-signal gates wired
+(§6); the rest were applied in follow-up slices. **All `EnvironmentProfile` fields
+are now respected in the UI:**
 
-- **`capabilities.editPaletteList`** — palette allowlist filtering.
-- **`capabilities.canEditScaffoldNodes`** — locking scaffold nodes on the canvas.
-- **`chromeDensity`** — full vs minimal panel layouts.
-- **`visibility.liveMetrics` / `scaffoldSourceNodes` / `gradingSuiteDetails`** —
-  the corresponding surfaces aren't gated yet.
-- **Host-driven lifecycle commands** (`reset` / `lock` / `reveal`) — the profile
-  covers reveal-timing; explicit host commands are still open (doc 07 §8).
+| Field | Where |
+|-------|-------|
+| `visibility.prompt` / `rubricChecks` | §6 (brief tab, rubric timing) |
+| `visibility.liveMetrics` | §6 (metric overlays + lens switcher) |
+| `visibility.gradingSuiteDetails` | §6 (grading-suite section) |
+| `visibility.scaffoldSourceNodes` | §6.5 (scaffold badge) |
+| `capabilities.editPaletteList` | §6 (palette allowlist) |
+| `capabilities.canEditScaffoldNodes` | §6.5 (scaffold lock) |
+| `capabilities.canTriggerTestRuns` / `maxTestRuns` | §6 (test-run gate) |
+| `graded` | §6 (graded submit) |
+| `chromeDensity` | §6 (minimal header) |
+| host lifecycle (`reset`/`lock`/`reveal`) | §6.6 |
 
-The contract is complete, so these become "apply an existing flag" follow-ups, not
-redesigns.
+Deeper follow-ups remain possible (e.g. richer minimal-chrome layouts, or locking
+scaffold-node *dragging*), but no field is unwired.
 
 ---
 

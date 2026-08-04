@@ -77,7 +77,7 @@ This means:
 - the learner should be constrained by the environment, not by hidden nitpicks
 - the grading should prefer behavioral correctness and coarse structural validity over exact graph matching
 - the question should isolate one concept family at a time
-- the same question content should be deployable in `LEARN`, `INTERVIEW`, and `AUTHOR` modes
+- the same question content should be deployable in `PRACTICE`, `ASSIGNMENT`, and `AUTHOR` modes
 
 This is the product move that makes "LeetCode for system design" viable.
 
@@ -109,13 +109,13 @@ The environment mode is a teaching lens, not a different question type.
 
 | Mode | Purpose | Palette | Feedback | Results | Grading |
 |---|---|---|---|---|---|
-| `LEARN` | Teach one concept with low pressure | tightly curated | live or near-live | curated and explanatory | optional or de-emphasized |
-| `INTERVIEW` | Evaluate problem-solving under bounded constraints | curated, less guided | limited | curated, less explanatory | required on submit |
+| `PRACTICE` | Teach one concept with low pressure | tightly curated | live or near-live | curated and explanatory | optional or de-emphasized |
+| `ASSIGNMENT` | Evaluate problem-solving under bounded constraints | curated, less guided | limited | curated, less explanatory | required on submit |
 | `AUTHOR` | Preview and validate question behavior | full | full | full | used for author verification |
 
-### `LEARN`
+### `PRACTICE`
 
-`LEARN` should optimize for concept acquisition.
+`PRACTICE` should optimize for concept acquisition.
 
 - Narrow palette.
 - Strong abstraction.
@@ -124,9 +124,9 @@ The environment mode is a teaching lens, not a different question type.
 - Explanatory failures.
 - Generous dry runs.
 
-### `INTERVIEW`
+### `ASSIGNMENT`
 
-`INTERVIEW` should optimize for evaluation signal.
+`ASSIGNMENT` should optimize for evaluation signal.
 
 - Curated palette, but less hand-holding.
 - Hidden grading suite.
