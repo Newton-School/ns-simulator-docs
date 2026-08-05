@@ -133,6 +133,126 @@ $ = budget).
 
 ---
 
+### 3.1 Worked encoding — one concrete example per dimension
+
+Each snippet is a **schema-valid** `QuestionPackage` fragment (validated with
+`parseQuestionPackage`). Full packages live in
+`question-bank-initial-game-states.md`. Metric keys are the real verdict paths
+(`summary.latency.p99`, `summary.throughput`, `invariantViolations.count`).
+
+**FR** → each functional requirement becomes a required node/sub-path (`structural`).
+Exam 1 "pay" ⇒ a payment path must exist and reach the transactional DB:
+```json
+{ "id": "pay-path", "kind": "requires_path", "fromType": "microservice", "toType": "relational-db",
+  "description": "A payment path reaches the transactional store" }
+```
+
+**NFR — latency/throughput** → a `simulation` rubric check vs a target under the
+injected load (Σ). Exam 1 "<3s match":
+```json
+{ "id": "match-latency", "kind": "simulation", "metric": "summary.latency.p99", "op": "<", "value": 3000, "points": 3,
+  "description": "p99 match under 3s" }
+```
+
+**NFR — consistency/durability** → *semantic*, not simulation — the sim can't
+measure consistency, so assert the store type (S). Exam 1 payment strongly consistent:
+```json
+{ "id": "pay-fits-relational", "kind": "storageFit", "accessPattern": "transactional-relational",
+  "accept": ["relational-db"], "antiPattern": ["in-memory-cache"], "points": 3, "hardFail": true,
+  "description": "Payment is ACID/transactional, not a cache" }
+```
+
+**Scale (numbers)** → one number drives three surfaces: the prompt panel, the
+injected workload, and scale-aware checks. It is *plumbing*, not a check:
+```json
+"prompt": { "scale": { "peakRps": 200000, "readWriteRatio": 99 } },
+"suite": { "cases": [ { "id": "peak",
+  "workload": { "baseRps": 2000, "requestDistribution": [
+    { "type": "read", "weight": 0.99 }, { "type": "write", "weight": 0.01 } ] } } ] }
+```
+
+**Storage-type for access pattern** → `storageFit` maps `(accessPattern) →
+accept / antiPattern`. Lab 4 time-series (SQL = hard fail):
+```json
+{ "id": "store-fits-time-series", "kind": "storageFit", "accessPattern": "time-series",
+  "accept": ["time-series-db", "columnar-db"], "antiPattern": ["relational-db"], "points": 6, "hardFail": true,
+  "description": "200K writes/s time-series → wide-column, not relational" }
+```
+
+**READ:WRITE ratio** → injected as **typed** traffic in the workload (drives the
+sim mix); the "must cache when read-heavy" property is enforced by the **p99
+simulation** check, *not* a topology rule (writes legitimately bypass the cache —
+alignment §9). So it's the §Scale workload block **plus** the §NFR-latency check
+above — no separate check kind.
+
+**Fan-out / messaging** → node-type-aware `fanout` (a *queue* to N is the hard
+fail). Lab 3:
+```json
+{ "id": "fanout", "kind": "fanout", "broker": "message-broker", "minConsumers": 3,
+  "forbiddenBroker": "queue", "points": 5, "hardFail": true,
+  "description": "Broker fans out to 3 independent consumers; a queue to 3 is wrong" }
+```
+
+**Placement / ordering** → `placement` with adjacency + forbidden position. Lab 2
+(cache between service & DB, not before the LB):
+```json
+{ "id": "cache-between", "kind": "placement", "componentType": "in-memory-cache",
+  "between": ["microservice", "relational-db"], "notBefore": "load-balancer", "points": 4,
+  "description": "Cache sits between service and DB, never before the LB" }
+```
+
+**Edge direction / data flow** → directional guard, not mere adjacency. Use
+`guardedPath` (all `from`→`to` traffic must traverse a guard, in direction), or a
+directed `requires_path`. Rate-limiter counters must reach the shared store:
+```json
+{ "id": "counters-in-shared-store", "kind": "guardedPath", "from": "rate-limiter",
+  "guard": "in-memory-cache", "points": 4, "hardFail": true,
+  "description": "All rate-limit checks traverse the shared counter store" }
+```
+
+**Tradeoffs / core hard problem** → a graph-consistent `justify` prompt (J):
+```json
+{ "id": "why-db", "decision": "Why this DB type for 200000 writes/sec time-series?",
+  "boundTo": { "componentType": "time-series-db" },
+  "requires": { "choice": true, "number": true, "tradeoff": true } }
+```
+
+**Omission (anti-cargo-cult)** → `forbidUnjustified`: absent, or present *and*
+defended. Lab 5 CDN:
+```json
+{ "id": "cdn-justified", "kind": "forbidUnjustified", "componentType": "cdn",
+  "justifyId": "why-cdn", "points": 4,
+  "description": "CDN must be absent, or defended by a valid justification" }
+```
+(paired with a `justify` prompt whose `id` is `why-cdn`.)
+
+**Hot/cold path separation** → `placement` (hot path off the transactional DB) +
+a latency `simulation` check on the hot path (T+Σ). Exam 1 geospatial:
+```json
+{ "id": "geo-hot-path", "kind": "placement", "componentType": "in-memory-cache",
+  "between": ["microservice", "relational-db"], "points": 2,
+  "description": "Geospatial matching uses a cache/index, not the payment DB" }
+```
+
+**Async vs sync** → structural (queue + workers present) **plus** an SLA
+`simulation` check that a synchronous design fails under load (Σ+T). Exam 3:
+```json
+"structuralRules": [
+  { "id": "has-queue", "kind": "requires_component", "componentType": "queue", "description": "Async queue decouples ingest" },
+  { "id": "has-workers", "kind": "requires_component", "componentType": "batch-worker", "description": "Scalable workers" } ],
+"rubric": { "checks": [
+  { "id": "sla", "kind": "simulation", "metric": "summary.latency.p99", "op": "<", "value": 15000, "points": 3,
+    "description": "p99 completion under 15s — a sync path fails this at 50K/min" } ] }
+```
+
+**Autoscaling / cost** → the `budget` axis caps total cost so a kitchen-sink
+design fails ($):
+```json
+"budget": { "unit": "cost", "cap": 600 }
+```
+
+---
+
 ## 4. The check-kind taxonomy
 
 Every rubric criterion is one of these kinds. Each is a **pure function of the
