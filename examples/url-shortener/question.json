@@ -1,0 +1,55 @@
+{
+  "version": "1.0",
+  "id": "url-shortener",
+  "title": "Design a URL shortener",
+  "difficulty": "intermediate",
+  "type": "open-build",
+  "workloadCategory": "read-heavy",
+  "prompt": {
+    "text": "Design a URL shortener that stays fast under a read-heavy load. Reads (redirects) dominate writes ~99:1. A redirect is a permanent (301) response; the short code is base62 (see Justify).",
+    "functionalRequirements": [
+      "Create a short code for a long URL (write path to a store)",
+      "Redirect a short code to its long URL (read path; permanent 301 — see Justify)"
+    ],
+    "nonFunctionalRequirements": [
+      { "metric": "latency_p99", "operator": "<", "value": 100, "unit": "ms", "description": "p99 redirect latency under 100ms" }
+    ],
+    "scale": { "dau": 50000000, "peakRps": 200000, "readWriteRatio": 99 }
+  },
+  "scaffold": { "type": "empty" },
+  "constraints": { "canModifyScaffold": true, "canRemoveScaffoldNodes": true, "maxNodeCount": 12 },
+  "structuralRules": [
+    { "id": "has-lb", "kind": "requires_component", "componentType": "load-balancer", "description": "A load balancer fronts the service" },
+    { "id": "single-source", "kind": "requires_single_source", "description": "Exactly one client/source of traffic" }
+  ],
+  "semanticCriteria": [
+    { "id": "store-fits-point-lookup", "kind": "storageFit", "description": "Short-code lookup is a point-lookup at scale",
+      "accessPattern": "point-lookup", "accept": ["kv-store", "nosql-db"], "partial": ["in-memory-cache"], "antiPattern": ["relational-db"],
+      "points": 3, "hardFail": true }
+  ],
+  "justify": [
+    { "id": "why-store", "decision": "Why this store type for short-code lookups at 200K rps, and how is the code generated (e.g. base62)?",
+      "boundTo": { "componentType": "kv-store" }, "requires": { "choice": true, "number": true, "tradeoff": true } }
+  ],
+  "budget": { "unit": "nodes", "cap": 8 },
+  "suite": {
+    "name": "url-shortener-suite",
+    "visibleToStudent": false,
+    "cases": [
+      { "id": "peak", "description": "Read-heavy peak (injected 99:1)",
+        "workload": { "baseRps": 2000, "requestDistribution": [
+          { "type": "read", "weight": 0.99, "sizeBytes": 256 },
+          { "type": "write", "weight": 0.01, "sizeBytes": 512 }
+        ] } }
+    ]
+  },
+  "rubric": {
+    "id": "url-shortener-rubric",
+    "passThreshold": 1,
+    "checks": [
+      { "id": "p99", "kind": "simulation", "description": "p99 redirect latency under 100ms", "metric": "summary.latency.p99", "op": "<", "value": 100, "points": 3 },
+      { "id": "no-invariants", "kind": "invariant", "description": "No invariant violations", "metric": "invariantViolations.count", "op": "==", "value": 0, "points": 1 }
+    ]
+  },
+  "author": "example"
+}

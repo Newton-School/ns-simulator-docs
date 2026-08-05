@@ -1,0 +1,17 @@
+{
+  "id": "url-ref", "name": "URL shortener (reference)", "version": "1.0.0",
+  "global": { "simulationDuration": 30000, "warmupDuration": 5000, "seed": "url", "timeResolution": "millisecond", "defaultTimeout": 5000 },
+  "nodes": [
+    { "id": "lb", "type": "load-balancer", "category": "network-and-edge", "label": "LB", "position": {"x":0,"y":0}, "queue": {"workers":300,"capacity":50000,"discipline":"fifo"}, "processing": {"distribution":{"type":"constant","value":0.5},"timeout":5000} },
+    { "id": "svc", "type": "microservice", "category": "compute", "label": "Service", "position": {"x":0,"y":100}, "queue": {"workers":80,"capacity":20000,"discipline":"fifo"}, "processing": {"distribution":{"type":"constant","value":2},"timeout":5000} },
+    { "id": "cache", "type": "in-memory-cache", "category": "storage-and-data", "label": "Cache", "position": {"x":100,"y":200}, "config": {"cacheHitRate":0.9,"cacheHitLatencyMs":1}, "queue": {"workers":1000,"capacity":100000,"discipline":"fifo"}, "processing": {"distribution":{"type":"constant","value":1},"timeout":5000} },
+    { "id": "store", "type": "kv-store", "category": "storage-and-data", "label": "KV Store", "position": {"x":0,"y":300}, "queue": {"workers":3,"capacity":100000,"discipline":"fifo"}, "processing": {"distribution":{"type":"constant","value":3},"timeout":5000} }
+  ],
+  "edges": [
+    { "id": "e-lb-svc", "source": "lb", "target": "svc", "mode": "synchronous", "protocol": "https", "latency":{"distribution":{"type":"constant","value":0.5},"pathType":"same-dc"},"bandwidth":100000,"maxConcurrentRequests":100000,"packetLossRate":0,"errorRate":0 },
+    { "id": "e-svc-cache", "source": "svc", "target": "cache", "mode": "conditional", "condition": "request.type === \"read\"", "protocol": "tcp", "latency":{"distribution":{"type":"constant","value":0.5},"pathType":"same-dc"},"bandwidth":100000,"maxConcurrentRequests":100000,"packetLossRate":0,"errorRate":0 },
+    { "id": "e-svc-store", "source": "svc", "target": "store", "mode": "conditional", "condition": "request.type === \"write\"", "protocol": "tcp", "latency":{"distribution":{"type":"constant","value":0.5},"pathType":"same-dc"},"bandwidth":100000,"maxConcurrentRequests":100000,"packetLossRate":0,"errorRate":0 },
+    { "id": "e-cache-store", "source": "cache", "target": "store", "mode": "synchronous", "protocol": "tcp", "latency":{"distribution":{"type":"constant","value":0.5},"pathType":"same-dc"},"bandwidth":100000,"maxConcurrentRequests":100000,"packetLossRate":0,"errorRate":0 }
+  ],
+  "workload": { "sourceNodeId": "lb", "pattern": "constant", "baseRps": 2000, "requestDistribution": [ {"type":"read","weight":0.99,"sizeBytes":256}, {"type":"write","weight":0.01,"sizeBytes":512} ] }
+}
