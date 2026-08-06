@@ -1,0 +1,3 @@
+[
+  { "promptId": "why-store", "text": "A KV store gives O(1) point lookups for short codes at 200000 rps, but we give up ad-hoc SQL joins and multi-key transactions." }
+]
