@@ -1,4 +1,4 @@
-# Evaluation Authoring — Reference Manual & DSL Guidebook
+# Evaluation Authoring — Reference Manual & DSL Guidebook (Domain-Specific Language)
 
 > **Scope.** The complete, authoritative reference for authoring **system-design
 > evaluation questions** (`QuestionPackage`) for the ns-simulator: every
