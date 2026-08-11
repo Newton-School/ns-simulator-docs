@@ -60,15 +60,15 @@ assessment. That trade is deliberate for V1 (§6).
 A game question is **not** a new set of tables — it is an `AssignmentQuestion`
 with a `game_url`. Do **not** build parallel models/endpoints.
 
-| Concern | ❌ Don't build | ✅ Existing rail |
-|---------|---------------|------------------|
-| The question | a custom `SystemDesignQuestion` model | **`AssignmentQuestion`**, `question_type = GAME (5)`, with `game_url` + `initial_game_state` (`assignments/models.py`) |
-| The "test cases" | a `question_package` field of checks | authored **inside the package** (V1) — or `AssignmentQuestionTestCaseMapping` rows if we ever go flavor-c (§2) |
-| Learner workspace/state | a custom submission model | **`GamePlayground.game_json`** — auto-created on first question GET; opaque to the backend except the two score keys |
-| Submit / persist | a custom `POST …/submit/` → 202 | **`PATCH /api/v1/playground/game/h/{hash}/`** — persists `game_json`, reads the two flags (`playgrounds/views.py`) |
-| Pass snapshot | a custom row | **`GamePlaygroundSubmission`** — created once on `all_test_cases_passed` False→True |
-| Embed / launch | a custom `…/launch/` endpoint | `newton-web` renders `<iframe src=game_url>` and pushes the seed; the playground is auto-created by the course/arena flow. No launch endpoint. |
-| Grading trigger | a Celery task calling the engine | **none in V1** — the iframe grades and reports; the backend trusts it |
+| Concern                 | ❌ Don't build                         | ✅ Existing rail                                                                                                                                |
+| ----------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| The question            | a custom `SystemDesignQuestion` model | **`AssignmentQuestion`**, `question_type = GAME (5)`, with `game_url` + `initial_game_state` (`assignments/models.py`)                         |
+| The "test cases"        | a `question_package` field of checks  | authored **inside the package** (V1) — or `AssignmentQuestionTestCaseMapping` rows if we ever go flavor-c (§2)                                 |
+| Learner workspace/state | a custom submission model             | **`GamePlayground.game_json`** — auto-created on first question GET; opaque to the backend except the two score keys                           |
+| Submit / persist        | a custom `POST …/submit/` → 202       | **`PATCH /api/v1/playground/game/h/{hash}/`** — persists `game_json`, reads the two flags (`playgrounds/views.py`)                             |
+| Pass snapshot           | a custom row                          | **`GamePlaygroundSubmission`** — created once on `all_test_cases_passed` False→True                                                            |
+| Embed / launch          | a custom `…/launch/` endpoint         | `newton-web` renders `<iframe src=game_url>` and pushes the seed; the playground is auto-created by the course/arena flow. No launch endpoint. |
+| Grading trigger         | a Celery task calling the engine      | **none in V1** — the iframe grades and reports; the backend trusts it                                                                          |
 
 The backend "cannot tell the flavors apart" — a game is identified by its
 `game_url`, not by a subtype or a bespoke model.
@@ -83,6 +83,7 @@ taxonomy (in-built logic, seed carries config), *not* flavor-(c) (rubric rows
 the host forwards to a game that doesn't own its checks — the packet-tracer case).
 
 **Authoring shape:**
+
 - **`game_url`** = the deployed ns-simulator embed URL (its exact origin becomes
   the host's inbound guard, `game_url.startsWith(event.origin)`).
 - **`initial_game_state`** = the **`QuestionPackage` JSON** (Strategy A). The
@@ -125,7 +126,7 @@ adapter (`feat(embed): adopt Game Playground host payloads`,
    - `all_test_cases_passed` (bool) — the overall pass,
    - the `QuestionPackage` carried forward (§2),
    - any advisory verdict/rubric detail needed to restore the UI on reload.
-   Post on meaningful progress and in reply to the raw `'save'` command.
+     Post on meaningful progress and in reply to the raw `'save'` command.
 5. **Origin discipline** — allow-list inbound origins, or TOFU-pin the first
    valid parent (packet-tracer's approach); never post to `'*'` once pinned.
 6. **`read_only`** — honor it (no edits/submit in mentor view); **standalone** —
@@ -203,6 +204,7 @@ applied locally):
 ```
 python manage.py migrate playgrounds 0159_external_playground
 ```
+
 then remove: the `SystemDesignQuestion` + `SystemDesignSimulatorSubmission`
 models, `SystemDesignSimulatorMode` / `GamePlaygroundSubType.SYSTEM_DESIGN_SIMULATOR`
 enums, their serializers/views/urls/admin, migration `0160_system_design_simulator`,
