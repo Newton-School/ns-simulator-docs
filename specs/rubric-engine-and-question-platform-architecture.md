@@ -69,11 +69,11 @@ flowchart TB
 
 ### Legend
 
-| Color | Meaning |
-|-------|---------|
-| Green (solid) | Built and working in the codebase |
-| Blue (solid) | Next to build (gap 4) |
-| Yellow (dashed) | Follow-up slice |
+| Color           | Meaning                           |
+| --------------- | --------------------------------- |
+| Green (solid)   | Built and working in the codebase |
+| Blue (solid)    | Next to build (gap 4)             |
+| Yellow (dashed) | Follow-up slice                   |
 
 ---
 
@@ -199,13 +199,13 @@ The rubric engine is the core grading component that converts a suite's verdicts
 
 A check is fundamentally an assertion against the verdict's numeric fields — latency thresholds, error rates, SLO breaches, throughput targets, resource utilization limits, invariant violations. Each check has:
 
-| Part | Purpose |
-|------|---------|
-| `metric` | Selector that points into the verdict data (dotted path or derived aggregate) |
-| `op` | Comparator: `<`, `<=`, `>`, `>=`, `==`, `!=` |
-| `value` | Threshold to compare against |
-| `id`, `description` | Human-readable metadata |
-| `points` | Weight toward the overall score (default 1) |
+| Part                | Purpose                                                                       |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `metric`            | Selector that points into the verdict data (dotted path or derived aggregate) |
+| `op`                | Comparator: `<`, `<=`, `>`, `>=`, `==`, `!=`                                  |
+| `value`             | Threshold to compare against                                                  |
+| `id`, `description` | Human-readable metadata                                                       |
+| `points`            | Weight toward the overall score (default 1)                                   |
 
 ```typescript
 interface RubricCheck {
@@ -230,11 +230,13 @@ interface Rubric {
 The resolver supports three categories of metric selectors:
 
 **Direct dotted paths** — navigate into the verdict structure:
+
 - `summary.errorRate` → `verdict.summary.errorRate`
 - `summary.latency.p99` → `verdict.summary.latency.p99`
 - `perNode.<nodeId>.utilization` → `verdict.perNode[nodeId].utilization`
 
 **Derived aggregates** — computed across collections:
+
 - `sloBreaches.count` → `verdict.sloBreaches.length`
 - `invariantViolations.count` → `verdict.invariantViolations.length`
 - `conservation.unbalanced` → count of nodes where `balanced === false`
@@ -445,15 +447,15 @@ interface QuestionScaffold {
 }
 ```
 
-| Question type | Scaffold `type` | What the student sees |
-|---------------|-----------------|----------------------|
-| Fix / missing node | `partial` | Broken/incomplete topology with gaps |
-| Build within budget | `empty` | Empty canvas + budget constraint |
-| Optimize | `complete` | Working-but-suboptimal topology |
-| Open build (interview) | `empty` | Empty canvas + full FR/NFR/scale prompt |
-| Scaling challenge | `complete` | Working MVP that handles low load |
-| HA / Chaos | `partial` | Partially built multi-AZ topology |
-| Trade-off design | `empty` | Empty canvas + competing constraints |
+| Question type          | Scaffold `type` | What the student sees                   |
+| ---------------------- | --------------- | --------------------------------------- |
+| Fix / missing node     | `partial`       | Broken/incomplete topology with gaps    |
+| Build within budget    | `empty`         | Empty canvas + budget constraint        |
+| Optimize               | `complete`      | Working-but-suboptimal topology         |
+| Open build (interview) | `empty`         | Empty canvas + full FR/NFR/scale prompt |
+| Scaling challenge      | `complete`      | Working MVP that handles low load       |
+| HA / Chaos             | `partial`       | Partially built multi-AZ topology       |
+| Trade-off design       | `empty`         | Empty canvas + competing constraints    |
 
 ### 2.4 QuestionConstraints
 
@@ -655,16 +657,16 @@ interface EnvironmentProfile {
 
 ### 3.2 The Three Modes
 
-| Aspect | AUTHOR (Today's full UI) | ASSIGNMENT (Contest/Evaluation) | PRACTICE (Minimal guided) |
-|--------|--------------------------|-------------------------------|----------------------|
-| **Palette** | The full palette (~60 node types) | Curated allowlist per question | Curated + explanations |
-| **Prompt** | Not shown (author is the setter) | FR/NFR panel visible | Prompt + guided hints |
-| **Results shown** | Everything (all tabs) | Only metrics relevant to question | Curated + explanations |
-| **Suite details** | Full scenario definitions | Hidden (student sees dry-run only) | Visible for learning |
-| **Rubric checks** | Full authoring view | Hidden until submit | Live green/red feedback |
-| **Editing** | Full — all nodes, all properties | Scaffold locked, add nodes only | Edit freely, no pressure |
-| **Grading** | Not graded | Graded on submit → score | Not graded, streamlined |
-| **Chrome** | Full panels, debugger, terminal | Clean interview panel | Minimal, distraction-free |
+| Aspect            | AUTHOR (Today's full UI)          | ASSIGNMENT (Contest/Evaluation)    | PRACTICE (Minimal guided) |
+| ----------------- | --------------------------------- | ---------------------------------- | ------------------------- |
+| **Palette**       | The full palette (~60 node types) | Curated allowlist per question     | Curated + explanations    |
+| **Prompt**        | Not shown (author is the setter)  | FR/NFR panel visible               | Prompt + guided hints     |
+| **Results shown** | Everything (all tabs)             | Only metrics relevant to question  | Curated + explanations    |
+| **Suite details** | Full scenario definitions         | Hidden (student sees dry-run only) | Visible for learning      |
+| **Rubric checks** | Full authoring view               | Hidden until submit                | Live green/red feedback   |
+| **Editing**       | Full — all nodes, all properties  | Scaffold locked, add nodes only    | Edit freely, no pressure  |
+| **Grading**       | Not graded                        | Graded on submit → score           | Not graded, streamlined   |
+| **Chrome**        | Full panels, debugger, terminal   | Clean interview panel              | Minimal, distraction-free |
 
 > **Key insight:** Mode 2 (ASSIGNMENT) and Mode 3 (PRACTICE) differ primarily in `graded` + `rubricChecks` + `chromeDensity`. They share the same underlying content and grading pipeline — the environment profile just controls what's exposed.
 
@@ -687,20 +689,20 @@ All question types share the same grading pipeline. What differs is the **scaffo
 
 ### Base Types
 
-| # | Type | Scaffold | Student Action | Primary Grading Domain |
-|---|------|----------|---------------|----------------------|
-| 1 | **Fix / Missing Node** | Broken/incomplete topology | Add/repair the gap | Verdict SLO rubric + minimal-edit constraint |
-| 2 | **Build Within Budget** | Empty + budget + FR/NFR | Design from constraints | SLO rubric + cost check (Σ node cost ≤ budget) |
-| 3 | **Optimize** | Working-but-suboptimal topology | Improve latency/cost/throughput | Comparative rubric: beat stored baseline verdict |
-| 4 | **Open Build (Interview)** | Empty + full FR/NFR/scale prompt | Design from scratch | SLO rubric + structural checks (has cache/LB/replicas) |
+| #   | Type                       | Scaffold                         | Student Action                  | Primary Grading Domain                                 |
+| --- | -------------------------- | -------------------------------- | ------------------------------- | ------------------------------------------------------ |
+| 1   | **Fix / Missing Node**     | Broken/incomplete topology       | Add/repair the gap              | Verdict SLO rubric + minimal-edit constraint           |
+| 2   | **Build Within Budget**    | Empty + budget + FR/NFR          | Design from constraints         | SLO rubric + cost check (Σ node cost ≤ budget)         |
+| 3   | **Optimize**               | Working-but-suboptimal topology  | Improve latency/cost/throughput | Comparative rubric: beat stored baseline verdict       |
+| 4   | **Open Build (Interview)** | Empty + full FR/NFR/scale prompt | Design from scratch             | SLO rubric + structural checks (has cache/LB/replicas) |
 
 ### Advanced Archetypes
 
-| # | Type | Scaffold | Grading | Unique Characteristic |
-|---|------|----------|---------|----------------------|
-| 5 | **Scaling Challenge** | Working MVP for 1k DAU | Graduated scenario suite (100 RPS → 10k RPS) | Must pass both low and high load without manual intervention |
-| 6 | **HA / Chaos Challenge** | Partial multi-AZ topology | Engine triggers node/zone failures via `DOWN` state during evaluation | Rubric checks SLO compliance *despite* simulated hardware failure |
-| 7 | **Trade-off / Constraint Box** | Empty | Structural checks + competing metric rubric | Rubric instantly fails if forbidden component exists (e.g., `NodeType === 'redis'`) |
+| #   | Type                           | Scaffold                  | Grading                                                               | Unique Characteristic                                                               |
+| --- | ------------------------------ | ------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 5   | **Scaling Challenge**          | Working MVP for 1k DAU    | Graduated scenario suite (100 RPS → 10k RPS)                          | Must pass both low and high load without manual intervention                        |
+| 6   | **HA / Chaos Challenge**       | Partial multi-AZ topology | Engine triggers node/zone failures via `DOWN` state during evaluation | Rubric checks SLO compliance *despite* simulated hardware failure                   |
+| 7   | **Trade-off / Constraint Box** | Empty                     | Structural checks + competing metric rubric                           | Rubric instantly fails if forbidden component exists (e.g., `NodeType === 'redis'`) |
 
 > **Dependency:** Archetype 6 (HA/Chaos) requires per-case fault injection in the evaluation suite. The current CLI evaluator (`prepareCase`) merges only `global` and `workload` overrides — suite-level fault override is a follow-up slice (see Build Order & Scope Boundaries).
 
@@ -810,11 +812,11 @@ These five decisions were evaluated and resolved to maintain momentum while keep
 
 **Resolution: Controlled by the `EnvironmentProfile`.**
 
-| Mode | Rubric visibility |
-|------|------------------|
-| PRACTICE | `LIVE_DURING_BUILD` — checks turn green/red as student designs, tight feedback loop |
-| ASSIGNMENT | `HIDDEN` or `POST_SUBMIT_ONLY` — forces reasoning about design constraints |
-| AUTHOR | Full visibility — sees all checks and how they evaluate |
+| Mode       | Rubric visibility                                                                   |
+| ---------- | ----------------------------------------------------------------------------------- |
+| PRACTICE   | `LIVE_DURING_BUILD` — checks turn green/red as student designs, tight feedback loop |
+| ASSIGNMENT | `HIDDEN` or `POST_SUBMIT_ONLY` — forces reasoning about design constraints          |
+| AUTHOR     | Full visibility — sees all checks and how they evaluate                             |
 
 **Rationale:** Learning benefits from immediate feedback. Evaluation benefits from forcing the student to reason without hints. The same rubric works in both modes — only the visibility changes.
 
@@ -916,14 +918,14 @@ At the delivery layer, this system follows the same integration pattern as Newto
 
 The Game Playground host (the Newton platform iframe wrapper) only understands a simple shape:
 
-| Game Playground concept | NS Simulator equivalent |
-|---|---|
-| Iframe-hosted simulator | NS Simulator embedded in `ASSIGNMENT` or `PRACTICE` environment mode |
-| Seeded starting state | `QuestionPackage.scaffold` (the topology the student opens) |
-| Durable attempt-state blob | `AttemptState` (JSON envelope — student topology, status, timestamps) |
-| N test cases, each with a boolean pass/fail | `GradedEvaluationBatch.cases[]` — each case has `ran` and `rubric.passed` |
-| Overall boolean: all tests passed? | `AttemptState.grade.overallPassed` (derived from `summary.errored === 0 && summary.passed === summary.ran` — a case that could not run is not a pass, matching the CLI exit-code rule) |
-| Visible checklist of tests | `RubricResult.checks[]` — each `CheckResult` has `passed: boolean` + human-readable `description` |
+| Game Playground concept                     | NS Simulator equivalent                                                                                                                                                                |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Iframe-hosted simulator                     | NS Simulator embedded in `ASSIGNMENT` or `PRACTICE` environment mode                                                                                                                   |
+| Seeded starting state                       | `QuestionPackage.scaffold` (the topology the student opens)                                                                                                                            |
+| Durable attempt-state blob                  | `AttemptState` (JSON envelope — student topology, status, timestamps)                                                                                                                  |
+| N test cases, each with a boolean pass/fail | `GradedEvaluationBatch.cases[]` — each case has `ran` and `rubric.passed`                                                                                                              |
+| Overall boolean: all tests passed?          | `AttemptState.grade.overallPassed` (derived from `summary.errored === 0 && summary.passed === summary.ran` — a case that could not run is not a pass, matching the CLI exit-code rule) |
+| Visible checklist of tests                  | `RubricResult.checks[]` — each `CheckResult` has `passed: boolean` + human-readable `description`                                                                                      |
 
 ### The shape the host actually reads
 
@@ -990,14 +992,14 @@ flowchart TB
 
 ### Mapping to packet tracer precedent
 
-| Packet tracer pattern | NS Simulator equivalent | Notes |
-|---|---|---|
-| `topology_xml` blob in attempt state | `TopologyJSON` in `AttemptState.topology` | JSON-native, not XML |
-| Per-test boolean checks (ping, connectivity) | Per-check booleans from `RubricResult.checks[]` | Backed by simulation metrics instead of packet-level checks |
-| Overall pass flag sent to host | `AttemptState.grade.overallPassed` collapsed via `postMessage` | Same contract, richer engine |
-| Visible checklist in sidebar | `CheckResult[]` rendered as check rows in the simulator UI | Shows description + pass/fail, optionally actual values |
-| Seeded starting state | `QuestionPackage.scaffold.topology` | Loaded on iframe boot |
-| Save/restore via attempt blob | `AttemptState` JSON envelope autosaved | Same lifecycle: draft → autosaved → submitted → graded → locked |
+| Packet tracer pattern                        | NS Simulator equivalent                                        | Notes                                                           |
+| -------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
+| `topology_xml` blob in attempt state         | `TopologyJSON` in `AttemptState.topology`                      | JSON-native, not XML                                            |
+| Per-test boolean checks (ping, connectivity) | Per-check booleans from `RubricResult.checks[]`                | Backed by simulation metrics instead of packet-level checks     |
+| Overall pass flag sent to host               | `AttemptState.grade.overallPassed` collapsed via `postMessage` | Same contract, richer engine                                    |
+| Visible checklist in sidebar                 | `CheckResult[]` rendered as check rows in the simulator UI     | Shows description + pass/fail, optionally actual values         |
+| Seeded starting state                        | `QuestionPackage.scaffold.topology`                            | Loaded on iframe boot                                           |
+| Save/restore via attempt blob                | `AttemptState` JSON envelope autosaved                         | Same lifecycle: draft → autosaved → submitted → graded → locked |
 
 The architectural takeaway: **the Game Playground host contract is a thin boolean projection of a rich grading engine**. The engine produces scored, weighted, multi-dimensional results — but the host only needs `N tests × boolean + overall boolean`. This separation means the grading engine can grow in sophistication (structural checks, comparative checks, cost checks) without ever changing the host integration contract.
 
@@ -1009,35 +1011,35 @@ The architectural takeaway: **the Game Playground host contract is a thin boolea
 
 Focus on defining schemas and wiring the lifecycle using the **existing verdict-rubric pipeline only**.
 
-| Deliverable | Description |
-|-------------|-------------|
-| `QuestionPackage` type | Full schema including prompt, scaffold, constraints, suite ref, rubric ref |
-| `AttemptState` type | Attempt envelope with lifecycle status, autosave, grade storage |
-| `QuestionPrompt` type | Structured FR/NFR/scale fields |
-| `QuestionScaffold` type | Scaffold with locked nodes and baseline verdict |
+| Deliverable               | Description                                                                 |
+| ------------------------- | --------------------------------------------------------------------------- |
+| `QuestionPackage` type    | Full schema including prompt, scaffold, constraints, suite ref, rubric ref  |
+| `AttemptState` type       | Attempt envelope with lifecycle status, autosave, grade storage             |
+| `QuestionPrompt` type     | Structured FR/NFR/scale fields                                              |
+| `QuestionScaffold` type   | Scaffold with locked nodes and baseline verdict                             |
 | Attempt → grade lifecycle | Wire: open question → autosave topology → submit → evaluate → grade → store |
-| Sample question package | A complete example using the order-topology scaffold |
+| Sample question package   | A complete example using the order-topology scaffold                        |
 
 **Question types that ship with gap 4:** Fix (partial scaffold + verdict rubric) and Open Build (empty scaffold + verdict rubric). These need only what's already built.
 
 ### Immediate Follow-up Slices
 
-| Slice | What it adds | Unlocks |
-|-------|-------------|---------|
-| **Topology checks** | `topologyChecks` in rubric, small query engine | Structural validation, forbidden-type checks |
-| **Cost model** | Per-node cost formulas, budget constraint | "Build within budget" question type |
-| **Comparative checks** | Baseline verdict comparison | "Optimize" question type, scaling challenges |
-| **Suite fault injection** | Per-case `faults` override in `prepareCase` | HA/Chaos challenge (archetype 6) |
-| **EnvironmentProfile** | Visibility/capability profiles, 3 modes | Interview mode, learn mode, contest mode |
-| **Suite auto-seeder** | `seedSuiteFromScale(scale, nfr)` | Interview-style question authoring |
+| Slice                     | What it adds                                   | Unlocks                                      |
+| ------------------------- | ---------------------------------------------- | -------------------------------------------- |
+| **Topology checks**       | `topologyChecks` in rubric, small query engine | Structural validation, forbidden-type checks |
+| **Cost model**            | Per-node cost formulas, budget constraint      | "Build within budget" question type          |
+| **Comparative checks**    | Baseline verdict comparison                    | "Optimize" question type, scaling challenges |
+| **Suite fault injection** | Per-case `faults` override in `prepareCase`    | HA/Chaos challenge (archetype 6)             |
+| **EnvironmentProfile**    | Visibility/capability profiles, 3 modes        | Interview mode, learn mode, contest mode     |
+| **Suite auto-seeder**     | `seedSuiteFromScale(scale, nfr)`               | Interview-style question authoring           |
 
 ### What Already Exists (Gaps 1–3)
 
-| Gap | Deliverable | Status |
-|-----|-------------|--------|
-| 1 | `SimulationVerdict` + `projectToVerdict()` | ✅ Built, tested |
-| 2 | `evaluateSuite()` + CLI `evaluate` command | ✅ Built, tested |
-| 3 | `Rubric`, `gradeVerdict()`, `gradeBatch()` + CLI `--rubric` | ✅ Built, tested |
+| Gap | Deliverable                                                 | Status          |
+| --- | ----------------------------------------------------------- | --------------- |
+| 1   | `SimulationVerdict` + `projectToVerdict()`                  | ✅ Built, tested |
+| 2   | `evaluateSuite()` + CLI `evaluate` command                  | ✅ Built, tested |
+| 3   | `Rubric`, `gradeVerdict()`, `gradeBatch()` + CLI `--rubric` | ✅ Built, tested |
 
 ---
 
@@ -1045,12 +1047,12 @@ Focus on defining schemas and wiring the lifecycle using the **existing verdict-
 
 This document integrates and extends the following existing specifications:
 
-| Existing spec | Relationship |
-|---------------|-------------|
-| `question-creation-feature-spec.md` | Defines the Django-side features (10 question types, 4 scoring buckets, structural rules, feedback). This document covers the **engine-side** architecture and the type system that both sides share. |
-| `game-playground-evaluation-integration-gap-analysis.md` | Defines the gap matrix and integration principles for Game Playground embedding. This document implements gaps 1–3 and specifies gaps 4+ with concrete types. |
-| `environment-definition-and-configuration-model.md` | Defines the simulation environment configuration (defaults, normalization, validation). This document's `EnvironmentProfile` is a **presentation** layer — distinct from the simulation environment. They compose: the simulation environment controls engine behavior, the environment profile controls UI visibility. |
-| `cost-calculation-and-budgeting.md` | Defines the per-node cost model. This document's topology checks and budget constraints depend on the cost model as a prerequisite. |
+| Existing spec                                            | Relationship                                                                                                                                                                                                                                                                                                            |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `question-creation-feature-spec.md`                      | Defines the Django-side features (10 question types, 4 scoring buckets, structural rules, feedback). This document covers the **engine-side** architecture and the type system that both sides share.                                                                                                                   |
+| `game-playground-evaluation-integration-gap-analysis.md` | Defines the gap matrix and integration principles for Game Playground embedding. This document implements gaps 1–3 and specifies gaps 4+ with concrete types.                                                                                                                                                           |
+| `environment-definition-and-configuration-model.md`      | Defines the simulation environment configuration (defaults, normalization, validation). This document's `EnvironmentProfile` is a **presentation** layer — distinct from the simulation environment. They compose: the simulation environment controls engine behavior, the environment profile controls UI visibility. |
+| `cost-calculation-and-budgeting.md`                      | Defines the per-node cost model. This document's topology checks and budget constraints depend on the cost model as a prerequisite.                                                                                                                                                                                     |
 
 ### Architecture Boundary (Unchanged)
 

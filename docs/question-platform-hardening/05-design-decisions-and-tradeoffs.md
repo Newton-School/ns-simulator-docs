@@ -16,14 +16,14 @@ this log is scoped to the grading/question platform.
 Nearly every decision below was judged against the same short list. Naming them
 once makes the individual choices easier to follow:
 
-| Criterion | What it means here |
-|-----------|--------------------|
-| **Determinism** | Same inputs → byte-identical output. Non-negotiable for a grading platform. |
-| **Honesty** | The output never overstates what was evaluated (e.g. never reports an un-run check as failed). |
-| **Evolvability** | Producers and consumers can change independently without silent breakage. |
-| **Isolation** | External/host concerns don't leak into the engine, and vice-versa. |
-| **Reviewability** | Meaningful changes show up as reviewable diffs (fixtures, version bumps). |
-| **Shippability** | Ship a correct, bounded slice now; defer the rest explicitly rather than gold-plating. |
+| Criterion         | What it means here                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| **Determinism**   | Same inputs → byte-identical output. Non-negotiable for a grading platform.                    |
+| **Honesty**       | The output never overstates what was evaluated (e.g. never reports an un-run check as failed). |
+| **Evolvability**  | Producers and consumers can change independently without silent breakage.                      |
+| **Isolation**     | External/host concerns don't leak into the engine, and vice-versa.                             |
+| **Reviewability** | Meaningful changes show up as reviewable diffs (fixtures, version bumps).                      |
+| **Shippability**  | Ship a correct, bounded slice now; defer the rest explicitly rather than gold-plating.         |
 
 ---
 
@@ -560,7 +560,7 @@ lists AUTHOR as ungraded.
 **Why this choice.** AUTHOR doubles as the standalone dev/testing mode, where
 exercising the grade → seal → archive path is exactly what a setter needs.
 
-**Trade-off.** A documented divergence from the spec; ASSIGNMENT remains the
+**Trade-off.** A documented divergence from the spec; INTERVIEW remains the
 canonical graded contest mode.
 
 *See: doc 08, §3.*

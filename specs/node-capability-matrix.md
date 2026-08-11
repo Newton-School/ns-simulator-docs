@@ -99,26 +99,6 @@ text, or not at all), so students couldn't learn it by running the sim.
 | `changeStream` | CDC capture lag + ordering | Data-pipeline latency and ordering guarantees. |
 | `requestMix` (extend source) | Typed traffic weights + payload sizing on the source | So read/write ratios and payload sizes actually drive routing and bandwidth. |
 
-### High-impact failure-mode traits (🔧 — the "notorious for crashing systems" set)
-
-These model emergent failures that generic queueing can't produce. They are the
-highest "aha!" per unit of engine effort because the student *sees* a healthy-looking
-design suddenly melt.
-
-| Trait | Attaches to | What it models | Why it exists (the lesson) |
-|-------|-------------|----------------|----------------------------|
-| `cacheStampede` | `in-memory-cache`, `cdn` | On hot-key TTL expiry, **N concurrent misses hit the origin at once** | The thundering herd — one expiry saturates the DB pool in a millisecond. Teaches request-coalescing / stale-while-revalidate / jittered TTLs. `sim.hotKeyExpirationMs`+`sim.stampedeConcurrency` → bypass cache for N requests, not one. |
-| `gcJitter` | `microservice`, `batch-worker` (any managed runtime) | Periodic **stop-the-world pauses** halt processing for Y ms every X s | The #1 cause of "healthy node, mysterious p99." Teaches that tail latency ≠ mean and why GC tuning / language choice matters. `sim.gcPauseMs`+`sim.gcFrequency` → sudden queue backlog + p99 spike. |
-| `connectionPool` | `relational-db`, `api-gateway`, `microservice` | Finite pool; in-flight beyond it **queues/times out before app logic** | Systems run out of *connections* before CPU (head-of-line blocking). Teaches pool sizing and why "add more CPU" doesn't help. `sim.maxConnections`(+`sim.tcpHandshakeMs`) → `ConnectionTimeout` when exceeded. |
-| `replicationCost` | `relational-db`, `nosql-db`, `message-broker` | Sync/cross-region replication consumes **background IOPS + NIC bandwidth** | A write-heavy primary can saturate its NIC just replicating to standbys — the hidden cost of durability/HA. `sim.replicationBandwidthMbps`+`sim.syncReplicationMs` → writes contend with replication. |
-| `dataSkew` | `nosql-db`, `shard-node`, `kv-store` | **Zipfian skew**: 80% of traffic hits 10% of keys/shards | The celebrity / hot-partition problem — one shard saturates while the rest idle. Teaches consistent hashing, salting, and why even sharding sizing needs skew. `sim.zipfianSkew` or `sim.hotPartitionRatio` → one backing node saturates. |
-
-> These pair naturally with existing/proposed traits: `cacheStampede` layers on
-> `cache`; `connectionPool` is the specific mechanism behind `capacityLimit` on
-> data nodes; `dataSkew` sharpens `keyBasedRouting`+`storageProfile`;
-> `replicationCost` sharpens `consistencyModel`/`readWriteSplit`; `gcJitter` is a
-> new, orthogonal source of tail latency on `computeContention` nodes.
-
 ---
 
 ## Full matrix by category
@@ -361,9 +341,6 @@ Mostly control-plane / off the request path.
 `cryptoCost` · `inspectionCost` · `telemetrySink` · `scheduler` · `windowing` ·
 `changeStream` · `requestMix` (see the Glossary for each one's rationale).
 
-**Failure-mode set (highest aha!):** `cacheStampede` · `gcJitter` ·
-`connectionPool` · `replicationCost` · `dataSkew`.
-
 ---
 
 ## Summary
@@ -377,7 +354,7 @@ Mostly control-plane / off the request path.
 | 📦 In the palette | 60 |
 | Existing traits | 12 (+1 unwired: `healthProber`) |
 | ➕ Nodes coverable by extending an existing trait | ~25 |
-| 🔧 New trait modules proposed | ~28 (incl. 5 failure-mode traits) |
+| 🔧 New trait modules proposed | ~23 |
 
 **Highest-leverage next steps:** `storageProfile` (stores are identical today),
 `broadcastFanout` (`message-broker` doesn't broadcast), and wiring the eponymous

@@ -28,7 +28,7 @@ actually built, in what order, and why each decision was made.
 | 05 | [Design Decisions & Trade-offs](05-design-decisions-and-tradeoffs.md) | A consolidated decision log with the criteria behind each choice |
 | 06 | [Grading-Safe Persistence & the Evaluation Envelope](06-grading-safe-persistence-and-the-evaluation-envelope.md) | The immutable, tamper-evident submission record: envelope, integrity checksum, replay digest, append-only archive |
 | 07 | [Production Embed Runtime & Origin Security](07-production-embed-runtime-and-origin-security.md) | Hardening the iframe seam: trusted-origin handshake, configured-allowlist-vs-TOFU policy, no `'*'` for sensitive messages |
-| 08 | [The Presentation Layer — EnvironmentProfile](08-environment-profile-presentation-layer.md) | The visibility + capability lens (AUTHOR/ASSIGNMENT/PRACTICE) over one QuestionPackage: presets, safe resolver, applied gates |
+| 08 | [The Presentation Layer — EnvironmentProfile](08-environment-profile-presentation-layer.md) | The visibility + capability lens (AUTHOR/INTERVIEW/LEARN) over one QuestionPackage: presets, safe resolver, applied gates |
 
 Read them in order for a narrative, or jump to a PR you care about — each stands
 alone, with the glossary below as a shared reference.
@@ -178,7 +178,7 @@ noted in the last column.
 | **Trust-on-first-use (TOFU)** | Trusting the origin of the first valid launch-context when no allowlist is configured. | 07 |
 | **`targetOrigin`** | The `postMessage` argument that restricts which origin may receive a message; `'*'` means "any", a data-leak risk for sensitive payloads. | 07 |
 | **EnvironmentProfile** | The presentation lens (mode + visibility + capabilities + graded + chromeDensity) applied over one QuestionPackage. | 08 |
-| **Profile mode** | AUTHOR / ASSIGNMENT / PRACTICE — the three presets a profile resolves from. | 08 |
+| **Profile mode** | AUTHOR / INTERVIEW / LEARN — the three presets a profile resolves from. | 08 |
 | **Visibility / capability gate** | A UI decision (show rubric now? allow another test run?) derived from the resolved profile. | 08 |
 
 ---

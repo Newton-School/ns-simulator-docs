@@ -6,6 +6,7 @@
 > the question is meant to test.
 >
 > **Sources.**
+>
 > 1. *HLD System Design Simulator — Lab & Exam Question Bank* (faculty spec: 5
 >    labs, 3 exams, grading logic, Section C dev-team notes).
 > 2. *System Design Interview Prep* (the "answer key": URL Shortener, Chat, News
@@ -22,11 +23,11 @@ companion lives in `docs/question-platform-hardening/`.
 The faculty grade a design on **three axes**; the simulator today covers mainly
 one.
 
-| Axis | What the docs grade | What the simulator does today |
-|------|---------------------|-------------------------------|
+| Axis                     | What the docs grade                                                                                           | What the simulator does today                    |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | **Topology correctness** | node & edge *presence*, *placement/ordering*, *direction*, *fan-out shape*, *storage-type-for-access-pattern* | `structuralRules` (presence + a few path checks) |
-| **Reasoning** | a **required, gradeable justification** — "choosing X because *[number]*, tradeoff is Y" | **nothing** — no justification field exists |
-| **Behaviour under load** | implied by the scale numbers | ✅ `rubric.checks` over simulation metrics |
+| **Reasoning**            | a **required, gradeable justification** — "choosing X because *[number]*, tradeoff is Y"                      | **nothing** — no justification field exists      |
+| **Behaviour under load** | implied by the scale numbers                                                                                  | ✅ `rubric.checks` over simulation metrics        |
 
 **Gaming is what happens when a design is graded on only one axis**, because any
 single axis is exploitable:
@@ -95,41 +96,52 @@ Question
 
 Mapping to the current `QuestionPackage` (see gap analysis, §8):
 
-| Schema part | Current field | Status |
-|-------------|---------------|--------|
-| meta.mode (lab/exam) | `EnvironmentProfile` PRACTICE/ASSIGNMENT | ✅ have |
-| prompt.FR / NFR / scale | `prompt.functionalRequirements` / `nonFunctionalRequirements` / `scale` | ✅ have |
-| scaffold | `scaffold` | ✅ have |
-| rubric (metric checks) | `rubric.checks` | ✅ have (simulation kind) |
-| structural checks | `structuralRules` | ✅ have (presence/path) |
-| **justify** | — | ❌ new |
-| **budget** | — | ❌ new (see `cost-calculation-and-budgeting.md`) |
-| weighted points + hardFail | partial (`points`) | ⚠️ extend |
+| Schema part                | Current field                                                           | Status                                          |
+| -------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------- |
+| meta.mode (lab/exam)       | `EnvironmentProfile` PRACTICE/ASSIGNMENT                                | ✅ have                                          |
+| prompt.FR / NFR / scale    | `prompt.functionalRequirements` / `nonFunctionalRequirements` / `scale` | ✅ have                                          |
+| scaffold                   | `scaffold`                                                              | ✅ have                                          |
+| rubric (metric checks)     | `rubric.checks`                                                         | ✅ have (simulation kind)                        |
+| structural checks          | `structuralRules`                                                       | ✅ have (presence/path)                          |
+| **justify**                | —                                                                       | ❌ new                                           |
+| **budget**                 | —                                                                       | ❌ new (see `cost-calculation-and-budgeting.md`) |
+| weighted points + hardFail | partial (`points`)                                                      | ⚠️ extend                                        |
 
 ---
 
 ## 3. How each evaluation dimension is graded
 
 Grounded in specific questions. "Axis" = which grading axis the dimension lives
-on (T = topology, S = scale-fit semantics, Σ = simulation, J = justification,
-$ = budget).
+on (
 
-| Dimension | Evidence | Mechanism | Axis | New? |
-|-----------|----------|-----------|------|------|
-| **FR** | Exam 1: match / track / surge / pay | each FR → a required sub-path/node-set | T | extend |
-| **NFR — latency/throughput** | Exam 1 "<3s match"; Exam 2 "<5ms" | simulation check vs target under load | Σ | have |
-| **NFR — consistency/durability** | Exam 1 payment strongly consistent | semantic: payment path must be SQL (not Σ) | S | new |
-| **Scale (numbers)** | prep doc pins *every* decision to a number | drives 3 things: panel display, sim workload, scale-aware checks | S+Σ | plumbing |
-| **Storage-type for access pattern** | Lab 4: 200K writes + time-series → wide-column, SQL = anti-pattern | `storageFit` check | S | **new** |
-| **READ:WRITE ratio** | URL 100:1; Feed 50:1; Lab 2 20:1 | drives sim workload mix + "must cache when read-heavy" check | S+Σ | new |
-| **Fan-out / messaging** | Lab 3: 1 broker + 3 consumers ✅; 1 queue→3 = hard fail; 3 queues = partial | `fanout` check (node-type-aware) | T | **new** |
-| **Placement / ordering** | Lab 2: cache between AppServer & DB, *not* before LB | `placement` check (adjacency/order/forbidden position) | T | extend |
-| **Edge direction / data flow** | prep flows are directional; DB→Client is wrong | directional path check, not adjacency | T | extend |
-| **Tradeoffs / core hard problem** | prep "choosing X because [n], tradeoff Y" | `justification` check (structured, graph-consistent) | J | **new** |
-| **Omission (anti-cargo-cult)** | Lab 5: CDN wasteful for Service B; justify *not* adding | `forbidUnjustified` check | T+J | **new** |
-| **Hot/cold path separation** | Exam 1: geospatial cache vs SQL (20 pts) | placement + latency-budget sim | T+Σ | extend |
-| **Async vs sync** | Exam 3: sync violates 15s SLA at 50K/min | sim fails SLA + queue/worker present | Σ+T | have |
-| **Autoscaling / cost** | Exam 3: autoscale (20 pts); kitchen-sink costs more | `budget`/cost | $ | **new** |
+1. T = topology, 
+
+2. S = scale-fit semantics, 
+
+3. Σ = simulation, 
+
+4. J = justification,
+
+5. $ = budget
+
+).
+
+| Dimension                           | Evidence                                                                   | Mechanism                                                        | Axis | New?     |
+| ----------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---- | -------- |
+| **FR**                              | Exam 1: match / track / surge / pay                                        | each FR → a required sub-path/node-set                           | T    | extend   |
+| **NFR — latency/throughput**        | Exam 1 "<3s match"; Exam 2 "<5ms"                                          | simulation check vs target under load                            | Σ    | have     |
+| **NFR — consistency/durability**    | Exam 1 payment strongly consistent                                         | semantic: payment path must be SQL (not Σ)                       | S    | new      |
+| **Scale (numbers)**                 | prep doc pins *every* decision to a number                                 | drives 3 things: panel display, sim workload, scale-aware checks | S+Σ  | plumbing |
+| **Storage-type for access pattern** | Lab 4: 200K writes + time-series → wide-column, SQL = anti-pattern         | `storageFit` check                                               | S    | **new**  |
+| **READ:WRITE ratio**                | URL 100:1; Feed 50:1; Lab 2 20:1                                           | drives sim workload mix + "must cache when read-heavy" check     | S+Σ  | new      |
+| **Fan-out / messaging**             | Lab 3: 1 broker + 3 consumers ✅; 1 queue→3 = hard fail; 3 queues = partial | `fanout` check (node-type-aware)                                 | T    | **new**  |
+| **Placement / ordering**            | Lab 2: cache between AppServer & DB, *not* before LB                       | `placement` check (adjacency/order/forbidden position)           | T    | extend   |
+| **Edge direction / data flow**      | prep flows are directional; DB→Client is wrong                             | directional path check, not adjacency                            | T    | extend   |
+| **Tradeoffs / core hard problem**   | prep "choosing X because [n], tradeoff Y"                                  | `justification` check (structured, graph-consistent)             | J    | **new**  |
+| **Omission (anti-cargo-cult)**      | Lab 5: CDN wasteful for Service B; justify *not* adding                    | `forbidUnjustified` check                                        | T+J  | **new**  |
+| **Hot/cold path separation**        | Exam 1: geospatial cache vs SQL (20 pts)                                   | placement + latency-budget sim                                   | T+Σ  | extend   |
+| **Async vs sync**                   | Exam 3: sync violates 15s SLA at 50K/min                                   | sim fails SLA + queue/worker present                             | Σ+T  | have     |
+| **Autoscaling / cost**              | Exam 3: autoscale (20 pts); kitchen-sink costs more                        | `budget`/cost                                                    | $    | **new**  |
 
 ---
 
@@ -142,6 +154,7 @@ Each snippet is a **schema-valid** `QuestionPackage` fragment (validated with
 
 **FR** → each functional requirement becomes a required node/sub-path (`structural`).
 Exam 1 "pay" ⇒ a payment path must exist and reach the transactional DB:
+
 ```json
 { "id": "pay-path", "kind": "requires_path", "fromType": "microservice", "toType": "relational-db",
   "description": "A payment path reaches the transactional store" }
@@ -149,6 +162,7 @@ Exam 1 "pay" ⇒ a payment path must exist and reach the transactional DB:
 
 **NFR — latency/throughput** → a `simulation` rubric check vs a target under the
 injected load (Σ). Exam 1 "<3s match":
+
 ```json
 { "id": "match-latency", "kind": "simulation", "metric": "summary.latency.p99", "op": "<", "value": 3000, "points": 3,
   "description": "p99 match under 3s" }
@@ -156,6 +170,7 @@ injected load (Σ). Exam 1 "<3s match":
 
 **NFR — consistency/durability** → *semantic*, not simulation — the sim can't
 measure consistency, so assert the store type (S). Exam 1 payment strongly consistent:
+
 ```json
 { "id": "pay-fits-relational", "kind": "storageFit", "accessPattern": "transactional-relational",
   "accept": ["relational-db"], "antiPattern": ["in-memory-cache"], "points": 3, "hardFail": true,
@@ -164,6 +179,7 @@ measure consistency, so assert the store type (S). Exam 1 payment strongly consi
 
 **Scale (numbers)** → one number drives three surfaces: the prompt panel, the
 injected workload, and scale-aware checks. It is *plumbing*, not a check:
+
 ```json
 "prompt": { "scale": { "peakRps": 200000, "readWriteRatio": 99 } },
 "suite": { "cases": [ { "id": "peak",
@@ -173,6 +189,7 @@ injected workload, and scale-aware checks. It is *plumbing*, not a check:
 
 **Storage-type for access pattern** → `storageFit` maps `(accessPattern) →
 accept / antiPattern`. Lab 4 time-series (SQL = hard fail):
+
 ```json
 { "id": "store-fits-time-series", "kind": "storageFit", "accessPattern": "time-series",
   "accept": ["time-series-db", "columnar-db"], "antiPattern": ["relational-db"], "points": 6, "hardFail": true,
@@ -187,6 +204,7 @@ above — no separate check kind.
 
 **Fan-out / messaging** → node-type-aware `fanout` (a *queue* to N is the hard
 fail). Lab 3:
+
 ```json
 { "id": "fanout", "kind": "fanout", "broker": "message-broker", "minConsumers": 3,
   "forbiddenBroker": "queue", "points": 5, "hardFail": true,
@@ -195,6 +213,7 @@ fail). Lab 3:
 
 **Placement / ordering** → `placement` with adjacency + forbidden position. Lab 2
 (cache between service & DB, not before the LB):
+
 ```json
 { "id": "cache-between", "kind": "placement", "componentType": "in-memory-cache",
   "between": ["microservice", "relational-db"], "notBefore": "load-balancer", "points": 4,
@@ -204,6 +223,7 @@ fail). Lab 3:
 **Edge direction / data flow** → directional guard, not mere adjacency. Use
 `guardedPath` (all `from`→`to` traffic must traverse a guard, in direction), or a
 directed `requires_path`. Rate-limiter counters must reach the shared store:
+
 ```json
 { "id": "counters-in-shared-store", "kind": "guardedPath", "from": "rate-limiter",
   "guard": "in-memory-cache", "points": 4, "hardFail": true,
@@ -211,6 +231,7 @@ directed `requires_path`. Rate-limiter counters must reach the shared store:
 ```
 
 **Tradeoffs / core hard problem** → a graph-consistent `justify` prompt (J):
+
 ```json
 { "id": "why-db", "decision": "Why this DB type for 200000 writes/sec time-series?",
   "boundTo": { "componentType": "time-series-db" },
@@ -219,15 +240,18 @@ directed `requires_path`. Rate-limiter counters must reach the shared store:
 
 **Omission (anti-cargo-cult)** → `forbidUnjustified`: absent, or present *and*
 defended. Lab 5 CDN:
+
 ```json
 { "id": "cdn-justified", "kind": "forbidUnjustified", "componentType": "cdn",
   "justifyId": "why-cdn", "points": 4,
   "description": "CDN must be absent, or defended by a valid justification" }
 ```
+
 (paired with a `justify` prompt whose `id` is `why-cdn`.)
 
 **Hot/cold path separation** → `placement` (hot path off the transactional DB) +
 a latency `simulation` check on the hot path (T+Σ). Exam 1 geospatial:
+
 ```json
 { "id": "geo-hot-path", "kind": "placement", "componentType": "in-memory-cache",
   "between": ["microservice", "relational-db"], "points": 2,
@@ -236,6 +260,7 @@ a latency `simulation` check on the hot path (T+Σ). Exam 1 geospatial:
 
 **Async vs sync** → structural (queue + workers present) **plus** an SLA
 `simulation` check that a synchronous design fails under load (Σ+T). Exam 3:
+
 ```json
 "structuralRules": [
   { "id": "has-queue", "kind": "requires_component", "componentType": "queue", "description": "Async queue decouples ingest" },
@@ -247,6 +272,7 @@ a latency `simulation` check on the hot path (T+Σ). Exam 1 geospatial:
 
 **Autoscaling / cost** → the `budget` axis caps total cost so a kitchen-sink
 design fails ($):
+
 ```json
 "budget": { "unit": "cost", "cap": 600 }
 ```
@@ -261,17 +287,17 @@ graph (+ scale + justification)**, returns pass / partial / fail, and may set
 faculty are explicit that some mistakes are *architecturally naive*, not merely
 *suboptimal*).
 
-| kind | Inputs | Passes when | Example |
-|------|--------|-------------|---------|
-| `structural` | graph, node types | required nodes present (min/max counts) | Lab 1: API Gateway present |
-| `placement` | graph, ordering/adjacency rules | node sits in the required position; forbidden positions absent | Lab 2: cache between AppServer↔DB, not before LB |
-| `direction` | graph, directed path spec | traffic path exists **in the correct direction**; no reverse/bypass edge | redirect path Client→…→DB, no Client→DB shortcut |
-| `fanout` | graph, node-type semantics | a *broker* fans out to N independent consumers (a *queue* to N ≠ fan-out) | Lab 3 |
-| `storageFit` | scale, access pattern, chosen DB type | DB type matches the access pattern; flags anti-patterns | Lab 4 (wide-column), Exam 1 payment (SQL) |
-| `simulation` | verdict metrics vs NFR targets under the scale-derived workload | metric meets target | Exam 3 15s SLA |
-| `justification` | text, bound decision, graph | names choice + cites a scale number + states a tradeoff, **consistent with the graph** | every "justify" prompt |
-| `forbidUnjustified` | graph, node/edge, bound justification | node/edge absent, OR present *and* defended by a valid justification | Lab 5 CDN-for-Service-B |
-| `budget` | graph, cost model | total cost / node count / edge count ≤ cap | anti-kitchen-sink |
+| kind                | Inputs                                                          | Passes when                                                                            | Example                                          |
+| ------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `structural`        | graph, node types                                               | required nodes present (min/max counts)                                                | Lab 1: API Gateway present                       |
+| `placement`         | graph, ordering/adjacency rules                                 | node sits in the required position; forbidden positions absent                         | Lab 2: cache between AppServer↔DB, not before LB |
+| `direction`         | graph, directed path spec                                       | traffic path exists **in the correct direction**; no reverse/bypass edge               | redirect path Client→…→DB, no Client→DB shortcut |
+| `fanout`            | graph, node-type semantics                                      | a *broker* fans out to N independent consumers (a *queue* to N ≠ fan-out)              | Lab 3                                            |
+| `storageFit`        | scale, access pattern, chosen DB type                           | DB type matches the access pattern; flags anti-patterns                                | Lab 4 (wide-column), Exam 1 payment (SQL)        |
+| `simulation`        | verdict metrics vs NFR targets under the scale-derived workload | metric meets target                                                                    | Exam 3 15s SLA                                   |
+| `justification`     | text, bound decision, graph                                     | names choice + cites a scale number + states a tradeoff, **consistent with the graph** | every "justify" prompt                           |
+| `forbidUnjustified` | graph, node/edge, bound justification                           | node/edge absent, OR present *and* defended by a valid justification                   | Lab 5 CDN-for-Service-B                          |
+| `budget`            | graph, cost model                                               | total cost / node count / edge count ≤ cap                                             | anti-kitchen-sink                                |
 
 `structural`, `placement`, `direction`, `fanout` all operate on **nodes *and*
 edges** — see §6 for why edges need their own defenses.
@@ -286,13 +312,13 @@ plus a `detail` string. Points are awarded **full** (passed), **floor(points/2)*
 (partial), or **zero** (failed); a `hardFail` criterion that fails sets
 `hardFailed`, which drops the host contract's `allPassed`.
 
-| kind | Exact computation | Fails when |
-|------|-------------------|-----------|
-| **guardedPath** (`from`,`guard`,`to?`) | Confirm `to` is reachable from `from` on the directed graph; then **rebuild the graph with the guard nodes removed** and re-run reachability. | A `from→to` path survives guard removal (an unguarded **bypass** exists), or `from`/`guard`/`to` is missing, or `from`→`to` is unreachable even with the guard. When `to` is omitted: fails if the guard isn't reachable from `from`. |
-| **placement** (`between?`,`notBefore?`,`orderedPipeline?`) | `between[A,B]`: some component node is reachable from an `A` **and** reaches a `B`. `notBefore X`: no component node reaches an `X`. `orderedPipeline[T₁..Tₙ]`: layered reachability — the frontier of `Tᵢ` nodes must reach a `Tᵢ₊₁` node at each stage. | The component is absent, or off the A→B path, or upstream of a `notBefore` type, or the pipeline order breaks. |
-| **fanout** (`broker`,`minConsumers`,`forbiddenBroker?`) | For each `broker` node, count **distinct** out-edge targets; pass if any ≥ `minConsumers`. | No broker meets the count. If a `forbiddenBroker` node (queue semantics) meets the count instead, fail with the "queue ≠ fan-out" detail (the hard-fail case). |
-| **storageFit** (`accessPattern`,`accept`,`partial?`,`antiPattern?`) | Classify the store types **present** in the graph: any `antiPattern` present → fail; else any `accept` present → pass; else any `partial` present → partial; else fail. | An anti-pattern store is present (e.g. `relational-db` at a point-lookup), or no fitting store exists. |
-| **forbidUnjustified** (`componentType`,`justifyId?`) | Absent ⇒ pass. Present ⇒ pass only if `ctx.justificationPassed(justifyId)` is `true`. | Present with no bound justification, or an undefended/unevaluated justification (conservative: undefined justification result ⇒ fail). |
+| kind                                                                | Exact computation                                                                                                                                                                                                                                         | Fails when                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **guardedPath** (`from`,`guard`,`to?`)                              | Confirm `to` is reachable from `from` on the directed graph; then **rebuild the graph with the guard nodes removed** and re-run reachability.                                                                                                             | A `from→to` path survives guard removal (an unguarded **bypass** exists), or `from`/`guard`/`to` is missing, or `from`→`to` is unreachable even with the guard. When `to` is omitted: fails if the guard isn't reachable from `from`. |
+| **placement** (`between?`,`notBefore?`,`orderedPipeline?`)          | `between[A,B]`: some component node is reachable from an `A` **and** reaches a `B`. `notBefore X`: no component node reaches an `X`. `orderedPipeline[T₁..Tₙ]`: layered reachability — the frontier of `Tᵢ` nodes must reach a `Tᵢ₊₁` node at each stage. | The component is absent, or off the A→B path, or upstream of a `notBefore` type, or the pipeline order breaks.                                                                                                                        |
+| **fanout** (`broker`,`minConsumers`,`forbiddenBroker?`)             | For each `broker` node, count **distinct** out-edge targets; pass if any ≥ `minConsumers`.                                                                                                                                                                | No broker meets the count. If a `forbiddenBroker` node (queue semantics) meets the count instead, fail with the "queue ≠ fan-out" detail (the hard-fail case).                                                                        |
+| **storageFit** (`accessPattern`,`accept`,`partial?`,`antiPattern?`) | Classify the store types **present** in the graph: any `antiPattern` present → fail; else any `accept` present → pass; else any `partial` present → partial; else fail.                                                                                   | An anti-pattern store is present (e.g. `relational-db` at a point-lookup), or no fitting store exists.                                                                                                                                |
+| **forbidUnjustified** (`componentType`,`justifyId?`)                | Absent ⇒ pass. Present ⇒ pass only if `ctx.justificationPassed(justifyId)` is `true`.                                                                                                                                                                     | Present with no bound justification, or an undefended/unevaluated justification (conservative: undefined justification result ⇒ fail).                                                                                                |
 
 **Ordering & dependency.** Semantic criteria run **after** the structural gate
 passes (a structurally-broken topology short-circuits before simulation *and*
@@ -346,14 +372,14 @@ Nodes are the obvious target; **edges are the subtle one**, because edges encode
 the data flow. Every graph-based check must consider edges, direction, and edge
 properties — not just node sets.
 
-| Edge gaming vector | Exploit | Defense |
-|--------------------|---------|---------|
-| **Complete graph / edge kitchen-sink** | wire everything→everything to satisfy any `requires_edge`/connectivity | `budget` on edge count/cost; require *specific directional* paths, not mere adjacency; penalize unused edges |
-| **Wrong-direction edges** | connectivity passes but data flows backwards (DB→Client) | `direction` check on directed paths (we already model edge direction / `request-flow-direction-and-topology-rules`) |
-| **Fake fan-out** | 3 edges off a single **Message Queue** to look like a broker | `fanout` is **node-type-aware**: a queue with N out-edges is *not* fan-out; only a broker with N consumer groups is |
-| **Edge-property tuning** | set edge `errorRate=0`, `latency=0`, `bandwidth=∞`, `maxConcurrentRequests=∞` to pass the sim | faithful edge-property **bounds + defaults** (`edge-properties-and-defaults`, `default-driven-simplification-layer`); **edge cost** (`cost-calculation-and-budgeting`); in exam mode, lock/validate edge props against realistic ranges |
-| **Bypass / shortcut edges** | add a hidden `Client→DB` edge that skips the required cache/gateway while keeping the correct path present | forbidden-edge checks; **"all traffic must traverse the required path"** (a stronger `direction` check than "a path exists") |
-| **Self-loops / duplicate edges** | pad to satisfy counts | normalize graph before grading; reject/ignore self-loops & duplicates |
+| Edge gaming vector                     | Exploit                                                                                                    | Defense                                                                                                                                                                                                                                 |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Complete graph / edge kitchen-sink** | wire everything→everything to satisfy any `requires_edge`/connectivity                                     | `budget` on edge count/cost; require *specific directional* paths, not mere adjacency; penalize unused edges                                                                                                                            |
+| **Wrong-direction edges**              | connectivity passes but data flows backwards (DB→Client)                                                   | `direction` check on directed paths (we already model edge direction / `request-flow-direction-and-topology-rules`)                                                                                                                     |
+| **Fake fan-out**                       | 3 edges off a single **Message Queue** to look like a broker                                               | `fanout` is **node-type-aware**: a queue with N out-edges is *not* fan-out; only a broker with N consumer groups is                                                                                                                     |
+| **Edge-property tuning**               | set edge `errorRate=0`, `latency=0`, `bandwidth=∞`, `maxConcurrentRequests=∞` to pass the sim              | faithful edge-property **bounds + defaults** (`edge-properties-and-defaults`, `default-driven-simplification-layer`); **edge cost** (`cost-calculation-and-budgeting`); in exam mode, lock/validate edge props against realistic ranges |
+| **Bypass / shortcut edges**            | add a hidden `Client→DB` edge that skips the required cache/gateway while keeping the correct path present | forbidden-edge checks; **"all traffic must traverse the required path"** (a stronger `direction` check than "a path exists")                                                                                                            |
+| **Self-loops / duplicate edges**       | pad to satisfy counts                                                                                      | normalize graph before grading; reject/ignore self-loops & duplicates                                                                                                                                                                   |
 
 **Principle:** the grading target is the **directed, typed, property-bearing
 graph**, and edge-level exploits are defended by the *same* defense-in-depth —
@@ -372,13 +398,13 @@ another.
 The single most important structural rule: **the question owns the test
 conditions; the student owns only the architecture.**
 
-| Surface | Owner | Anti-gaming rationale |
-|---------|-------|-----------------------|
-| **Workload** (RPS, traffic pattern, read/write mix, request types/sizes) | **question** | injected at grade time, overriding any student value — else a student sets a 1-RPS, all-cache-hit workload and passes trivially. A read-heavy question **must** inject a read-heavy load so the cache is actually stressed. |
-| **Global run config** (seed, simulationDuration, warmupDuration) | **question** | else a student shortens the run to dodge steady-state, or **cherry-picks a lucky seed** by re-running until one passes. Fixed, question-authored seed(s) + `maxTestRuns` (exam) kill seed-farming. |
-| **Fault injection** (chaos/HA scenarios) | **question** | Exam-mode HA questions inject the failures; the student can't opt out of the scenario they're graded on. |
-| **Node design config** (queue capacity, workers, processing dist/timeout) | **student** (bounded) | the student *should* design node sizing — but each unit is **priced (cost)** and **bounded to realistic ranges/defaults**, so `workers=10000` is caught by `budget` + faithful sim, not by being forbidden. |
-| **Edge design config** (bandwidth, latency, maxConcurrentRequests, errorRate) | **student** (bounded) | same: real ceilings + edge cost, so `bandwidth=∞`/`errorRate=0` is caught by `budget` + faithful sim (§6). |
+| Surface                                                                       | Owner                 | Anti-gaming rationale                                                                                                                                                                                                       |
+| ----------------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Workload** (RPS, traffic pattern, read/write mix, request types/sizes)      | **question**          | injected at grade time, overriding any student value — else a student sets a 1-RPS, all-cache-hit workload and passes trivially. A read-heavy question **must** inject a read-heavy load so the cache is actually stressed. |
+| **Global run config** (seed, simulationDuration, warmupDuration)              | **question**          | else a student shortens the run to dodge steady-state, or **cherry-picks a lucky seed** by re-running until one passes. Fixed, question-authored seed(s) + `maxTestRuns` (exam) kill seed-farming.                          |
+| **Fault injection** (chaos/HA scenarios)                                      | **question**          | Exam-mode HA questions inject the failures; the student can't opt out of the scenario they're graded on.                                                                                                                    |
+| **Node design config** (queue capacity, workers, processing dist/timeout)     | **student** (bounded) | the student *should* design node sizing — but each unit is **priced (cost)** and **bounded to realistic ranges/defaults**, so `workers=10000` is caught by `budget` + faithful sim, not by being forbidden.                 |
+| **Edge design config** (bandwidth, latency, maxConcurrentRequests, errorRate) | **student** (bounded) | same: real ceilings + edge cost, so `bandwidth=∞`/`errorRate=0` is caught by `budget` + faithful sim (§6).                                                                                                                  |
 
 **This split is already how our engine works** — `QuestionSuiteCase` carries
 `global` / `workload` / `faults` overrides that `gradeAttempt` injects via
@@ -388,18 +414,18 @@ config* side: realistic ceilings + cost (§4, §6).
 
 ### 7.2 The gaming matrix
 
-| Gaming vector | Exploit | Caught by |
-|---------------|---------|-----------|
-| Node kitchen-sink | pass all `requires_X` | `budget` · `forbidUnjustified` · `max_component_count` · sim ignores unwired nodes |
-| Edge kitchen-sink | pass all connectivity | `budget` (edge cost) · `direction` (specific paths) |
-| Node-config tuning | crank capacity/workers/timeout so one box absorbs impossible load | node cost (`budget`) · realistic ceilings/defaults · `storageFit` is config-independent |
-| Edge-config tuning | `bandwidth=∞`, `errorRate=0`, `latency=0` | edge cost · faithful edge-property bounds (§6) |
-| **Workload tampering** | set a trivial/benign source workload | **question injects the workload**, overriding the student's (§7.1) |
-| **Seed / run tampering** | shorten run or farm seeds until one passes | **question fixes seed + duration**; `maxTestRuns` caps attempts (§7.1) |
-| Keyword-stuffing | pass keyword match | graph-consistent `justification` (§5) |
-| Wrong-but-passes-sim | under-loaded scenario | sim workload **derived from the scale numbers** so load genuinely stresses the design; independent S-axis checks |
-| Copy a reference diagram | memorize the 4 worked systems | **randomize scale numbers per attempt** + novel prompts |
-| Decorative/disconnected | node/edge present but unwired/off-path | `direction`/connectivity · unwired elements cost but give no metric benefit |
+| Gaming vector            | Exploit                                                           | Caught by                                                                                                        |
+| ------------------------ | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Node kitchen-sink        | pass all `requires_X`                                             | `budget` · `forbidUnjustified` · `max_component_count` · sim ignores unwired nodes                               |
+| Edge kitchen-sink        | pass all connectivity                                             | `budget` (edge cost) · `direction` (specific paths)                                                              |
+| Node-config tuning       | crank capacity/workers/timeout so one box absorbs impossible load | node cost (`budget`) · realistic ceilings/defaults · `storageFit` is config-independent                          |
+| Edge-config tuning       | `bandwidth=∞`, `errorRate=0`, `latency=0`                         | edge cost · faithful edge-property bounds (§6)                                                                   |
+| **Workload tampering**   | set a trivial/benign source workload                              | **question injects the workload**, overriding the student's (§7.1)                                               |
+| **Seed / run tampering** | shorten run or farm seeds until one passes                        | **question fixes seed + duration**; `maxTestRuns` caps attempts (§7.1)                                           |
+| Keyword-stuffing         | pass keyword match                                                | graph-consistent `justification` (§5)                                                                            |
+| Wrong-but-passes-sim     | under-loaded scenario                                             | sim workload **derived from the scale numbers** so load genuinely stresses the design; independent S-axis checks |
+| Copy a reference diagram | memorize the 4 worked systems                                     | **randomize scale numbers per attempt** + novel prompts                                                          |
+| Decorative/disconnected  | node/edge present but unwired/off-path                            | `direction`/connectivity · unwired elements cost but give no metric benefit                                      |
 
 ### 7.3 The two missing levers + load faithfulness
 
@@ -421,24 +447,24 @@ time-weighted integrals) — a lenient/averaged metric is itself a gaming surfac
 
 ## 8. Reverse-engineering to the simulator — gap analysis
 
-| Capability | Status | Note |
-|------------|--------|------|
-| Question schema (prompt/scaffold/suite/rubric/constraints) | ✅ have | `QuestionPackage` |
-| Lab vs Exam mode | ✅ have | `EnvironmentProfile` PRACTICE/ASSIGNMENT; hints + timer are the only gaps |
-| Simulation-metric checks | ✅ have | `rubric.checks` |
-| Structural presence/path checks | ✅ have | `structuralRules` |
-| Hard-fail vs partial + weighted points | ⚠️ extend | need explicit `hardFail` overrides-all + point allocation |
-| **Justification field (graph-consistent)** | ❌ new | §5 — biggest gap; faculty explicitly demand it |
-| **`storageFit` (scale→DB-type)** | ❌ new | Lab 4, Exam 1 |
-| **`fanout` (node-type-aware)** | ❌ new | Lab 3 |
-| **`placement` / `direction`** | ⚠️ extend | extend `requires_path`; add forbidden-position/edge + directed-all-traffic |
-| **Cost / budget model** | ⚠️ specced | `cost-calculation-and-budgeting.md` exists; wire as `budget` check |
-| **Question-authored test conditions** (workload/seed/duration/faults injected, overriding student) | ✅ have | `QuestionSuiteCase` overrides via `mergeTopologyWithOverrides` — the anti-gaming test/architecture split (§7.1) |
-| **Scale numbers → sim workload** | ⚠️ plumbing | derive the injected workload from `scale` so numbers force architecture |
-| **Bounded student config** (node/edge config ceilings + cost) | ⚠️ extend | realistic defaults + pricing so config-tuning is caught, not forbidden (§6, §7.1) |
-| **Faithful node/edge ceilings** | ⚠️ verify | see load-faithfulness (§7.3) |
-| Hints (cost points, exam) + timer | ❌ new | Lab/Exam detail |
-| Scale randomization per attempt | ❌ new | anti-memorization (§7) |
+| Capability                                                                                         | Status     | Note                                                                                                            |
+| -------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------- |
+| Question schema (prompt/scaffold/suite/rubric/constraints)                                         | ✅ have     | `QuestionPackage`                                                                                               |
+| Lab vs Exam mode                                                                                   | ✅ have     | `EnvironmentProfile` PRACTICE/ASSIGNMENT; hints + timer are the only gaps                                       |
+| Simulation-metric checks                                                                           | ✅ have     | `rubric.checks`                                                                                                 |
+| Structural presence/path checks                                                                    | ✅ have     | `structuralRules`                                                                                               |
+| Hard-fail vs partial + weighted points                                                             | ⚠️ extend   | need explicit `hardFail` overrides-all + point allocation                                                       |
+| **Justification field (graph-consistent)**                                                         | ❌ new      | §5 — biggest gap; faculty explicitly demand it                                                                  |
+| **`storageFit` (scale→DB-type)**                                                                   | ❌ new      | Lab 4, Exam 1                                                                                                   |
+| **`fanout` (node-type-aware)**                                                                     | ❌ new      | Lab 3                                                                                                           |
+| **`placement` / `direction`**                                                                      | ⚠️ extend   | extend `requires_path`; add forbidden-position/edge + directed-all-traffic                                      |
+| **Cost / budget model**                                                                            | ⚠️ specced  | `cost-calculation-and-budgeting.md` exists; wire as `budget` check                                              |
+| **Question-authored test conditions** (workload/seed/duration/faults injected, overriding student) | ✅ have     | `QuestionSuiteCase` overrides via `mergeTopologyWithOverrides` — the anti-gaming test/architecture split (§7.1) |
+| **Scale numbers → sim workload**                                                                   | ⚠️ plumbing | derive the injected workload from `scale` so numbers force architecture                                         |
+| **Bounded student config** (node/edge config ceilings + cost)                                      | ⚠️ extend   | realistic defaults + pricing so config-tuning is caught, not forbidden (§6, §7.1)                               |
+| **Faithful node/edge ceilings**                                                                    | ⚠️ verify   | see load-faithfulness (§7.3)                                                                                    |
+| Hints (cost points, exam) + timer                                                                  | ❌ new      | Lab/Exam detail                                                                                                 |
+| Scale randomization per attempt                                                                    | ❌ new      | anti-memorization (§7)                                                                                          |
 
 ---
 
@@ -491,6 +517,7 @@ rubric:
       requires: { choice, number:200000, tradeoff }
 budget: { unit: cost, cap: <IoT-store budget> }   // KV/relational padding costs
 ```
+
 Gaming caught: SQL-and-tune-the-sim → `storageFit` hard-fails independent of sim;
 kitchen-sink DBs → `budget`; correct-prose-wrong-graph → `justification`
 graph-consistency.
@@ -507,6 +534,7 @@ rubric:
   - justification points 20   decision:"Which algorithm and why?"  // token bucket / sliding window
   - justification points 20   decision:"Why cache not DB for counters?"  requires:{number:5 /*ms*/, tradeoff}
 ```
+
 Gaming caught: the faculty's exact hard-fail — *"detect graphs where the Rate
 Limiter has no connection to a shared Cache/DB node"* — is the `structural` +
 `direction` guard; "vague we-check-a-counter" → `justification` requiring the
@@ -521,11 +549,11 @@ canonical questions were fetched and encoded. They were chosen to hit dimensions
 *absent* from URL/Chat/Feed/Docs: **correctness-under-contention**, **exactly-once**,
 and **batch/throughput**.
 
-| Question | New dimension it stresses | Core hard problem |
-|----------|---------------------------|-------------------|
-| **Ticketmaster** | correctness-under-contention | no double-booking (distributed lock + TTL + OCC); virtual waiting queue |
-| **Web Crawler** | batch / throughput + async pipeline | URL/content dedup; per-domain politeness; frontier→fetch→process pipeline with DLQ |
-| **Payment System** | exactly-once + auditability | idempotency keys; immutable double-entry ledger; reconciliation |
+| Question           | New dimension it stresses           | Core hard problem                                                                  |
+| ------------------ | ----------------------------------- | ---------------------------------------------------------------------------------- |
+| **Ticketmaster**   | correctness-under-contention        | no double-booking (distributed lock + TTL + OCC); virtual waiting queue            |
+| **Web Crawler**    | batch / throughput + async pipeline | URL/content dedup; per-domain politeness; frontier→fetch→process pipeline with DLQ |
+| **Payment System** | exactly-once + auditability         | idempotency keys; immutable double-entry ledger; reconciliation                    |
 
 **Encodings held** in the §2 schema. But solving them surfaced **five concrete
 refinements** that Phase 1 must fold in:
