@@ -64,11 +64,16 @@ scale numbers and be forced into the right design by the simulation).
 | `connection-heavy` | fan-out / shared-state traffic | T | broker fan-out, shared counters |
 | `correctness-heavy` | modest load | **T + J** (NOT Σ) | exactly-once, no-double-book, ordering |
 | `batch-heavy` | sustained throughput, latency-insensitive | Σ (throughput) + T (pipeline) | ordered pipeline, dedup, aggregate throughput |
-| `compute` | CPU-bound requests | Σ (utilization) | sizing compute; `batch-worker` category is `compute` |
 
 > **"Equal"** read/write is authored as a `requestDistribution` with `read`/`write`
 > weights ~0.5/0.5 and no single dominant axis; the grade then rests on structure +
 > justification. There is no `equal` enum value — express it via the distribution.
+>
+> **CPU-bound / resource-allocation questions.** There is also **no**
+> `workloadCategory: "compute"` enum in the shipped schema. Author those as an
+> existing workload character (`batch-heavy` is the usual fit for sustained
+> throughput work), then declare the lesson explicitly in `domains`
+> (for example `["compute"]` or `["compute", "cost"]`).
 
 ---
 
@@ -126,6 +131,24 @@ type token.
 traffic **and** (b) the topology routes on type (`condition: request.type === "read"`).
 A distribution with no type-conditional routing leaves reads and writes on the
 same path, so the ratio has no effect (alignment §9).
+
+### 2.4 Current topology-default semantics that affect authored questions
+The question DSL owns the **suite workload**, but authored reference / gamed
+topologies still inherit important simulator defaults. These are the ones that
+matter today:
+
+| Surface | Current behavior | Authoring consequence |
+|---------|------------------|-----------------------|
+| `suite.cases[].workload.pattern` | If you author a full workload, `pattern` must be explicit. The product's interactive defaults now favor **`constant`** traffic for predictability. | For deterministic graded cases, prefer `constant` unless arrival jitter is part of the lesson. Use `poisson` only intentionally. |
+| Edge latency when no explicit edge latency is authored | The renderer/serializer now resolves a bare edge to a **path-type-derived constant median latency (no jitter)**. Log-normal latency only appears when the edge explicitly chooses the log-normal model or supplies `mu` / `sigma`. | If the question depends on latency variance or burst bunching, author explicit log-normal edge latency in the topology. Do not assume omitted latency means jitter. |
+| Node capacity when `resources.instanceType` / `instanceCount` are present | The engine now treats the **instance model** as authoritative for effective concurrency on that node. Legacy nodes with no instance-model resources still run off raw `queue.workers` / `queue.capacity`. | For saturation / scaling questions, treat `resources` as part of the real topology DSL. Once you opt into instance-model resources, raw queue numbers are no longer the whole story. |
+| Cost in the live product vs cost in question grading | The app now has a richer instance-aware live cost model and resource displays, but **`budget.unit:"cost"` in question grading still uses the older v1 heuristic** from `budget.ts`. | Do not assume the UI cost chip and the graded `$` axis are numerically identical. Use `budget.nodes` / `budget.edges` for hard anti-kitchen-sink caps; treat `budget.cost` as a heuristic grading axis until the grading DSL is upgraded. |
+
+For authored question packages, the safest practice is:
+- always set `suite.cases[].workload.pattern` explicitly,
+- author edge latency explicitly whenever edge jitter is part of the discriminator,
+- and be deliberate about whether a reference topology is **legacy queue-authored**
+  or **instance-model-authored**.
 
 ---
 
@@ -385,6 +408,8 @@ Every customizable property across the DSL. **Scope** names the containing objec
 | `estimatedTimeMinutes` | QuestionPackage | number | Optional | Est. solve time. | — |
 | `type` | QuestionPackage | `fix \| build-budget \| optimize \| open-build \| scaling \| ha-chaos \| tradeoff` | Required | Question archetype. | — |
 | `workloadCategory` | QuestionPackage | `read-heavy \| write-heavy \| connection-heavy \| correctness-heavy \| batch-heavy` | Optional | Primary evaluation axis selector. | No `compute`/`equal` enum — `batch-worker` node is category `compute`; "equal" = a 0.5/0.5 `requestDistribution`. |
+| `domains` | QuestionPackage | `QuestionDomain[]` (`compute \| storage \| network \| resilience \| correctness \| cost`) | Optional but strongly recommended | Declares the bottleneck domain(s) the question is teaching. Drives authoring-validator consistency checks and platform behavior such as edge/resource edit policy. | Missing ⇒ validator `domains.missing`; `network` / `resilience` / `cost` currently warn as V2 domains. |
+| `concepts` | QuestionPackage | `string[]` (non-empty kebab-case slugs by convention) | Optional | Fine-grained lesson tags, narrower than `domains` (for example `read-cache`, `store-fit`, `async-decoupling`). | Free-form metadata today; schema enforces only non-empty strings. |
 | `author` | QuestionPackage | string | Optional | Author id. | — |
 | `createdAt` | QuestionPackage | ISO string | Optional | Timestamp. | — |
 | `prompt.text` | prompt | string (markdown) | Required | Problem statement. | Frame as "design the architecture, not code". |
@@ -505,6 +530,13 @@ Every customizable property across the DSL. **Scope** names the containing objec
 - **Read/write mix is JSON-only** — not settable on the canvas or a source node
   (both `Omit` `requestDistribution`); and it only affects the sim when the topology
   routes on `request.type`.
+- **Omitted edge latency is now deterministic by default** — a bare edge resolves to
+  a path-type-derived **constant** median latency, not an implicit log-normal. If a
+  question needs network jitter, author it explicitly.
+- **Instance-model resources change the meaning of capacity** — once a node carries
+  `resources.instanceType` / `instanceCount`, effective concurrency is derived from
+  the instance model. Legacy `queue.workers`-only intuition no longer applies
+  unchanged to that node.
 - **Short-circuit** — a failing `structuralRule` skips semantic + simulation. Design
   gamed topologies to pass structural if you want a specific semantic check to fail.
 - **CLI vs in-app** — `forbidUnjustified` fails a present component in the CLI (no
@@ -513,6 +545,9 @@ Every customizable property across the DSL. **Scope** names the containing objec
 - **Correctness ≠ simulation** — never author a `simulation` check for exactly-once,
   ordering, immutability, or no-double-book.
 - **Tractable RPS** — `baseRps` ~2–5K; the real number goes in `prompt.scale`.
+- **Graded cost is still heuristic** — the live app may show richer instance-aware
+  cost numbers, but question-package `budget.unit:"cost"` still grades via
+  `estimateNodeCost` in `budget.ts`.
 
 ### 8.3 Implementation status — graded vs schema-only
 Not every schema field drives grading. Author accordingly.
@@ -527,6 +562,8 @@ Not every schema field drives grading. Author accordingly.
 | `suite.cases[].workload` / `global` / `faults` | ✅ | ✅ injected at grade time |
 | `constraints.*` (`maxNodeCount`, `maxBudget`, `maxTotalWorkers`, `allowed/forbiddenNodeTypes`) | ✅ | ❌ **not enforced at grade time** (UI/palette only) — use `budget` + `max_node_count`/`max_component_count` structural rules to enforce |
 | `workloadCategory` | ✅ | ❌ label only (author-side axis selector; not read by grading) |
+| `domains` | ✅ | ⚠️ **advisory + platform-facing** — checked by the authoring validator and consumed by environment-profile / edit-policy logic, but not scored as a rubric axis by themselves |
+| `concepts` | ✅ | ❌ metadata only (taxonomy / indexing aid; not graded) |
 | `type` (`fix`/`build-budget`/`optimize`/`open-build`/`scaling`/`ha-chaos`/`tradeoff`) | ✅ | ❌ **all are labels** — none drives behavior. `optimize` does **not** grade against `scaffold.baselineVerdict`; `build-budget` does not auto-enforce `budget`; `ha-chaos` "works" only via `suite.faults`. |
 | `scaffold.baselineVerdict` | ✅ | ❌ not graded (no "beat the baseline" check) |
 | `requestDistribution[].metadata` | ✅ | ❌ not consumed |
