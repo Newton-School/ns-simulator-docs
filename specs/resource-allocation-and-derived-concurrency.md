@@ -17,7 +17,8 @@ Related: [`cost-calculation-and-budgeting.md`](./cost-calculation-and-budgeting.
 5. [The instance catalog](#the-instance-catalog)
 6. [The caps: quota, cost, and per-node](#the-caps-quota-cost-and-per-node)
 7. [Cost model: where cost comes from](#cost-model-where-cost-comes-from)
-8. [The derivation model](#the-derivation-model)
+8. [Cost sourcing: the authoritative per-component reference](#cost-sourcing-the-authoritative-per-component-reference)
+9. [The derivation model](#the-derivation-model)
 9. [Worked examples](#worked-examples)
 10. [Schema changes](#schema-changes)
 11. [New failure modes](#new-failure-modes)
@@ -239,37 +240,89 @@ Nobody should later bolt "S3 storage pricing" onto a simulator with no stored-by
 
 ---
 
+## Cost sourcing: the authoritative per-component reference
+
+This is the canonical answer to "where does each node's cost come from." Cost is **node-based** and resolved through a four-step lookup, all of which exist in code:
+
+```
+palette component  ──paletteTemplates──▶  componentType
+componentType      ──resourceDefaults──▶  { instanceType, workloadKind, costModel, pricePerGb? }
+instanceType       ──INSTANCE_CATALOG──▶  { vcpu, ramGb, pricePerHour }
+node cost/hr       =  by costModel (below)                        (analysis/cost.ts)
+topology cost/hr   =  Σ node costs                                (header CostChip)
+```
+
+### The `costModel` primitive (how the trait system fits)
+
+Cost basis is a **per-type capability**, declared on `ResourceTypeDefault.costModel` — the same trait-style pattern as `base.queue` / `source.workload`. Four models, because node types cost money in fundamentally different *shapes*:
+
+| `costModel` | Formula | Shape | Applies to |
+|---|---|---|---|
+| `provisioned` | `pricePerHour × instanceCount` | pure fn of topology → **live, pre-run** | compute, LB, queue, broker, cache, all DBs |
+| `volume` | `pricePerGb × bytes-transferred` | needs traffic → **estimate pre-run, exact post-run** | CDN, object-storage |
+| `consumption` | `pricePerMillionReq × throughput` | needs traffic → post-run (Slice 4) | serverless (deferred) |
+| `none` | — | not billable | sources / client apps |
+
+**Why volume can't be a pure pre-run number like provisioned:** provisioned cost is a function of what you *provisioned* (instances), knowable before any run. Volume cost is a function of *traffic* (bytes egressed), which only exists once requests flow. So volume nodes show a **pre-run estimate** from the configured workload (`baseRps × avg request bytes × pricePerGb`, an upper bound that assumes the node sees full offered load — routing is a post-run concern), and can be measured exactly after a run. This is real physics, not a modelling gap.
+
+### Authoritative table — visible palette (V1 focus)
+
+| Palette | componentType | costModel | Default instance | $/hr or $/GB | Notes |
+|---|---|---|---|---|---|
+| Client App / Input Source | api-endpoint (source) | `none` | — | $0 | traffic source, not infra |
+| API Server / Service / My Service | microservice | provisioned | `c5.large` | 0.085/hr | compute-opt |
+| Job Worker / Cron Job | batch-worker | provisioned | `c5.large` | 0.085/hr | compute-opt |
+| Load Balancer | load-balancer | provisioned | `m5.large` | 0.096/hr | general |
+| Message Queue | queue | provisioned | `m5.large` | 0.096/hr | backpressure |
+| Event Broker | message-broker | provisioned | `r5.large` | 0.126/hr | memory-opt |
+| Redis Cache | in-memory-cache | provisioned | `r5.large` | 0.126/hr | memory-opt |
+| KV Store | kv-store | provisioned | `m5.large` | 0.096/hr | — |
+| NoSQL DB | nosql-db | provisioned | `m5.xlarge` | 0.192/hr | — |
+| Primary DB / Read Replica | relational-db | provisioned | `m5.xlarge` | 0.192/hr | — |
+| Time-series DB | time-series-db | provisioned | `r5.xlarge` | 0.252/hr | memory-opt, write-heavy |
+| CDN | cdn | **volume** | (n/a for cost) | **0.085/GB** | egress; `instanceType` only sizes the queue |
+| Object Storage | object-storage | **volume** | (n/a for cost) | **0.09/GB** | egress; storage GB-month still unmodeled |
+
+For `volume` types the `instanceType` is retained **only** to size the G/G/c/K queue (they still serve requests) — it does **not** drive their cost. Their cost is per-GB egress.
+
+### CDN / Object-Storage: why they were placeholders, and the fix
+
+They were briefly priced as an `m5.large` because the cost model only knew `provisioned`. That was wrong — CloudFront bills per-GB egress, S3 per-GB-month storage + egress, neither in instance-hours. The fix is the `volume` costModel above: they now show a per-GB rate and a workload-based egress estimate, never a fake instance price. **Object-storage's dominant real cost (GB-month storage-at-rest) stays unmodeled** — the sim has no stored-bytes quantity (see out-of-scope) — so only its egress is priced, and that limitation is stated honestly rather than faked.
+
+### Slice 5, restated
+
+Slice 5 **is** this volume axis. Implementing it for the visible nodes = the `volume` costModel + per-GB egress estimate above (done for CDN/object-storage). The remaining Slice-5 work is post-run *measured* egress (exact, per-node, routing-aware) and inter-region transfer pricing via composite membership — layered on once per-node throughput/byte accounting is wired.
+
+---
+
 ## The derivation model
 
-`queue.workers` and `queue.capacity` become **derived outputs**, not authored inputs. The engine resolves the instance type to `{ vcpu, ramGb }`, multiplies by count, then builds its G/G/c/K.
+**FINAL MODEL — derive & lock (supersedes the earlier "cap a requested number" drafts).** `workersPerInstance` and `queueSlots` are **not authored at all** — the instance is the *only* allocation knob. Workers and K are pure functions of the hardware, shown read-only. This is the resolution of the original decision #1: keeping them as editable inputs (even capped) let a student type `8×10²⁰` workers and defeat the whole model, so they were removed entirely.
 
 ```
 { vcpu, ramGb } = instanceCatalog[instanceType]      // fixed per-instance, from the menu
 
-totalVcpu  = vcpu  × instanceCount
-totalRamMb = ramGb × 1024 × instanceCount
+// Concurrency is DERIVED from the hardware — not a free dial.
+workersPerVcpu = workloadKind === 'cpu-bound' ? 1 : IO_WORKERS_PER_VCPU   // 1 vs 32
+effectiveC = vcpu × instanceCount × workersPerVcpu   // servers actually serving
 
-requestedConcurrency = instanceCount × workersPerInstance
-
-// vCPU only caps CPU-bound work; IO-bound legitimately runs workers ≫ vCPU
-cpuCeiling = workloadKind === 'cpu-bound' ? totalVcpu : Infinity   // ~1 parallel worker / vCPU
-
-// RAM is a hard admission wall
-memCeiling = floor( totalRamMb / perRequestMemMb )
-
-effectiveC = min(requestedConcurrency, cpuCeiling)     // servers actually serving
-effectiveK = min(effectiveC + queueSlots, memCeiling)  // system limit (in-service + waiting)
+// Admission K is DERIVED from RAM (a full node is out of memory → `oom`).
+memCeiling = floor( ramGb × 1024 × instanceCount / perRequestMemMb )
+effectiveK = max(effectiveC, memCeiling)             // RAM decides the waiting room, never below c
 ```
 
-Three derived signals the UI must surface **inline** (per the honesty principle — every number shows its provenance, not in a tooltip):
+`IO_WORKERS_PER_VCPU` (=32) is the global io-bound concurrency knob: a core mostly waiting on IO multiplexes many concurrent requests, but the count is still tethered to the paid hardware tier — never infinite. cpu-bound work runs ~1 parallel worker per vCPU. To get more concurrency you provision a bigger/more instances, which costs money — that *is* the lesson.
+
+Two derived signals the UI surfaces **inline**, read-only (per the honesty principle — every number shows its provenance):
 
 | Derived value | Meaning | Surfaced as |
 |---|---|---|
-| `effectiveC` | actual `c` in the sim | "effective concurrency ≈ 24 (requested 24, CPU-capped)" |
-| `effectiveK` | actual `K` | "admission limit 200 (RAM-bound: 8 GB ÷ 40 MB)" |
-| `contentionFactor` = `requestedConcurrency / cpuCeiling` when > 1 | CPU oversubscription | service-time inflation multiplier |
+| `effectiveC` | actual `c` in the sim | "64 workers/inst → eff. concurrency 64" |
+| `effectiveK` | actual `K` | "admission 256 (RAM-bound)" |
 
-**CPU contention is not a terminal — it's service-time inflation.** When `requestedConcurrency > cpuCeiling`, multiply the service-time distribution mean by `contentionFactor`: workers past the vCPU count time-slice instead of running in parallel. This is the "you can't fake compute" physics. Utilization's time-weighted `busyAreaUs` integral then divides by `effectiveC` instead of raw `workers`.
+**No oversubscription / contention factor exists anymore** — since workers aren't a requested number, there's nothing to over-request. The vCPU relationship *is* the derivation, not a cap on a separate input. Utilization's time-weighted `busyAreaUs` integral divides by `effectiveC` (still true, `maxWorkers = effectiveC`).
+
+**Separately: Timeout and Mean Service Time are clamped** (Timeout ≤ 60000 ms, service time ≤ 10000 ms) — an input-validation guard unrelated to the instance model, closing the "type `1e38` ms" hole.
 
 ---
 
@@ -301,10 +354,10 @@ cpuCeiling           = totalVcpu       = 8       (cpu-bound)
 memCeiling           = 16 384 / 40     = 409
 effectiveC           = min(100, 8)     = 8       ← 100 asked, 8 real
 effectiveK           = min(8 + 40, 409) = 48
-contentionFactor     = 100 / 8         = 12.5    ← service time ×12.5
+contentionFactor     = 100 / 8         = 12.5    ← informational only (oversubscribed 12.5×)
 ```
 
-**What the student sees (inline provenance):** *"effective concurrency = 8 (requested 100, CPU-capped at 8 vCPU) · service time ×12.5 from oversubscription."* Cranking workers from 8 → 50 did **nothing** for throughput and *hurt* latency (12.5× contention). Provisioned cost held flat at `0.170 × 2 = $0.34/hr` — they paid nothing extra and gained nothing.
+**What the student sees (inline provenance):** *"effective c = 8 (requested 100, CPU-capped at 8 vCPU · oversubscribed 12.5×)."* Cranking workers from 8 → 50 did **nothing** for throughput (c is still 8, capped by vCPU) and *hurt* latency — the 92 excess requested workers can't run in parallel, so they pile into the queue. Provisioned cost held flat at `0.170 × 2 = $0.34/hr` — they paid nothing extra and gained nothing. (The oversubscription is not double-charged as a separate service-time penalty; the cap alone is the physics.)
 
 **The honest fix — buy concurrency:** to actually get ~24 parallel workers they must provision vCPU. Switch to `c5.2xlarge` (8 vCPU, $0.340/hr) × 3 = 24 vCPU → `effectiveC = 24`, cost `0.340 × 3 = $1.02/hr`. But `maxInstances = 4` caps them at 4 instances, and if the environment `resourceBudget.totalVcpu = 16`, three 8-vCPU boxes (24 vCPU) is a **build-time quota failure** — they must either raise the budget (author's call) or accept the ceiling. Concurrency now visibly *costs* money and is *capped* — exactly the intended lesson.
 
@@ -374,7 +427,7 @@ The closed terminal taxonomy today is `queue_full | node_failed | network_error 
 
 - **`oom`** — an arrival would exceed `memCeiling`. Distinct from `queue_full`: `queue_full` = "too many waiting"; `oom` = "not enough RAM to hold them." Different lesson, different fix (add RAM/instances vs add workers). It flows through the **same** `recordTerminal` funnel / `WindowedLatencyAggregator` as any other cause; the UI renders it only when it fires.
 
-CPU contention adds **no** terminal — it is the service-time multiplier described above.
+CPU contention adds **no** terminal and **no** service-time penalty — it is realized purely by capping `effectiveC` (excess workers queue). `contentionFactor` is an informational oversubscription badge only. See the derivation-model note.
 
 ---
 
@@ -394,19 +447,19 @@ A "first honest slice" = make one dishonest number honest, end to end (derived v
 Add `INSTANCE_CATALOG`; author picks `instanceType` + `instanceCount` (rename of `replicas`) with a per-node `maxInstances` validation. Wire into `GGcKNode` so `effectiveC = instanceCount × workersPerInstance`, resolving per-instance vCPU/RAM from the catalog. Show the derived effective concurrency inline ("effective c = 3 × c5.xlarge = 3 × 8 = 24"). Lock with a test. Converts three ❌ rows (`resources` decoration, `replicas` inconsistency, free-typed dials) toward ✅ without yet touching CPU/RAM *physics*. Highest leverage, testable in isolation, low-risk.
 
 **Slice 1 — Compute (vCPU) caps concurrency & bends service time.**
-Add `cpuCeiling = totalVcpu` + `contentionFactor` for `cpu-bound` nodes. Couples `resources` to `processing.distribution` (currently unrelated). Requires the `workloadKind` flag so IO-bound designs aren't wrongly punished.
+Add `cpuCeiling = totalVcpu` so `effectiveC = min(requested, cpuCeiling)` for `cpu-bound` nodes; `contentionFactor` surfaced as an informational oversubscription badge (no service-time penalty — cap-only, see derivation note). Requires the `workloadKind` flag so IO-bound designs aren't wrongly punished.
 
 **Slice 2 — RAM as the admission wall.**
 Derive `effectiveK` from `memCeiling = totalRamMb / perRequestMemMb`; add the `oom` terminal. Makes `queue.capacity` derived and defensible instead of a vibe. Most pedagogically valuable — it's what makes this a *resource-allocation* exercise rather than a *worker-count* exercise.
 
-**Slice 3 — cost display + the two environment budgets (axis 1, provisioned).**
-Make cost a first-class always-on output: replace `estimateNodeCost` with the provisioned instance-price sum (`pricePerHour × instanceCount`) in `budgetBreakdown`, and show `totalCostPerHour` + per-node breakdown on every topology (cap or not). Then add `resourceBudget` (quota) and `costBudget` (cost) on `EnvironmentCapabilities`; sum vCPU/RAM/$ across nodes and surface over/under each cap live. This is what turns "size each box" into "spend a fixed hardware *and money* budget across the architecture" — the core requirement.
+**Slice 3 — cost display + the two environment budgets (axis 1, provisioned). DONE.**
+Cost is a first-class always-on output (the header CostChip + per-node breakdown, shown cap or not). `resourceBudget` (vCPU/RAM quota) and `costBudget` (money) added on `EnvironmentCapabilities`, both optional (absent = unbounded). `analysis/cost.ts` gained `topologyResources` + `evaluateBudgets` (each dimension present only when its cap is set; quota and cost independent — a design can pass one and fail the other). The CostChip reads the caps from the active environment profile, turns red over budget, shows the cap inline (`$0.09 / $0.05`), and lists per-dimension used/cap in its dropdown. Verified in-app. This turns "size each box" into "spend a fixed hardware *and money* budget across the architecture" — the core requirement.
 
-**Slice 4 — consumption pricing (axis 2), the provisioned-vs-serverless lesson.**
-Add a consumption-priced node flag + `pricePerMillionRequests`, billed on the throughput `MetricsCollector` already measures. Both regimes now compare on one `$/hr` axis — the exam question "provisioned fleet vs per-request service at this traffic shape."
+**Slice 4 — consumption pricing (axis 2), the provisioned-vs-serverless lesson. DONE.**
+`costModel: 'consumption'` + `pricePerMillionRequests` on `ResourceTypeDefault`; `serverless-function` priced at $0.20/M req. `cost.ts` bills it from the configured workload (`baseRps × 3600 / 1e6 × rate`) as a pre-run estimate (exact post-run once per-node throughput is wired). Both regimes now compare on one `$/hr` axis. The RESOURCES note + cost breakdown show `$X/M req`. Unit-tested ($0.72/hr @ 1000 rps). *Serverless is not in the curated V1 palette — a product call, not a model gap.*
 
-**Slice 5 — network egress (axis 3), GATED.**
-Edge/inter-region transfer cost from per-request byte size. Do **not** start until the request-size model lands (shared dependency with `perRequestMemMb`), or it's dishonest.
+**Slice 5 — network egress (axis 3). DONE (pre-run estimate).**
+Per-edge inter-region/egress transfer cost keyed off `edge.latency.pathType`: `cross-zone` $0.01/GB, `cross-region` $0.02/GB, `internet` $0.09/GB, same-rack/same-dc free (`EDGE_EGRESS_RATE_PER_GB` in `cost.ts`). Egress bytes estimated from configured workload (rough — assumes the edge carries the offered load); exact per-edge egress is the remaining post-run *measurement*. Shows as a `transfer · <pathType>` line in the cost breakdown. Unit-tested + verified in-app (a cross-zone edge priced at `~$0.01/GB · $0.0033/hr` in the breakdown).
 
 Ship Slice 0, verify in-app, then stage 1 → 2 → 3 → 4 → (5 when unblocked). (Cost display in Slice 3 has no engine-physics dependency, so it can be pulled forward to run alongside Slice 0 if cost-awareness is the priority.)
 
@@ -504,6 +557,28 @@ Notes: (1) no current node type defaults to the **consumption** regime — there
 
 ---
 
+## Pricing model & compute-performance (Vantage-inspired)
+
+Two enrichments drawn from professional instance-comparison tools (e.g. Vantage), keeping our catalog a short legible menu — *not* a searchable database (we deliberately skip filter-expression languages, compare/export, region/currency selectors).
+
+### Pricing model — DONE
+
+`ResourceConfig.pricingModel: 'on-demand' | 'reserved' | 'spot'` (default on-demand). Cost = `pricePerHour × PRICING_MULTIPLIER[model] × instanceCount` (`instanceCatalog.ts`): on-demand 1.0, **reserved 0.6** (~40% off, committed), **spot 0.3** (~70% off). Surfaced as a `Pricing` select in the RESOURCES section; the node note + cost breakdown show the model (e.g. `$0.026/hr (spot)`). This completes the cost story with the flexibility ↔ commitment ↔ risk tradeoff.
+
+**The spot hook (future):** spot's discount comes with *reclaim risk* — the provider can terminate the instance. That maps cleanly onto the fault-injection suite: a spot node is a candidate for a random `node_failed`/`connection_reset` during a run. So `spot` is not just a cheaper price — it's a reliability-vs-cost lesson, wired in once fault injection is reachable in-app (the same blocker that keeps the status-timeline strip empty today).
+
+### Compute-performance factor — DONE
+
+Vantage shows a CoreMark/benchmark score per instance — a *speed* dimension the model previously lacked (every vCPU was equal; the instance set concurrency and cost, but not how fast a single request served). Now each catalog entry carries a **`perfFactor`** (relative single-thread speed, per family: `m5`/`r5`/`x1e` = 1.0 baseline, `c5` compute-optimized = 1.3, `t3` burstable = 0.8). A node's service time is multiplied by `serviceTimeMultiplier = 1 / effectivePerf`, so a faster instance serves each request quicker — "buy better hardware → lower latency" is now a real, visible lever.
+
+- **`workloadKind` interaction:** cpu-bound work spends all its time on the core, so it gets the full `perfFactor`; io-bound work mostly *waits*, so it's damped: `effectivePerf = cpu-bound ? perfFactor : 1 + (perfFactor − 1) × IO_PERF_SENSITIVITY` (0.25). A faster core barely helps a request blocked on a store.
+- **Surfaced** in the RESOURCES note as `service ×N.NN` (e.g. a cpu-bound `c5.large` shows `service ×0.77` — 23% faster).
+- **v1 keeps it a flat multiplier** — the real burstable-credit *exhaustion* of `t3` (fast until credits run out, then throttled) is deliberately deferred.
+- **Burstable-credit exhaustion — assessed, staying deferred (not a v-gate, a modelling call).** A faithful credit machine is *non-stationary*: the node serves at burst speed while a credit balance lasts, then drops to a baseline rate once it's spent. That collides with two load-bearing invariants of this engine: (a) the G/G/c/K node has a single stationary service-time distribution, and (b) every reported scalar is a **time-weighted integral over the whole run** ([[no-point-sampled-scalars]]) — a mid-run regime switch would blend two speeds into one utilization/latency number that describes neither. Under *sustained* above-baseline load (the regime these sims target), a burstable instance depletes its credits early and spends almost the entire run at baseline anyway — so the honest steady-state representation of a `t3` **is** a flat derate at its post-credit speed, which is exactly what `perfFactor` already encodes. Building the transient would add engine state and *reduce* metric honesty while modelling a window (the first few seconds) that no bank question exercises (per the "9 questions drive priority" gate). Revisit only if a question is authored specifically around burst-then-throttle behaviour; the correct implementation then is a two-phase timeline, not a knob on the node.
+- **Bank impact (as predicted):** shifting service time re-tunes throughput. Re-validated after regeneration — the bottleneck `t3.small` cpu-bound stores got ~25% slower (`×1.25`), which only strengthens their saturation; cache-fronted references are unaffected. **All 9 still discriminate** (9/9 refs PASS, 9/9 gamed FAIL as intended, 0 under-constrained).
+
+---
+
 ## Source-to-feature map
 
 | Source | Role in this spec |
@@ -523,7 +598,7 @@ Notes: (1) no current node type defaults to the **consumption** regime — there
 
 ## Open questions
 
-1. **Fully-derived vs constrained `workersPerInstance` — and whether the app-level knobs stay at all (DECIDE LATER).** The instance type sets the *ceiling* for both concurrency and queue depth (`cpuCeiling` from vCPU, `memCeiling` from RAM), but doesn't fully *decide* them — `workersPerInstance` (app concurrency: gunicorn workers / thread pool) and the queue-slots depth (accept backlog / load-shedding policy) are app-level settings that live *inside* the ceiling. `effective = min(configured, ceiling)`. So the fork is three-way: (a) **keep both knobs**, capped — richest (models sync-vs-async worker tuning and fail-fast-vs-buffer queue depth, and lets an author write a misconfigured-concurrency bug on correct hardware); (b) **derive defaults from `instanceType` + `workloadKind`, override within cap** — a student who does nothing gets a correct machine, tuning stays available (recommended lean); (c) **fully derive, drop the knobs** — `workersPerInstance` defaults (= vCPU for cpu-bound, vCPU × N for io-bound) and `effectiveK` = `memCeiling` directly, with the separately-authored queue slots removed — fewest dials, tightest "pick hardware, physics follows" story, but loses the tuning lessons. The queue-slots field is the weakest and the easiest to drop independently (let RAM fully decide `K`). **Not decided — revisit before Slice 0.** Until then the spec/examples keep both knobs explicit for clarity.
+1. **Worker/queue knobs — RESOLVED (2026-08-13).** The instance type sets the *ceiling* for both concurrency and queue depth (`cpuCeiling` from vCPU, `memCeiling` from RAM), but doesn't fully *decide* them. **Decision: derive sensible defaults for *both* `workersPerInstance` and queue-slots from `instanceType` + `workloadKind` (so a topology works out-of-the-box), but keep both as visible, editable fields** — the author can tune them or *intentionally misconfigure* (e.g. too few workers, or a fail-fast tiny queue) to author a teaching bug. `effective = min(configured, ceiling)` still applies, so an override is always capped by the hardware. Defaults: `workersPerInstance` = vCPU (cpu-bound) or vCPU × ioMultiplier (io-bound); queue-slots default = a backlog multiple of the default workers, capped by `memCeiling`. Both fields stay in the schema and examples (not dropped) — the earlier "drop queue-slots / K = memCeiling" simplification was **rejected** in favor of keeping the editable knob for the misconfiguration lesson.
 2. **CPU-bound vs IO-bound signal.** The vCPU→concurrency cap only holds for CPU-bound work; IO-bound legitimately runs workers ≫ vCPU. `workloadKind` is proposed as new on `ResourceConfig` — confirm no existing node property already carries this, else the model punishes correct IO-bound designs.
 3. **`perRequestMemMb` provenance.** Per-node authored constant, or derived from request/workload size (`request-type-model.md`)? A workload-derived footprint is more honest but couples this spec to the request model.
 4. **Pricing & cost cap — RESOLVED.** Each instance type carries a `pricePerHour`, and **cost is a separate cap from quota — both apply** (a design can be within vCPU/RAM quota yet over the money budget, and vice versa). Cost is also an **always-on display**, shown on every topology regardless of whether a `costBudget` is set. Remaining sub-question: does the catalog need more families later (GPU/accelerated, storage-optimized `i3`)? Deferred — the 12-type set is v1.
