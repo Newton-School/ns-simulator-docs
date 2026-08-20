@@ -6,10 +6,23 @@
 > simulation metric, justification field, budget, and validation requirement
 > needed to author **discriminatory** questions.
 >
-> **Source of truth.** `src/engine/analysis/{question,gradingCriteria,rubric,structural,semanticCriteria,justification,authoringValidator}.ts`.
+> **Source of truth.** `src/engine/analysis/{question,gradingCriteria,rubric,structural,semanticCriteria,justification,authoringValidator,environmentProfile}.ts`;
+> the node-sizing model in `src/engine/catalog/{instanceCatalog,resourceDefaults,componentSpecs}.ts`
+> + `src/engine/nodes/resourceDerivation.ts`; the Newton authoring bridge in
+> `src/engine/analysis/newtonGamePlayground.ts`.
 > Validated by `parseQuestionPackage` (schema) + `validateAuthoredQuestion`
 > (authoring contract). Companion specs: `question-simulation-alignment.md`,
-> `question-grading-model-and-anti-gaming.md`, `question-bank-initial-game-states.md`.
+> `question-grading-model-and-anti-gaming.md`, `question-bank-initial-game-states.md`,
+> `resource-allocation-and-derived-concurrency.md`.
+>
+> **What's new (2026-08).** Node capacity is now derived from a discrete **instance
+> model** (§9), not free-typed workers; every node has an **execution profile**
+> (`cpu-bound` / `io-bound`) that decides how many concurrent workers its hardware
+> yields (§9.3 — this is why a datastore shows 64–128 "workers/connections" while a
+> compute service shows 2). Assignment behaviour (locked resources, connector edges,
+> execution-profile lock) is governed by an **environment profile** (§10). Newton
+> assignments are authored as **Django test-case rows**, not a raw `question.json`
+> (§11).
 
 ---
 
@@ -141,7 +154,7 @@ matter today:
 |---------|------------------|-----------------------|
 | `suite.cases[].workload.pattern` | If you author a full workload, `pattern` must be explicit. The product's interactive defaults now favor **`constant`** traffic for predictability. | For deterministic graded cases, prefer `constant` unless arrival jitter is part of the lesson. Use `poisson` only intentionally. |
 | Edge latency when no explicit edge latency is authored | The renderer/serializer now resolves a bare edge to a **path-type-derived constant median latency (no jitter)**. Log-normal latency only appears when the edge explicitly chooses the log-normal model or supplies `mu` / `sigma`. | If the question depends on latency variance or burst bunching, author explicit log-normal edge latency in the topology. Do not assume omitted latency means jitter. |
-| Node capacity when `resources.instanceType` / `instanceCount` are present | The engine now treats the **instance model** as authoritative for effective concurrency on that node. Legacy nodes with no instance-model resources still run off raw `queue.workers` / `queue.capacity`. | For saturation / scaling questions, treat `resources` as part of the real topology DSL. Once you opt into instance-model resources, raw queue numbers are no longer the whole story. |
+| Node capacity when `resources.instanceType` / `instanceCount` are present | The engine now treats the **instance model** as authoritative for effective concurrency on that node (derived from vCPU × count × execution profile — **§9**). Legacy nodes with no instance-model resources still run off raw `queue.workers` / `queue.capacity`. | For saturation / scaling questions, treat `resources` as part of the real topology DSL. Once you opt into instance-model resources, raw queue numbers are no longer the whole story — size via `instanceType` + `workloadKind`, not `workers`. |
 | Cost in the live product vs cost in question grading | The app now has a richer instance-aware live cost model and resource displays, but **`budget.unit:"cost"` in question grading still uses the older v1 heuristic** from `budget.ts`. | Do not assume the UI cost chip and the graded `$` axis are numerically identical. Use `budget.nodes` / `budget.edges` for hard anti-kitchen-sink caps; treat `budget.cost` as a heuristic grading axis until the grading DSL is upgraded. |
 
 For authored question packages, the safest practice is:
@@ -494,6 +507,15 @@ Every customizable property across the DSL. **Scope** names the containing objec
 | `global.timeResolution` | global | `microsecond \| millisecond` | Required (full) | Tick resolution. | — |
 | `global.defaultTimeout` | global | number > 0 (ms) | Required (full) | Request timeout. | — |
 | `global.traceSampleRate` | global | number 0–1 | Optional | Trace sampling. | — |
+| `resources.instanceType` | node resources | `InstanceType` (catalog key, §9.2) | Optional | Hardware SKU; resolves vCPU/RAM/price/perf. Opts the node into the instance model. | Not free-typed — must be a catalog key. |
+| `resources.instanceCount` | node resources | number ≥ 1 | Optional (=1) | Horizontal scale. | Supersedes `replicas`. |
+| `resources.workloadKind` | node resources | `cpu-bound \| io-bound` | Optional (per-type default) | Execution profile → workers-per-vCPU (1 vs 32, §9.3). | This is why stores show 64–128 and services show 2. |
+| `resources.maxInstances` | node resources | number | Optional | Per-node `instanceCount` quota. | Build-time validation. |
+| `resources.perRequestMemMb` | node resources | number (MB) | Optional | Per-request memory → admission ceiling `K`. | Small value ⇒ RAM never binds (pure queueing). |
+| `resources.pricingModel` | node resources | `on-demand \| reserved \| spot` | Optional (=on-demand) | Price multiplier 1.0 / 0.6 / 0.3. | Provisioned cost only; not the graded `$` axis (§9.5). |
+| `resources.workersPerInstance` / `queueSlots` | node resources | number | Optional | **Derived, read-only** once instance model is set. | Do not tune to size a node — ignored by derivation. |
+| `resources.cpu` / `memory` / `replicas` | node resources | number | Optional | **@deprecated** legacy free-typed fields. | Read for back-compat only. |
+| `environmentProfile` | Newton `SIMULATOR_CONFIG` / launch payload | `EnvironmentProfileInput` (§10) | Optional | Mode + visibility + capabilities lens. | Not part of `question.json`; authored in the Newton row or launch payload. |
 | `rubric.id` | rubric | string | Required | Rubric id. | — |
 | `rubric.passThreshold` | rubric | number 0–1 | Optional (=1) | Fraction of points to pass. | — |
 | `rubric.checks[].id` | rubric check | string | Required | Check id. | — |
@@ -535,8 +557,20 @@ Every customizable property across the DSL. **Scope** names the containing objec
   question needs network jitter, author it explicitly.
 - **Instance-model resources change the meaning of capacity** — once a node carries
   `resources.instanceType` / `instanceCount`, effective concurrency is derived from
-  the instance model. Legacy `queue.workers`-only intuition no longer applies
+  the instance model (§9). Legacy `queue.workers`-only intuition no longer applies
   unchanged to that node.
+- **Execution profile decides worker count** — `io-bound` yields 32 servers/vCPU,
+  `cpu-bound` yields 1. A datastore/cache/LB reading "64/128 workers/connections" is
+  correct (io-bound); a service reading "2 workers" is correct (cpu-bound). To make a
+  store a bottleneck, author it `cpu-bound` on a small instance (§9.3).
+- **`connector` edges carry no physics** — under a connector `edgeModel` (the
+  deployed/practice default and ASSIGNMENT default), edges add no latency, bandwidth,
+  or egress cost. Author reference/gamed sizing so the discriminator lives in nodes,
+  or set the profile/`domains` to get `network` edges when the lesson *is* the edge
+  (§10.3–10.4).
+- **Two authoring shapes must agree** — a Newton assignment ships as Django rows
+  (§11), not the `question.json` the harness grades. Keep the rows byte-equal to the
+  package or students get a different question than you validated.
 - **Short-circuit** — a failing `structuralRule` skips semantic + simulation. Design
   gamed topologies to pass structural if you want a specific semantic check to fail.
 - **CLI vs in-app** — `forbidUnjustified` fails a present component in the CLI (no
@@ -560,6 +594,10 @@ Not every schema field drives grading. Author accordingly.
 | `justify` (graph-consistent) | ✅ | ✅ graded; feeds `forbidUnjustified` in-app |
 | **`budget`** | ✅ | ✅ **graded** (`budget.ts` — nodes/edges exact, cost = v1 heuristic) |
 | `suite.cases[].workload` / `global` / `faults` | ✅ | ✅ injected at grade time |
+| `resources.*` (instance model — `instanceType`/`instanceCount`/`workloadKind`/`perRequestMemMb`) | ✅ | ✅ **behavioral** — drives derived concurrency `c`/`K`, service speed, and cost on that node (§9) |
+| `resources.pricingModel` | ✅ | ⚠️ affects the **live** cost chip / `cost.ts` only; graded `budget.unit:"cost"` still uses the v1 heuristic (§6.2) |
+| `environmentProfile` (mode / visibility / `capabilities`) | ✅ (Newton row / launch) | ⚠️ **platform-facing** — governs edit locks, `edgeModel`, visibility; not a scored axis. Overlaid by `domains` (§10.4) |
+| `edgeModel` (`network` / `connector`) | ✅ | ⚠️ behavioral — `connector` edges carry no sim physics or egress cost (§10.3) |
 | `constraints.*` (`maxNodeCount`, `maxBudget`, `maxTotalWorkers`, `allowed/forbiddenNodeTypes`) | ✅ | ❌ **not enforced at grade time** (UI/palette only) — use `budget` + `max_node_count`/`max_component_count` structural rules to enforce |
 | `workloadCategory` | ✅ | ❌ label only (author-side axis selector; not read by grading) |
 | `domains` | ✅ | ⚠️ **advisory + platform-facing** — checked by the authoring validator and consumed by environment-profile / edit-policy logic, but not scored as a rubric axis by themselves |
@@ -572,6 +610,346 @@ Not every schema field drives grading. Author accordingly.
 > To enforce a node cap, use `budget:{unit:"nodes",cap:N}` or a
 > `max_node_count`/`max_component_count` structural rule — `constraints.maxNodeCount`
 > alone does nothing at grade time.
+
+---
+
+## Section 9 — Resource, Instance & Execution-Profile Model (node sizing DSL)
+
+Node capacity is no longer a free-typed `queue.workers`. A node's `resources`
+block picks a **discrete instance** from a frozen catalog and an **execution
+profile**; the engine *derives* effective concurrency, admission, service speed,
+and cost from those. This is the physical, un-gameable half of the DSL: you
+cannot ask for 6.5 vCPU or 10²⁰ workers, and more of one axis costs money.
+
+> Source: `ResourceConfig` in `core/types.ts`; `INSTANCE_CATALOG` in
+> `catalog/instanceCatalog.ts`; per-type defaults in `catalog/resourceDefaults.ts`;
+> derivation in `nodes/resourceDerivation.ts`.
+
+### 9.1 The `resources` block
+
+```json
+"resources": {
+  "instanceType": "m5.xlarge",
+  "instanceCount": 2,
+  "workloadKind": "io-bound",
+  "pricingModel": "on-demand",
+  "perRequestMemMb": 8
+}
+```
+
+| Field | Type / Enum | Meaning |
+|-------|-------------|---------|
+| `instanceType` | `InstanceType` (catalog key, §9.2) | Hardware SKU → resolves `{ vcpu, ramGb, pricePerHour, perfFactor }`. Never free-typed. |
+| `instanceCount` | number ≥ 1 | Horizontal scale (replaces legacy `replicas`). |
+| `maxInstances` | number | Per-node quota; `instanceCount` may not exceed it (build-time validation error). |
+| `workloadKind` | `cpu-bound \| io-bound` | The **execution profile** — decides workers-per-vCPU (§9.3). |
+| `perRequestMemMb` | number (MB) | Memory footprint of one in-flight request; divides RAM into the admission ceiling `K`. |
+| `pricingModel` | `on-demand \| reserved \| spot` | Purchasing model → price multiplier (§9.5). Absent = `on-demand`. |
+| `workersPerInstance` / `queueSlots` | number | **Derived defaults, shown read-only.** Authored values are ignored by the derivation once `instanceType`/`instanceCount` are present — do not tune these to size a node. |
+| `cpu` / `memory` / `replicas` | number | **@deprecated** legacy free-typed fields, read only for back-compat (`replicas`→`instanceCount` via `getInstanceCount`). |
+
+**Legacy vs instance-model nodes.** A node with **no** `instanceType`/`instanceCount`
+falls back to raw `queue.workers` / `queue.capacity` (pass-through concurrency).
+A node **with** them is instance-derived. A reference topology may mix the two,
+but for any node whose sizing matters to the discriminator, prefer the instance
+model so the fixture matches what a student builds from the palette.
+
+### 9.2 The instance catalog (frozen SKU menu)
+
+Curated (not the full AWS list): three CPU:RAM ratio tiers plus a burstable floor
+and a memory-extreme ceiling, at 2 / 4 / 8-vCPU sizes. Prices are AWS-proportional
+on-demand `$/hr`.
+
+| `instanceType` | Family | vCPU | RAM (GB) | `$/hr` | `perfFactor` |
+|----------------|--------|------|----------|--------|--------------|
+| `t3.small` | burstable | 2 | 2 | 0.021 | 0.8 |
+| `t3.medium` | burstable | 2 | 4 | 0.042 | 0.8 |
+| `m5.large` | general | 2 | 8 | 0.096 | 1.0 |
+| `m5.xlarge` | general | 4 | 16 | 0.192 | 1.0 |
+| `m5.2xlarge` | general | 8 | 32 | 0.384 | 1.0 |
+| `c5.large` | compute-optimized | 2 | 4 | 0.085 | 1.3 |
+| `c5.xlarge` | compute-optimized | 4 | 8 | 0.170 | 1.3 |
+| `c5.2xlarge` | compute-optimized | 8 | 16 | 0.340 | 1.3 |
+| `r5.large` | memory-optimized | 2 | 16 | 0.126 | 1.0 |
+| `r5.xlarge` | memory-optimized | 4 | 32 | 0.252 | 1.0 |
+| `r5.2xlarge` | memory-optimized | 8 | 64 | 0.504 | 1.0 |
+| `x1e.xlarge` | memory-extreme | 4 | 122 | 0.834 | 1.0 |
+
+`perfFactor` is relative single-thread speed (compute-optimized `c5` faster,
+burstable `t3` slower). Burstable-credit exhaustion is deliberately **not**
+modelled — `t3` is a flat derate representing sustained/baseline speed.
+
+### 9.3 Derived concurrency — why a datastore shows 64–128 "workers" and a service shows 2
+
+This is the single most common authoring surprise. **Not every node is
+`cpu-bound`.** The execution profile sets workers-per-vCPU:
+
+```
+effectiveC (parallel servers) = vCPU × instanceCount × workersPerVcpu
+  workersPerVcpu = 1   when workloadKind = "cpu-bound"   (CPU_WORKERS_PER_VCPU)
+  workersPerVcpu = 32  when workloadKind = "io-bound"    (IO_WORKERS_PER_VCPU)
+
+effectiveK (admission ceiling) = max(effectiveC, memCeiling)
+  memCeiling = floor(totalRAM_MB / perRequestMemMb)      // RAM-bound
+```
+
+- **`cpu-bound`** — a compute service actually *occupies* the core, so true
+  parallelism ≈ #cores → **1 worker / vCPU**. A `c5.large` (2 vCPU) service = **2
+  workers**.
+- **`io-bound`** — a datastore, cache, load balancer, broker, or queue mostly
+  *waits* on disk/network, so one core legitimately multiplexes many concurrent
+  in-flight requests → **32 / vCPU**. An `m5.xlarge` (4 vCPU) DB = **128**; a
+  `r5.large` (2 vCPU) cache = **64**.
+
+**Per-type default execution profile** (`resourceDefaults.ts`):
+
+| Tier | Example types | Default `workloadKind` | Derived `c` (per vCPU) |
+|------|---------------|------------------------|------------------------|
+| Compute processors | `microservice`, `batch-worker` | **cpu-bound** | 1 |
+| Everything else | `relational-db`, `nosql-db`, `kv-store`, `in-memory-cache`, `load-balancer`, `api-endpoint`, `queue`, `message-broker`, `object-storage`, … | **io-bound** | 32 |
+
+The canvas shows the same derived `c` under **per-type vocabulary** — "workers"
+(services/stores), "connections" (DB/LB), "consumers" (broker/queue), "ops"
+(cache). They are all the one number `effectiveC`. So a NoSQL DB reading "128
+connections" or a broker reading "64 consumers" is **correct and by design**, not
+a bug.
+
+> **Authoring lever.** To make a store a *tight bottleneck* (few servers), author it
+> `cpu-bound` on a small instance — e.g. `t3.small` (2 vCPU) `cpu-bound` = 2
+> servers. This is how a reference fixture forces a saturation lesson (a
+> read-heavy DB that collapses without a cache). Flipping a store to `cpu-bound`
+> is a modelling choice, not a default.
+
+> **Deep dive.** The canonical explainer for the execution-profile model — the
+> per-tier defaults, the reasoning, the "one number, many labels" vocabulary, and
+> the `canEditExecutionProfile` lock — is `execution-profile-and-node-concurrency.md`.
+
+### 9.4 Service speed (`perfFactor` → `serviceTimeMultiplier`)
+
+A node's authored base service time is multiplied by
+`serviceTimeMultiplier = 1 / effectivePerf`:
+
+```
+effectivePerf = cpu-bound ? perfFactor : 1 + (perfFactor − 1) × 0.25   // IO_PERF_SENSITIVITY
+```
+
+CPU-bound work gets the full hardware speed-up; io-bound work is damped toward 1.0
+(a faster core barely helps a request blocked on I/O). So a cpu-bound `c5.large`
+(perfFactor 1.3) serves each request `≈0.77×` the base time.
+
+### 9.5 Cost model (what the graded `$` axis and the live chip use)
+
+`nodeCostPerHour = pricePerHour × instanceCount × pricingMultiplier(pricingModel)`
+for **provisioned** nodes. Pricing multipliers: `on-demand = 1.0`, `reserved = 0.6`,
+`spot = 0.3`.
+
+Per **component type**, a `costModel` (in `resourceDefaults.ts`) decides the basis:
+
+| `costModel` | Basis | Types |
+|-------------|-------|-------|
+| `provisioned` | instance-hours (above) | most compute + stores |
+| `consumption` | `pricePerMillionRequests × throughput` | `serverless-function` (per-request) |
+| `volume` | `pricePerGb × egress` | `cdn`, `object-storage` (traffic-priced; estimated pre-run, measured post-run) |
+| `none` | not billable | traffic sources (`api-endpoint` client) |
+
+Inter-region **egress** is also charged per edge, keyed off `edge.latency.pathType`
+(`cross-zone` `$0.01/GB`, `cross-region` `$0.02`, `internet` `$0.09`; same-rack /
+same-dc free). Note the **graded question `budget.unit:"cost"` still uses the older
+v1 heuristic** (§6.2) — the instance-aware model above powers the live cost chip and
+`cost.ts`, not yet the graded `$` axis.
+
+---
+
+## Section 10 — Environment Profiles & Capabilities (assignment vs practice vs author)
+
+An **EnvironmentProfile** is a visibility + capability lens layered over one
+question. The same package runs unchanged in three modes; the profile decides what
+the student sees and may edit — it never changes *what* the question is or *how* it
+grades.
+
+> Source: `environmentProfile.ts` (`EnvironmentProfile`, `EnvironmentCapabilities`,
+> `resolveEnvironmentProfile`, `resolveEdgeModel`, `canEditEdgesForQuestion`,
+> `canEditResourcesForQuestion`).
+
+### 10.1 Modes and the deployed default
+
+| Mode | `graded` | Edges | Resources editable | Use |
+|------|----------|-------|--------------------|-----|
+| `AUTHOR` | true | `network` | yes | Full authoring / dev UI |
+| `ASSIGNMENT` | true | `connector` | no | Graded student attempt (locked scaffold) |
+| `PRACTICE` | false | `connector` | yes | Free self-paced sandbox |
+
+`DEFAULT_ENVIRONMENT_PROFILE` (standalone / online-deployed default, no host
+payload) is **`PRACTICE` with connector edges** — a learner lands focused on the
+high-level design, not edge physics. The Newton assignment host forces `ASSIGNMENT`
+on its own path, so the default never downgrades a graded launch.
+
+### 10.2 Capabilities (`environmentProfile.capabilities`)
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `editPaletteList` | `string[] \| null` | Allowed palette types (`null` = all, `[]` = none). |
+| `canEditScaffoldNodes` | boolean | Whether scaffold nodes can be edited. |
+| `canTriggerTestRuns` | boolean | Whether the student may dry-run before submit. |
+| `edgeModel` | `network \| connector` | Whether edges are a modelled layer or dumb wires (§10.3). |
+| `canEditEdges` | boolean | Edit edge *properties* — only meaningful in `network` mode. |
+| `canEditResources` | boolean | Change a node's instance type / count / execution profile. |
+| `canEditExecutionProfile` | boolean | Change a node's `workloadKind` (cpu/io) specifically. |
+| `maxTestRuns` | number? | Cap on dry runs (absent = unlimited). |
+| `resourceBudget` | `{ totalVcpu, totalRamGb }`? | Hardware quota wall (absent = unbounded). |
+| `costBudget` | `{ maxPerHour }`? | Money wall, independent of quota (absent = unbounded). |
+
+Cost/resource totals are **always displayed** regardless of caps; the caps only
+gate. `resourceBudget` and `costBudget` are independent — a design can pass the
+vCPU/RAM quota yet exceed the money cap, and vice versa.
+
+### 10.3 `edgeModel` — network edges vs dumb connectors
+
+- **`network`** — edges carry latency / bandwidth into the sim, expose a
+  properties panel, and project the edge metric lenses. Editability then follows
+  `canEditEdges`.
+- **`connector`** — edges are dumb wires that only express topology: **zero sim
+  physics, no egress bill, no properties, no edge lenses**. Placing/removing them
+  still defines the graph, but they cost and delay nothing. This is the "focus on
+  the HLD, don't get tangled in edges" mode.
+
+The ladder: `connector` (no edit, no calc) < `network` + locked (no edit, affects
+calc) < `network` + editable.
+
+### 10.4 Domain overrides — how `domains` unlock edits
+
+The question's `domains` (§7) layer over the profile so a lesson that *is* about a
+locked axis unlocks it (`resolveEdgeModel` / `canEditEdgesForQuestion` /
+`canEditResourcesForQuestion`):
+
+- `domains` includes **`network`** → edges upgrade to `network` and edge editing
+  unlocks, even under a connector profile (sizing the network *is* the lesson).
+- `domains` includes **`cost`** → resource editing unlocks under ASSIGNMENT (the
+  allocation-within-budget lesson needs the instance knobs).
+
+So a `compute`/`storage` assignment keeps edges as connectors and resources locked;
+a `network` assignment gets editable network edges; a `cost` assignment gets
+editable resources. Choose `domains` deliberately — they drive platform edit policy,
+not just metadata.
+
+---
+
+## Section 11 — Writing Test Cases: the Newton Django-Admin Authoring Format
+
+There are **two authoring shapes** for the same question:
+
+1. **Standalone `question.json`** (this manual's Sections 1–9) — used for
+   local/standalone authoring and the `validate-question-dir` harness.
+2. **Newton Django test-case rows** — how an assignment is actually authored in the
+   Newton admin when the simulator is embedded via the GAME iframe
+   (`?host=newton`). Each question folder ships a `django-admin-assignment.md` that
+   spells the rows out.
+
+They encode the **same** package; the Newton translator (`newtonGamePlayground.ts`,
+`parseNewtonSeed` / `buildQuestionPackageFromRows`) rebuilds the immutable config
+from the **rows**, not from `initial_game_state`.
+
+### 11.1 The frontend contract (assignment mode)
+
+- GAME iframe: `https://systems-simulator.newtonschool.co/?host=newton`.
+- `question_text` renders as **raw Django HTML** (`presentationMode: "raw-html"`).
+- The translator rebuilds config from the **test-case rows**, not `initial_game_state`.
+- `initial_game_state` stays **mutable-only** learner state — paste `{}`, never the
+  full `question.json`.
+- Assignment mode **hides** topology Open/Save (and disables `Ctrl/Cmd+O` / `S`),
+  hides the header settings entry point, **locks scaffold nodes**, keeps edges in
+  **`connector`** mode, and **locks node resource + execution-profile editing** —
+  unless a domain overlay unlocks it (§10.4: `network` → edges, `cost` → resources).
+- Justification prompts are hidden and ungraded in Newton assignment mode today —
+  do **not** include `justify` rows in this flow.
+
+### 11.2 Django fields
+
+| Field | Value |
+|-------|-------|
+| `question_type` | `GAME` |
+| `question_title` | the question title |
+| `question_text` | raw HTML: prompt + `<h3>` Functional Requirements / Non-Functional Targets / Scale blocks |
+| `initial_game_state` | `{}` (mutable-only; never the full package) |
+
+Test-case rows: create in the exact order below; for every row `hidden = false`,
+`output = ""`, `output_file = empty`; paste each JSON block verbatim into the Django
+`input` field. Every row is discriminated by its **`type`** key.
+
+### 11.3 Row types
+
+**Row 1 — `SIMULATOR_CONFIG`** (the master row). Carries everything that is not a
+rule/criterion/check: identity, `scaffold`, `constraints`, `suite`, `rubric` header
+(`id` + `passThreshold`), `domains`, `concepts`, `presentationMode`,
+`workloadCategory`, and the **`environmentProfile`** block (§10).
+
+```json
+{
+  "type": "SIMULATOR_CONFIG",
+  "configVersion": "1.0",
+  "questionId": "cache-placement",
+  "questionVersion": "1.0",
+  "questionType": "open-build",
+  "domains": ["compute"],
+  "concepts": ["cache-placement"],
+  "difficulty": "beginner",
+  "workloadCategory": "read-heavy",
+  "presentationMode": "raw-html",
+  "promptSource": "question_text",
+  "scaffold": { "type": "empty" },
+  "constraints": { "canModifyScaffold": true, "canRemoveScaffoldNodes": true, "maxNodeCount": 10 },
+  "suite": { "name": "cache-suite", "visibleToStudent": false, "cases": [ /* … §2 workload … */ ] },
+  "rubric": { "id": "cache-rubric", "passThreshold": 1 },
+  "environmentProfile": {
+    "mode": "ASSIGNMENT",
+    "visibility": { "prompt": true, "scaffoldSourceNodes": true, "gradingSuiteDetails": false, "liveMetrics": true, "rubricChecks": "LIVE_DURING_BUILD" },
+    "capabilities": {
+      "editPaletteList": null, "canEditScaffoldNodes": false, "canTriggerTestRuns": true,
+      "edgeModel": "connector", "canEditEdges": false, "canEditResources": false, "canEditExecutionProfile": false
+    },
+    "graded": true,
+    "chromeDensity": "minimal"
+  }
+}
+```
+
+**Rows 2…N — one row per rule / criterion / check**, each a stringified object of
+the matching sub-schema with a `type` discriminator:
+
+| Row `type` | Body = one element of | Notes |
+|------------|-----------------------|-------|
+| `STRUCTURAL_RULE` | `structuralRules[]` (§5.3) | e.g. `requires_component`, `requires_single_source`. |
+| `SEMANTIC_CRITERION` | `semanticCriteria[]` (§5) | `placement` / `guardedPath` / `fanout` / `storageFit` / `forbidUnjustified`. |
+| `RUBRIC_CHECK` | `rubric.checks[]` (§4.2) | `simulation` / `topology` / `invariant`. |
+
+```json
+{ "type": "STRUCTURAL_RULE", "id": "has-lb", "kind": "requires_component",
+  "componentType": "load-balancer", "description": "A load balancer fronts the system" }
+```
+```json
+{ "type": "RUBRIC_CHECK", "id": "p99", "kind": "simulation", "description": "p99 under 120 ms",
+  "metric": "summary.latency.p99", "op": "<", "value": 120, "points": 3 }
+```
+
+The row body (minus `type`) must be byte-equal to the corresponding array element in
+`question.json`. Keep the two shapes in lock-step — `validate-question-dir` grades
+the `question.json`, and the django rows are what actually ships to students, so a
+drift between them means the student sees a different question than the one you
+validated.
+
+### 11.4 Per-question authoring checklist (alignment)
+
+- [ ] Every `componentType` referenced (structural + semantic) exists in the current
+      palette (`PALETTE_TEMPLATES`).
+- [ ] `SIMULATOR_CONFIG.scaffold` / `constraints` / `suite` / `domains` / `concepts`
+      match `question.json` exactly.
+- [ ] Each `STRUCTURAL_RULE` / `SEMANTIC_CRITERION` / `RUBRIC_CHECK` row equals its
+      `question.json` array element (minus `type`).
+- [ ] `question_text` HTML says the same thing as `prompt.text` (+ FR/NFR/scale).
+- [ ] `environmentProfile.capabilities` carries the current field set
+      (`edgeModel`, `canEditEdges`, `canEditResources`, `canEditExecutionProfile`,
+      `canEditScaffoldNodes`).
+- [ ] Reference passes and gamed fails via `validate-question-dir` (§1.2).
 
 ---
 
