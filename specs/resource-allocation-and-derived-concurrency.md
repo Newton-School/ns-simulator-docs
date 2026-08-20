@@ -297,6 +297,12 @@ Slice 5 **is** this volume axis. Implementing it for the visible nodes = the `vo
 
 ## The derivation model
 
+> **See also.** The focused explainer for the execution-profile half of this model —
+> why io-bound stores show 64–128 workers while cpu-bound services show 2, the
+> per-tier defaults, the "workers / connections / consumers / ops are the same
+> number" vocabulary, and the `canEditExecutionProfile` lock — lives in
+> `execution-profile-and-node-concurrency.md`.
+
 **FINAL MODEL — derive & lock (supersedes the earlier "cap a requested number" drafts).** `workersPerInstance` and `queueSlots` are **not authored at all** — the instance is the *only* allocation knob. Workers and K are pure functions of the hardware, shown read-only. This is the resolution of the original decision #1: keeping them as editable inputs (even capped) let a student type `8×10²⁰` workers and defeat the whole model, so they were removed entirely.
 
 ```
