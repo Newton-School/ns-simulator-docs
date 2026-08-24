@@ -2,7 +2,7 @@
 
 Technical feature specification defining the complete lifecycle of a request from generation to terminal state: every event type, every state transition, every decision point, and how the event priority system resolves ordering ambiguities.
 
-This spec consolidates the 20 `EventType` values, the `SimulationEvent` interface, the `EventPriority` constants, the `MinHeap` scheduler, and the engine's event handling pipeline into a single reference for how requests move through time and state. It exists because the lifecycle is the simulation's execution model — every metric, every trace, every debug event is a consequence of lifecycle transitions. Downstream specs (throughput, rejection, cost) all reference specific lifecycle events; this spec is the authoritative definition of what those events mean and when they fire.
+This spec consolidates the 20 `EventType` values, the `SimulationEvent` interface, the `EventPriority` constants, the `MinHeap` scheduler, and the engine's event handling pipeline into a single reference for how requests move through time and state. It exists because the lifecycle is the simulation's execution model - every metric, every trace, every debug event is a consequence of lifecycle transitions. Downstream specs (throughput, rejection, cost) all reference specific lifecycle events; this spec is the authoritative definition of what those events mean and when they fire.
 
 ---
 
@@ -25,7 +25,7 @@ This spec consolidates the 20 `EventType` values, the `SimulationEvent` interfac
 
 ### Capability definition
 
-Request Lifecycle Semantics defines the deterministic state machine that every request follows from creation to terminal state. A request is generated, optionally routed via edges, arrives at nodes, is admitted or rejected, waits in a queue, is processed, is forwarded or completes, and eventually reaches one of three terminal states: success, rejection, or timeout. The event system — a MinHeap priority queue with bigint microsecond timestamps and tie-breaking priorities — ensures that events are processed in a deterministic, reproducible order for any given seed.
+Request Lifecycle Semantics defines the deterministic state machine that every request follows from creation to terminal state. A request is generated, optionally routed via edges, arrives at nodes, is admitted or rejected, waits in a queue, is processed, is forwarded or completes, and eventually reaches one of three terminal states: success, rejection, or timeout. The event system - a MinHeap priority queue with bigint microsecond timestamps and tie-breaking priorities - ensures that events are processed in a deterministic, reproducible order for any given seed.
 
 ### Classification
 
@@ -193,7 +193,7 @@ Defines the 20 event types, their default priorities, and how the priority syste
 | ARRIVAL | 1 | `request-generated`, `request-arrival` | Arrivals before processing to model real causality |
 | PROCESSING | 2 | `processing-start`, `processing-complete`, `request-complete`, `request-rejected`, `cache-hit`, `cache-miss` | Processing results after arrivals |
 | DEPARTURE | 3 | `request-forwarded` | Departures after processing |
-| TIMEOUT | 4 | `request-timeout` | Timeouts last — give the request a chance to complete first |
+| TIMEOUT | 4 | `request-timeout` | Timeouts last - give the request a chance to complete first |
 
 **Why timeout has the lowest priority**: If a `processing-complete` and a `request-timeout` share the same timestamp, the processing completes first. The request successfully finishes, its `__terminal` is set to `'success'`, and when the timeout handler runs, `getRequest` returns `undefined` and the timeout is silently discarded. This prevents false timeouts on requests that just barely made their deadline.
 
@@ -230,7 +230,7 @@ while running AND not paused AND queue not empty:
     if eventsProcessed % 1000 === 0 → emit progress
 ```
 
-**Clock model**: `bigint` microsecond precision. The clock only advances forward — it jumps to each event's timestamp. Between events, no time passes. This is the fundamental property of discrete event simulation: time is event-driven, not wall-clock-driven.
+**Clock model**: `bigint` microsecond precision. The clock only advances forward - it jumps to each event's timestamp. Between events, no time passes. This is the fundamental property of discrete event simulation: time is event-driven, not wall-clock-driven.
 
 **Snapshot interval**: 1 second of simulation time (`secToMicro(1)`). Snapshots capture queue depth, utilization, and active worker count at each node.
 
@@ -277,7 +277,7 @@ The `scope: 'node'` data field triggers the `cancelRequest` path in the timeout 
 
 **Edge-transit timeout** (in `enqueueEdgeTransfer`, `engine.ts:757-766`):
 
-Fires when `request.deadline <= arrivalTime` — the request would arrive at the target node after its deadline. Also fires on packet loss (silently dropped). Uses `scope: 'in-flight'` to distinguish from node timeouts.
+Fires when `request.deadline <= arrivalTime` - the request would arrive at the target node after its deadline. Also fires on packet loss (silently dropped). Uses `scope: 'in-flight'` to distinguish from node timeouts.
 
 **Deadline origin**: `request.deadline = createdAt + msToMicro(defaultTimeoutMs)`, where `defaultTimeoutMs = topology.global.defaultTimeout`.
 
@@ -297,11 +297,11 @@ Fires when `request.deadline <= arrivalTime` — the request would arrive at the
 | **Request Flow Direction & Topology Rules** | `request-forwarded` and `request-arrival` as routing boundary events | Routing decisions that determine next hop | `resolveTarget()` → forward/arrive |
 | **Request Type Model** | Request properties (type, size, priority) that travel through the lifecycle | Type definitions | `Request` fields |
 | **Edge Properties & Defaults** | Edge transfer as a lifecycle transition (forwarded → in-transit → arrived) | Edge loss/error/latency properties | `enqueueEdgeTransfer` pipeline |
-| **Throughput Calculation** | `request-complete` events that increment throughput counters | — | Terminal success events |
+| **Throughput Calculation** | `request-complete` events that increment throughput counters | - | Terminal success events |
 | **Queue Depth Calculation** | Arrival admission → queued/processing state transitions | Queue state changes | `handleArrival`, `handleCompletion` |
-| **Request Rejection Behaviour** | `request-rejected` as a terminal lifecycle event | — | Rejection events with reasons |
-| **Cost Calculation & Budgeting** | Request lifecycle duration for cost calculation | — | `createdAt` to terminal event time |
-| **Simulation Validation & Pattern Accuracy** | Event sequence as validation input | — | Event ordering, determinism |
+| **Request Rejection Behaviour** | `request-rejected` as a terminal lifecycle event | - | Rejection events with reasons |
+| **Cost Calculation & Budgeting** | Request lifecycle duration for cost calculation | - | `createdAt` to terminal event time |
+| **Simulation Validation & Pattern Accuracy** | Event sequence as validation input | - | Event ordering, determinism |
 
 ---
 
@@ -320,8 +320,8 @@ Fires when `request.deadline <= arrivalTime` — the request would arrive at the
 | --- | --- | --- | --- |
 | Lifecycle State Machine | `engine.ts:238-488` | `Request`, `SimulationEvent` | All `handle*` methods |
 | Event Types & Priority | `events.ts:4-36, 71-108` | `EventType`, `EventPriority`, `SimulationEvent` | `createEvent()`, `getDefaultPriority()` |
-| Event Processing Loop | `engine.ts:188-236` | — | `processEvents()` |
-| Timeout Mechanics | `engine.ts:708-726, 438-466` | — | `scheduleNodeTimeout()`, `handleRequestTimeout()` |
+| Event Processing Loop | `engine.ts:188-236` | - | `processEvents()` |
+| Timeout Mechanics | `engine.ts:708-726, 438-466` | - | `scheduleNodeTimeout()`, `handleRequestTimeout()` |
 
 ---
 

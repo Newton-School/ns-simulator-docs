@@ -1,0 +1,37 @@
+# Copy this to your Quartz repo at .github/workflows/deploy.yml
+# It builds the vault and publishes to GitHub Pages on every push to `v4`/`main`.
+name: Deploy Quartz site to GitHub Pages
+on:
+  push:
+    branches: [v4, main]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # Quartz needs full history for last-modified dates
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx quartz build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

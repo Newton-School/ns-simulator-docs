@@ -1,4 +1,4 @@
-# Worked Example — Order Processing Question, Environment Model, and Paper Evaluation
+# Worked Example - Order Processing Question, Environment Model, and Paper Evaluation
 
 This document is a worked example of what a good simulator-graded system design question could look like before committing to implementation details. It uses the existing order-processing example and turns it into a full paper design artifact: the question, the canonical solution topology, the environment model, the constraint model, and the evaluation logic.
 

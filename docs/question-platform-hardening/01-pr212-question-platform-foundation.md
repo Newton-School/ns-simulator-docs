@@ -1,4 +1,4 @@
-# PR #212 — Question Platform Foundation
+# PR #212 - Question Platform Foundation
 
 > **Branch:** `feat/question-platform-hardening` · **Merge:** `ee57ecd`
 > **Scale:** ~4,900 lines across 37 files
@@ -23,7 +23,7 @@ types and lifecycle introduced here.
 
 ---
 
-## 2. The content model — `QuestionPackage`
+## 2. The content model - `QuestionPackage`
 
 A `QuestionPackage` is the **immutable definition** of a question. It is authored
 once and never mutated by grading. Its core fields:
@@ -57,7 +57,7 @@ interface QuestionPackage {
 - **Separation of "what" from "how much is shown."** The package never encodes
   presentation. Whether a student sees the suite (`visibleToStudent`) is content;
   whether they can *edit* the scaffold (`constraints`) is content; but *which
-  environment* renders it (author/contest/learn) is deliberately **not** here —
+  environment* renders it (author/contest/learn) is deliberately **not** here -
   that belongs to a future `EnvironmentProfile`. This keeps one question reusable
   across environments.
 - **Two independent grading axes.** `structuralRules` grade the *diagram*;
@@ -66,18 +66,18 @@ interface QuestionPackage {
 - **A closed question taxonomy** (`type`) rather than free-form tags, so the
   platform can reason about grading characteristics per type.
 
-### Concept — Zod as the schema authority
+### Concept - Zod as the schema authority
 
 Every model is defined **twice**: once as a TypeScript `interface` (compile-time)
 and once as a Zod schema (runtime). `parseQuestionPackage(input)` is the only
 sanctioned way to turn untrusted JSON into a `QuestionPackage`. This matters
-because questions and attempts arrive from **outside** the process — a file, a
-host `postMessage`, `localStorage` — and cannot be trusted to match the type.
+because questions and attempts arrive from **outside** the process - a file, a
+host `postMessage`, `localStorage` - and cannot be trusted to match the type.
 Runtime parsing is the boundary that makes the compile-time types *true*.
 
 ---
 
-## 3. The attempt model — `AttemptState` and its lifecycle
+## 3. The attempt model - `AttemptState` and its lifecycle
 
 Where `QuestionPackage` is fixed, `AttemptState` is the student's **mutable work**:
 
@@ -112,7 +112,7 @@ stateDiagram-v2
   GRADED --> LOCKED
 ```
 
-The transition functions are explicit and total — each returns a **new**
+The transition functions are explicit and total - each returns a **new**
 `AttemptState` rather than mutating in place:
 
 - `createAttemptState({ questionId, topology, now })` → `DRAFT`
@@ -133,13 +133,13 @@ The transition functions are explicit and total — each returns a **new**
   impossible to get wrong downstream.
 - **Grading is asynchronous and can fail.** `GRADING` is an explicit in-flight
   state, and `recoverAttemptAfterGradingError` defines what happens when the
-  worker throws — you fall back to the *last good* grade, never a blank slate.
+  worker throws - you fall back to the *last good* grade, never a blank slate.
 - **Immutable transitions** make the attempt trivially serializable and
   replayable, and they play well with the renderer's store model.
 
 ---
 
-## 4. Structural checks — grading the diagram
+## 4. Structural checks - grading the diagram
 
 Some things you want to require of a *design* have nothing to do with running a
 simulation: "there must be a load balancer," "the graph must be connected,"
@@ -165,7 +165,7 @@ type StructuralRule =
 ### Why structural checks are a separate stage
 
 - **They are a cheap, deterministic gate.** Checking "does this diagram contain a
-  load balancer?" is graph inspection — no simulation, no randomness, instant.
+  load balancer?" is graph inspection - no simulation, no randomness, instant.
   Running them *first* lets grading fail fast on a fundamentally wrong design
   before spending time on simulation.
 - **They gate the expensive stage.** This "structural first, then simulate"
@@ -187,7 +187,7 @@ evaluateInvariantViolations(...)   // returns the list of violated invariants
 ```
 
 *Reference: `src/engine/analysis/invariants.ts:64`.* Unsupported or unparseable
-conditions produce an explicit *violation* rather than silently passing — a
+conditions produce an explicit *violation* rather than silently passing - a
 recurring theme in this codebase: **absence of a check is never treated as
 success.**
 
@@ -207,7 +207,7 @@ interface HostContract {
 }
 ```
 
-`toHostContract(structural, graded)` builds it, and — crucially — it builds
+`toHostContract(structural, graded)` builds it, and - crucially - it builds
 `tests` from the **same** flattening logic the full contract uses (this becomes
 `flattenAttemptCheckRows` in #214). The result is that the host's thin view is
 always a faithful projection of the full grade, never a hand-maintained parallel
@@ -229,7 +229,7 @@ readable IDs; #214 makes them **content-hashed** for collision-safety (doc 03).
 
 ---
 
-## 7. Embedding — running a question inside a host iframe
+## 7. Embedding - running a question inside a host iframe
 
 A question can be embedded in a host page inside an `<iframe>`, communicating
 over `window.postMessage`. #212 hardened this seam.
@@ -246,11 +246,11 @@ sequenceDiagram
 *Reference: `src/renderer/src/utils/questionHostMessaging.ts`,
 `QuestionPanel.tsx`, `WorkspaceLayout.tsx`, `EmbeddedIframeQuestion.tsx`.*
 
-### Concept — `postMessage` origin security
+### Concept - `postMessage` origin security
 
 `postMessage` takes a **`targetOrigin`**: the browser only delivers the message
 if the receiving frame's origin matches. Getting this wrong is a real security
-issue — a `targetOrigin` of `'*'` broadcasts your payload to *any* page that
+issue - a `targetOrigin` of `'*'` broadcasts your payload to *any* page that
 happens to be framing you.
 
 The current outbound logic derives the target from the referrer:
@@ -262,7 +262,7 @@ return document.referrer ? new URL(document.referrer).origin : '*'
 
 This is the pragmatic default: use the real host origin when known, fall back to
 `'*'` only when the referrer is unavailable. **That `'*'` fallback is a known
-sharp edge** — doc 05 records it as an accepted, documented trade-off with a
+sharp edge** - doc 05 records it as an accepted, documented trade-off with a
 follow-up to make origins explicitly configured. Flagging it honestly (rather
 than pretending the seam is fully locked down) is itself a deliberate choice.
 
@@ -272,7 +272,7 @@ than pretending the seam is fully locked down) is itself a deliberate choice.
 
 `questionAttemptPersistence.ts` provides best-effort save/restore of an attempt
 (currently `localStorage`-backed), so a student who reloads mid-build doesn't
-lose work. It is deliberately *best-effort*, not an immutable grading archive —
+lose work. It is deliberately *best-effort*, not an immutable grading archive -
 a boundary the team chose to keep #212 shippable, with the durable-replay archive
 left as explicit future work.
 
@@ -285,13 +285,13 @@ left as explicit future work.
    is a pure function of both.
 2. **The attempt lifecycle is a real state machine** whose most important edge is
    "dry-run ≠ submission."
-3. **Two grading axes** — structural (diagram) and rubric (simulation) — set up
+3. **Two grading axes** - structural (diagram) and rubric (simulation) - set up
    the check-kind model that #214 completes.
 4. **Runtime parsing at every trust boundary** (files, `postMessage`, storage) is
    what makes the compile-time types trustworthy.
 5. **Honest boundaries:** the `'*'` origin fallback and best-effort persistence
    are documented sharp edges, not hidden ones.
 
-**Next:** [PR #213 — Evaluation Contract & CLI](02-pr213-evaluation-contract-and-cli.md),
+**Next:** [PR #213 - Evaluation Contract & CLI](02-pr213-evaluation-contract-and-cli.md),
 which wraps this grading in a versioned, machine-readable contract and exposes it
 to the outside world.

@@ -1,4 +1,4 @@
-# HLD Simulator — How It Works
+# HLD Simulator - How It Works
 
 > This document explains how the simulation engine works, how it is represented in the UI and CLI, and maps every feature to its implementation ticket. It is the single source of truth for understanding the system end-to-end.
 
@@ -45,7 +45,7 @@ Step 2: PRIME
        { time: 0, type: REQUEST_GENERATED }
    This goes into the event queue (a min-heap sorted by time).
 
-Step 3: LOOP (the core — repeats millions of times)
+Step 3: LOOP (the core - repeats millions of times)
    Pull the earliest event from the queue.
    Jump the clock to that event's time.
    Handle the event:
@@ -112,7 +112,7 @@ The simulation has exactly **two kinds of data** that the UI needs to show:
 1. **Time-series snapshots** (streamed DURING the simulation, once per sim-second):
    - Per-node: queue length, active workers, utilization, RPS, error rate, status
    - Per-edge: throughput, latency, load
-   - These drive **live canvas coloring** — nodes turning yellow/red as they saturate
+   - These drive **live canvas coloring** - nodes turning yellow/red as they saturate
 
 2. **Final output** (returned AFTER the simulation completes):
    - Summary: total requests, latency percentiles, throughput, error rate
@@ -145,7 +145,7 @@ Every interaction follows this flow:
     Inspector             Controls                Trace viewer
 ```
 
-### Phase 1: BUILD — what the user does
+### Phase 1: BUILD - what the user does
 
 | Action | What happens internally |
 |--------|----------------------|
@@ -159,7 +159,7 @@ Every interaction follows this flow:
 **What exists today**: Nodes and edges on the React Flow canvas.
 **What needs to be built**: Topology state store, inspector panel, JSON topology viewer, workload config, fault config, topology serializer, import/export controls.
 
-### Phase 2: SIMULATE — what the user sees
+### Phase 2: SIMULATE - what the user sees
 
 | Moment | What the user sees | What's happening |
 |--------|-------------------|------------------|
@@ -169,16 +169,16 @@ Every interaction follows this flow:
 | Cascade happens | Upstream nodes turn yellow then red one by one | Failure propagation engine walks the dependency graph, affected nodes degrade |
 | Simulation ends | Progress bar completes, "Results" tab appears | Worker sends `COMPLETE` message with full `SimulationOutput` JSON |
 
-**What exists today**: Nothing — no simulation controls, no live visualization.
+**What exists today**: Nothing - no simulation controls, no live visualization.
 **What needs to be built**: Web Worker (with playback speed throttling), useSimulation hook (with `setPlaybackSpeed`), useLiveVisualization hook, SimulationControls component (with speed selector).
 
-### Phase 3: ANALYSE — what the user reads
+### Phase 3: ANALYSE - what the user reads
 
 | View | What it shows | Data source |
 |------|-------------|-------------|
 | Summary cards | P50/P90/P95/P99 latency, throughput, error rate, total requests | `output.summary` |
 | Per-node table | Each node's utilization, queue depth, service time, rejection count | `output.perNode` |
-| Latency chart | Latency vs time (line chart) — shows when latency spiked | `output.timeSeries[].global.avgLatency` |
+| Latency chart | Latency vs time (line chart) - shows when latency spiked | `output.timeSeries[].global.avgLatency` |
 | Queue depth chart | Queue depth per node over time | `output.timeSeries[].nodes[id].queueLength` |
 | Request waterfall | One sampled request's journey: arrival → queue wait → service → edge → next node (like Chrome DevTools) | `output.traces[]` |
 | Causal failure graph | Tree showing: DB crashed → API timed out → Gateway rejected → Users saw 503 | `output.causalGraph` |
@@ -231,7 +231,7 @@ There is one screen with five zones:
 | **Right Panel** (right) | Tabbed: **Inspector** (form fields for selected node/edge) OR **JSON Viewer** (tree view of full topology). | No |
 | **Results Tray** (bottom) | Tabbed panel that slides up after simulation completes. | No |
 
-### 3.2 Canvas — During Each Phase
+### 3.2 Canvas - During Each Phase
 
 #### BUILD phase (before simulation)
 
@@ -254,7 +254,7 @@ The canvas is a static graph editor. Nodes are draggable, edges are connectable.
 Each node shows:
 - Label (user-defined name)
 - Type badge (e.g., "lb-l7", "postgres")
-- No metrics yet — system is idle
+- No metrics yet - system is idle
 
 Each edge shows:
 - Protocol label
@@ -300,7 +300,7 @@ Live edge decorations:
 
 Canvas returns to static. Nodes retain a final-state color as a heatmap. The results tray expands from the bottom.
 
-### 3.3 Inspector Panel — What the User Configures
+### 3.3 Inspector Panel - What the User Configures
 
 When a node is selected, the right panel shows:
 
@@ -380,7 +380,7 @@ When an edge is selected:
 └──────────────────────────────────────────────┘
 ```
 
-### 3.4 Results Tray — Tabs
+### 3.4 Results Tray - Tabs
 
 After the simulation completes, the bottom tray expands with these tabs:
 
@@ -402,7 +402,7 @@ After the simulation completes, the bottom tray expands with these tabs:
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘        │
 │                                                                  │
 │  Little's Law check:  ✓ All nodes within 10% tolerance          │
-│  Seed: "my-seed" — reproducible: yes                            │
+│  Seed: "my-seed" - reproducible: yes                            │
 │                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -490,7 +490,7 @@ Shows the causal graph when cascading failures occurred:
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.5 Scenario Bar — What the User Configures Before Running
+### 3.5 Scenario Bar - What the User Configures Before Running
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -509,9 +509,9 @@ Shows the causal graph when cascading failures occurred:
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.6 JSON Topology Viewer — Inspect and Edit the Full Structure
+### 3.6 JSON Topology Viewer - Inspect and Edit the Full Structure
 
-The right panel has two tabs: **Inspector** (form fields for one selected node/edge) and **JSON Viewer** (tree view of the entire topology). The JSON Viewer is like Chrome DevTools' object inspector — a structured, expandable tree that is both readable and editable.
+The right panel has two tabs: **Inspector** (form fields for one selected node/edge) and **JSON Viewer** (tree view of the entire topology). The JSON Viewer is like Chrome DevTools' object inspector - a structured, expandable tree that is both readable and editable.
 
 ```
 ┌─ { } Topology Viewer ─────────────────────────────────────┐
@@ -563,7 +563,7 @@ The right panel has two tabs: **Inspector** (form fields for one selected node/e
 - Search filters the tree to matching paths (e.g., typing "workers" shows all nodes' worker counts)
 - Validation warnings from the validator (T-003) appear at the bottom
 
-**Why this matters**: The inspector shows one node at a time. The canvas shows connections but no config details. The JSON viewer shows **everything** — all nodes, all edges, all config, all at once. Users can scan the entire topology, spot misconfigured values, and verify that the structure is correct before running a simulation.
+**Why this matters**: The inspector shows one node at a time. The canvas shows connections but no config details. The JSON viewer shows **everything** - all nodes, all edges, all config, all at once. Users can scan the entire topology, spot misconfigured values, and verify that the structure is correct before running a simulation.
 
 #### Two-Way Sync Architecture
 
@@ -599,7 +599,7 @@ All three editing surfaces (canvas, inspector, JSON viewer) read from and write 
      Changes in one instantly appear in the others.
 ```
 
-There is no "sync" problem because there is nothing to sync — they all read and write the same store. Edit workers in the inspector → the JSON viewer updates. Edit workers in the JSON viewer → the inspector updates. Drag a node on the canvas → the JSON viewer's position updates.
+There is no "sync" problem because there is nothing to sync - they all read and write the same store. Edit workers in the inspector → the JSON viewer updates. Edit workers in the JSON viewer → the inspector updates. Drag a node on the canvas → the JSON viewer's position updates.
 
 #### Import / Export
 
@@ -620,11 +620,11 @@ The **validation badge** (✓ Valid / ✗ 3 errors / ⚠ 2 warnings) is always v
 
 ### 3.7 Execution Modes and Playback Speed
 
-The simulation engine always runs as fast as possible — it is event-driven and jumps from one event to the next with no wall-clock synchronization. **Playback speed** controls the presentation layer: how quickly the worker emits snapshots to the UI.
+The simulation engine always runs as fast as possible - it is event-driven and jumps from one event to the next with no wall-clock synchronization. **Playback speed** controls the presentation layer: how quickly the worker emits snapshots to the UI.
 
 | Mode | Speed value | Behavior |
 |------|-------------|----------|
-| **Batch** (default) | `0` | Engine runs at full speed. Snapshots are emitted as fast as possible. Best for getting results quickly — the UI shows a progress bar but no live node animation. |
+| **Batch** (default) | `0` | Engine runs at full speed. Snapshots are emitted as fast as possible. Best for getting results quickly - the UI shows a progress bar but no live node animation. |
 | **Real-time** | `1` | Snapshots are throttled so 1 simulated second ≈ 1 wall-clock second. Nodes animate at a watchable pace. |
 | **5× accelerated** | `5` | 1 simulated second ≈ 200ms wall-clock. Faster but still watchable. |
 | **10× accelerated** | `10` | 1 simulated second ≈ 100ms wall-clock. Quick overview of the simulation's progression. |
@@ -632,8 +632,8 @@ The simulation engine always runs as fast as possible — it is event-driven and
 **How it works internally**: The worker inserts a `setTimeout(snapshotInterval / playbackSpeed)` delay between snapshot emissions when `playbackSpeed > 0`. At `playbackSpeed = 0` (batch), no delay is inserted and snapshots are posted immediately.
 
 **User interaction**:
-- Speed defaults to **Max** (batch) — users who just want results don't need to wait.
-- Speed can be changed mid-run without restarting the simulation — clicking a different speed button sends a `SET_SPEED` command to the worker.
+- Speed defaults to **Max** (batch) - users who just want results don't need to wait.
+- Speed can be changed mid-run without restarting the simulation - clicking a different speed button sends a `SET_SPEED` command to the worker.
 - The speed selector is a segmented button group: `[1×] [5×] [10×] [Max]`. The active speed is highlighted.
 - The speed selector only appears when the simulation is running or paused.
 
@@ -650,8 +650,8 @@ The simulation engine always runs as fast as possible — it is event-driven and
 
 | Feature | Phase | Where in UI | Engine function | Ticket |
 |---------|-------|-------------|-----------------|--------|
-| Place nodes on canvas | BUILD | Canvas | — (UI only, React Flow) | existing |
-| Connect nodes with edges | BUILD | Canvas | — (UI only, React Flow) | existing |
+| Place nodes on canvas | BUILD | Canvas | - (UI only, React Flow) | existing |
+| Connect nodes with edges | BUILD | Canvas | - (UI only, React Flow) | existing |
 | Configure node params | BUILD | Inspector Panel | Writes to `ComponentNode` JSON | T-033 |
 | Configure edge params | BUILD | Inspector Panel | Writes to `EdgeDefinition` JSON | T-033 |
 | Choose workload pattern | BUILD | Scenario Bar | Sets `WorkloadProfile` | T-034 |
@@ -676,7 +676,7 @@ The simulation engine always runs as fast as possible — it is event-driven and
 | Upload topology JSON | BUILD | Scenario Bar | file → `importFromFile()` → store | T-045, T-046 |
 | Copy/paste topology JSON | BUILD | Scenario Bar | clipboard ↔ `store.exportTopology()` | T-045, T-046 |
 | See live validation status | BUILD | Scenario Bar / JSON Viewer | `store.validationResult` (auto-computed) | T-043 |
-| Export/share results | ANALYSE | Results → Export | Serialize `SimulationOutput` to JSON | — |
+| Export/share results | ANALYSE | Results → Export | Serialize `SimulationOutput` to JSON | - |
 
 ---
 
@@ -733,7 +733,7 @@ $ dsds run topology.json --seed "abc123" --duration 60000
   ─────────────────────────────────────────────────────
 
    Little's Law:  ✓ All nodes within 10% tolerance
-   SLO Breaches:  1 — DB P99 (890ms) exceeds target (500ms)
+   SLO Breaches:  1 - DB P99 (890ms) exceeds target (500ms)
    Seed: abc123   Reproducible: yes
 ```
 
@@ -861,7 +861,7 @@ Every UI component, what it does, what data it consumes, and what ticket builds 
 | **WorkloadConfig** | `WorkloadConfig.tsx` | Scenario bar: traffic pattern, RPS, request mix | `WorkloadProfile` | updated `WorkloadProfile` | T-034 |
 | **FaultConfig** | `FaultConfig.tsx` | Scenario bar: add/edit/delete fault injections | `FaultSpec[]` | updated `FaultSpec[]` | T-034 |
 | **SimulationControls** | `SimulationControls.tsx` | Run/Pause/Stop/Step buttons + progress bar + speed selector (`[1×][5×][10×][Max]`) | `useSimulation` state | commands to worker | T-034 |
-| **TopologyViewer** | `TopologyViewer.tsx` | Tree view of full topology — expand/collapse, inline edit, search | `useTopologyStore` | writes to store | T-044 |
+| **TopologyViewer** | `TopologyViewer.tsx` | Tree view of full topology - expand/collapse, inline edit, search | `useTopologyStore` | writes to store | T-044 |
 | **ImportExportControls** | `ImportExportControls.tsx` | Download/Upload/Copy/Paste buttons + validation badge | `useTopologyStore` | file / clipboard | T-046 |
 | **TopologySerializer** | `useTopologySerializer.ts` | Convert React Flow state → `TopologyJSON` (becomes `store.exportTopology()` after T-043) | `rfNodes`, `rfEdges`, configs | `TopologyJSON` | T-028 |
 | **TopologyValidator** | `validator.ts` | Validate topology before simulation | `TopologyJSON` | errors/warnings | T-003 |
@@ -870,7 +870,7 @@ Every UI component, what it does, what data it consumes, and what ticket builds 
 
 | Component | File | Role | Data In | Data Out | Ticket |
 |-----------|------|------|---------|----------|--------|
-| **ScenarioBar** | `ScenarioBar.tsx` | Container for workload, faults, and sim controls | all config state | — | T-034 |
+| **ScenarioBar** | `ScenarioBar.tsx` | Container for workload, faults, and sim controls | all config state | - | T-034 |
 | **SimulationWorker** | `simulation.worker.ts` | Runs engine in background thread | `TopologyJSON` | `PROGRESS`, `SNAPSHOT`, `COMPLETE` | T-025 |
 | **useSimulation** | `useSimulation.ts` | React hook: manages worker lifecycle + state | `TopologyJSON` | `status`, `progress`, `result`, `snapshots` | T-026 |
 | **useLiveVisualization** | `useLiveVisualization.ts` | React hook: maps snapshots → node/edge styles | `TimeSeriesSnapshot[]` | `nodeStyles`, `edgeStyles` | T-027 |
@@ -879,14 +879,14 @@ Every UI component, what it does, what data it consumes, and what ticket builds 
 
 | Component | File | Role | Data In | Data Out | Ticket |
 |-----------|------|------|---------|----------|--------|
-| **useTopologyStore** | `topologyStore.ts` | Canonical topology state — all views read/write here | canvas events, inspector edits, JSON viewer edits, imported files | `rfNodes`, `rfEdges`, `validationResult`, `TopologyJSON` | T-043 |
+| **useTopologyStore** | `topologyStore.ts` | Canonical topology state - all views read/write here | canvas events, inspector edits, JSON viewer edits, imported files | `rfNodes`, `rfEdges`, `validationResult`, `TopologyJSON` | T-043 |
 | **useTopologyDeserializer** | `useTopologyDeserializer.ts` | Import JSON → validate → populate store + auto-layout | `TopologyJSON` (file, clipboard, string) | `ImportResult` (success/errors) | T-045 |
 
 ### 5.4 ANALYSE Phase Components
 
 | Component | File | Role | Data In | Data Out | Ticket |
 |-----------|------|------|---------|----------|--------|
-| **ResultsTray** | `ResultsTray.tsx` | Collapsible bottom tray with tabbed results | `SimulationOutput` | — | T-035 |
+| **ResultsTray** | `ResultsTray.tsx` | Collapsible bottom tray with tabbed results | `SimulationOutput` | - | T-035 |
 | **MetricsDashboard** | `MetricsDashboard.tsx` | Summary cards: P50/P90/P95/P99, throughput, errors | `SimulationOutput.summary` | rendered cards | T-035 |
 | **PerNodeTable** | `PerNodeTable.tsx` | Sortable table of per-node metrics | `SimulationOutput.perNode` | rendered table | T-035 |
 | **SLOBreachList** | `SLOBreachList.tsx` | Table of SLO violations | `SimulationOutput.sloBreaches` | rendered list | T-035 |
@@ -896,7 +896,7 @@ Every UI component, what it does, what data it consumes, and what ticket builds 
 | **AntiPatternPanel** | `AntiPatternPanel.tsx` | Warnings list with recommendations | `AntiPatternDetection[]` | rendered list | T-038 |
 | **ComparisonView** | `ComparisonView.tsx` | Side-by-side diff of two simulation outputs | `DesignComparison` | rendered diff | T-032 |
 
-### 5.5 Engine Components (no UI — pure logic)
+### 5.5 Engine Components (no UI - pure logic)
 
 | Component | File | Role | Ticket |
 |-----------|------|------|--------|
@@ -938,14 +938,14 @@ Every UI component, what it does, what data it consumes, and what ticket builds 
 
 ### What needs to be built (ordered by priority)
 
-#### Critical Path (MVP — must be built in order)
+#### Critical Path (MVP - must be built in order)
 
 | Priority | Feature | Ticket(s) | Blocked by |
 |----------|---------|-----------|------------|
-| 1 | TypeScript types for topology JSON | T-001 | — |
-| 2 | Event types + factory functions | T-002 | — |
-| 3 | BigInt time utilities | T-004 | — |
-| 4 | Deterministic PRNG | T-005 | — |
+| 1 | TypeScript types for topology JSON | T-001 | - |
+| 2 | Event types + factory functions | T-002 | - |
+| 3 | BigInt time utilities | T-004 | - |
+| 4 | Deterministic PRNG | T-005 | - |
 | 5 | Distribution sampler | T-006 | T-005 |
 | 6 | Min-heap priority queue | T-007 | T-002 |
 | 7 | G/G/c/K node model | T-008 | T-004, T-005, T-006, T-002 |
@@ -961,19 +961,19 @@ Every UI component, what it does, what data it consumes, and what ticket builds 
 
 After these 16 tickets, you have: **a working simulation that runs from the canvas and returns results**.
 
-#### UI Components (can develop in parallel with engine — only need T-001)
+#### UI Components (can develop in parallel with engine - only need T-001)
 
 | Feature | Ticket(s) | Can start after |
 |---------|-----------|-----------------|
 | Node & Edge Inspector Panel | T-033 | T-001 |
 | Node Palette (drag to canvas) | T-039 | T-001 |
 | Scenario Bar (workload + faults + controls) | T-034 | T-001, T-026 |
-| Results Tray — Summary & Per-Node | T-035 | T-020, T-026 |
-| Results Tray — Waterfall Trace View | T-036 | T-018, T-035 |
-| Results Tray — Failure Cascade View | T-037 | T-021, T-035 |
-| Results Tray — Cost & Anti-Pattern | T-038 | T-030, T-031, T-035 |
+| Results Tray - Summary & Per-Node | T-035 | T-020, T-026 |
+| Results Tray - Waterfall Trace View | T-036 | T-018, T-035 |
+| Results Tray - Failure Cascade View | T-037 | T-021, T-035 |
+| Results Tray - Cost & Anti-Pattern | T-038 | T-030, T-031, T-035 |
 
-#### Topology State & Viewer (can develop in parallel with engine — only need T-001 + T-003)
+#### Topology State & Viewer (can develop in parallel with engine - only need T-001 + T-003)
 
 | Feature | Ticket(s) | Can start after |
 |---------|-----------|-----------------|
@@ -982,7 +982,7 @@ After these 16 tickets, you have: **a working simulation that runs from the canv
 | Topology deserializer (JSON → canvas) | T-045 | T-043 |
 | Import/Export controls (download, upload, copy, paste) | T-046 | T-043, T-045 |
 
-#### Engine — Important but Parallel
+#### Engine - Important but Parallel
 
 | Feature | Ticket(s) | Can start after |
 |---------|-----------|-----------------|
@@ -1051,7 +1051,7 @@ Retained from the original design system, aligned with the components above.
 | Healthy | green tint | green | "42% · 980 rps" |
 | Saturated | orange tint | orange | "92% · 500 rps ⚠" |
 | Failed | red tint | red | "FAILED ✗" |
-| Selected | — | blue focus ring | — |
+| Selected | - | blue focus ring | - |
 
 ### 7.3 Edge Visual States
 
@@ -1084,7 +1084,7 @@ Retained from the original design system, aligned with the components above.
 
 ---
 
-## Appendix: Gap Analysis — Old ui.md vs Current Implementation
+## Appendix: Gap Analysis - Old ui.md vs Current Implementation
 
 The original `ui.md` was a design-system-first document (atomic design, tokens, variants). Here is what changed:
 

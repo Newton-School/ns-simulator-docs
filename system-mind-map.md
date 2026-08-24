@@ -1,4 +1,4 @@
-# NS Simulator — System Mind Map
+# NS Simulator - System Mind Map
 
 > How everything connects. Solid boxes = built and working. Dashed boxes = planned/specced but not yet implemented.
 > Read this like someone sketched it on a whiteboard to understand the whole system.
@@ -20,7 +20,7 @@ flowchart TB
   USER --> CLI
   USER -.-> TERMINAL
 
-  subgraph FRONTEND ["Renderer — What the user sees and touches"]
+  subgraph FRONTEND ["Renderer - What the user sees and touches"]
     direction TB
     CANVAS["React Flow Canvas<br/>drag nodes, draw edges<br/><i>src/renderer</i>"]:::built
     STORE["Zustand Store<br/>nodes, edges, scenario,<br/>simulation metrics<br/><i>useStore.ts</i>"]:::built
@@ -31,7 +31,7 @@ flowchart TB
     RESULTS["Results Tray<br/>summary, per-node metrics,<br/>health checks, SLO breaches<br/><i>components/simulation</i>"]:::built
     DEBUGGER_UI["Event Debugger UI<br/>event log, request inspector,<br/>waterfall, step-through,<br/>canvas overlay, sequence diagram<br/><i>13 features specced</i>"]:::planned
     TERMINAL["In-App Terminal<br/>Cisco IOS-style CLI,<br/>context modes, show/set commands,<br/>port-level state<br/><i>11 features specced</i>"]:::planned
-    DSDS["Design System (DSDS)<br/>atoms, molecules, templates,<br/>pages — unified component library<br/><i>stitch_simulation_output_analysis</i>"]:::planned
+    DSDS["Design System (DSDS)<br/>atoms, molecules, templates,<br/>pages - unified component library<br/><i>stitch_simulation_output_analysis</i>"]:::planned
 
     CANVAS --> STORE
     CATALOG_UI --> CANVAS
@@ -45,7 +45,7 @@ flowchart TB
     DSDS -.-> DEBUGGER_UI
   end
 
-  subgraph SERIALIZATION ["The Bridge — Canvas to Engine"]
+  subgraph SERIALIZATION ["The Bridge - Canvas to Engine"]
     direction TB
     SERIALIZER["Topology Serializer<br/>canvas state → TopologyJSON<br/>applies EDGE_DEFAULTS,<br/>merges workload overrides,<br/>builds GlobalConfig<br/><i>useTopologySerializer.ts</i>"]:::built
     VALIDATOR_TOPO["Topology Validator<br/>Zod schema parse,<br/>cross-ref checks,<br/>connectivity analysis,<br/>applies node defaults (mutation)<br/><i>validator.ts</i>"]:::built
@@ -61,7 +61,7 @@ flowchart TB
 
   STORE --> SERIALIZER
 
-  subgraph WORKER ["Web Worker — Off-thread execution"]
+  subgraph WORKER ["Web Worker - Off-thread execution"]
     direction TB
     WORKER_THREAD["simulation.worker.ts<br/>receives TopologyJSON,<br/>constructs engine,<br/>streams progress/snapshots,<br/>returns SimulationOutput"]:::built
     WORKER_PROTO["Worker Protocol<br/>Inbound: run, pause, resume, stop, step<br/>Outbound: progress, snapshot, complete, error<br/><i>protocols.ts</i>"]:::built
@@ -74,7 +74,7 @@ flowchart TB
   ENV_NORMALIZE -.-> WORKER_THREAD
   VALIDATOR_TOPO --> WORKER_THREAD
 
-  subgraph ENGINE ["Simulation Engine — The brain"]
+  subgraph ENGINE ["Simulation Engine - The brain"]
     direction TB
     ENGINE_CORE["SimulationEngine<br/>the event loop<br/>pulls from MinHeap,<br/>advances clock,<br/>dispatches to handlers<br/><i>engine.ts</i>"]:::built
 
@@ -82,7 +82,7 @@ flowchart TB
       direction LR
       EVENTS["20 Event Types<br/>request-generated, arrival,<br/>processing-complete, forwarded,<br/>complete, timeout, rejected,<br/>node-failure, recovery,<br/>network-partition, scale-up/down,<br/>circuit-breaker, cache, db-failover<br/><i>events.ts</i>"]:::built
       HEAP["Min-Heap Priority Queue<br/>events sorted by timestamp,<br/>then by priority for ties<br/><i>min-heap.ts</i>"]:::built
-      CLOCK["Simulation Clock<br/>bigint microseconds,<br/>no real time — pure numbers<br/><i>time.ts</i>"]:::built
+      CLOCK["Simulation Clock<br/>bigint microseconds,<br/>no real time - pure numbers<br/><i>time.ts</i>"]:::built
     end
 
     subgraph NODES_SYS ["Node Runtime"]
@@ -130,7 +130,7 @@ flowchart TB
 
   WORKER_THREAD --> ENGINE_CORE
 
-  subgraph ANALYSIS ["Output & Analysis — What comes out"]
+  subgraph ANALYSIS ["Output & Analysis - What comes out"]
     direction TB
     SIM_OUTPUT["SimulationOutput<br/>the final result object<br/><i>output.ts</i>"]:::built
 
@@ -155,7 +155,7 @@ flowchart TB
   SIM_OUTPUT --> WORKER_THREAD
   WORKER_THREAD --> RESULTS
 
-  subgraph CATALOG ["Component Catalog — The 113 node types"]
+  subgraph CATALOG ["Component Catalog - The 113 node types"]
     direction TB
     COMP_SPECS["Component Specs<br/>per-type: structuralRole, profile,<br/>defaultRenderer, routingStrategy,<br/>asyncBoundary, createDefaultSimConfig,<br/>validateCanvas, serializeCanvas<br/><i>componentSpecs.ts</i>"]:::built
     PALETTE["Palette Templates<br/>drag-and-drop presets,<br/>seed metrics, labels, icons<br/><i>paletteTemplates.ts</i>"]:::built
@@ -171,7 +171,7 @@ flowchart TB
   CATALOG --> SERIALIZER
   CATALOG --> GGCK
 
-  subgraph TOPOLOGY ["Topology JSON — The contract"]
+  subgraph TOPOLOGY ["Topology JSON - The contract"]
     direction TB
     TOPO_JSON["TopologyJSON<br/>id, name, version<br/>the single object that crosses<br/>the canvas→engine boundary<br/><i>types.ts</i>"]:::built
 
@@ -192,13 +192,13 @@ flowchart TB
   SERIALIZER --> TOPO_JSON
   TOPO_JSON --> ENGINE_CORE
 
-  subgraph ENV_MODEL ["Environment Model — The missing layer (specced)"]
+  subgraph ENV_MODEL ["Environment Model - The missing layer (specced)"]
     direction TB
     ENV_CONFIG["SimulationEnvironmentConfig<br/>id, name, global, defaults,<br/>nodes, edges, behaviourRules,<br/>constraints"]:::planned
     ENV_DEFAULTS["EnvironmentDefaults<br/>requestPatternId,<br/>node defaults (queue, processing),<br/>edge defaults (latency, bandwidth, etc.)"]:::planned
     ENV_BEHAVIOUR["Behaviour Rules<br/>allowRejection,<br/>allowBidirectionalRequests,<br/>allowNodePatternOverrides,<br/>allowEdgeOverrides"]:::planned
     ENV_CONSTRAINTS["Constraint Model<br/>type, severity, message<br/>evaluated before simulation<br/>blocks or warns"]:::planned
-    NORMALIZED["NormalizedSimulationEnvironment<br/>fully resolved — no optionals,<br/>every node/edge has complete config,<br/>ready for engine consumption"]:::planned
+    NORMALIZED["NormalizedSimulationEnvironment<br/>fully resolved - no optionals,<br/>every node/edge has complete config,<br/>ready for engine consumption"]:::planned
 
     ENV_CONFIG -.-> ENV_DEFAULTS
     ENV_CONFIG -.-> ENV_BEHAVIOUR
@@ -208,7 +208,7 @@ flowchart TB
 
   ENV_NORMALIZE -.-> NORMALIZED
 
-  subgraph FUTURE_SPECS ["Future Feature Specs — Planned domains"]
+  subgraph FUTURE_SPECS ["Future Feature Specs - Planned domains"]
     direction TB
     REQ_PATTERN["Request Pattern Configuration<br/>pattern shapes, presets,<br/>pattern validation,<br/>simulation effect"]:::planned
     REQ_DIRECTION["Request Flow Direction<br/>& Topology Rules<br/>direction inference,<br/>routing semantics"]:::planned
@@ -242,7 +242,7 @@ flowchart TB
   SIM_OUTPUT -.-> VERDICT
   CLI --> VERDICT
 
-  subgraph CLI_SYS ["CLI — Headless execution"]
+  subgraph CLI_SYS ["CLI - Headless execution"]
     direction LR
     CLI["CLI Runner<br/>tsx src/cli/index.ts<br/>reads topology JSON file,<br/>validates, runs engine,<br/>streams progress bar,<br/>prints results or --json<br/><i>cli/index.ts</i>"]:::built
   end

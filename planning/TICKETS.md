@@ -1,4 +1,4 @@
-# HLD Simulator — Engineering Tickets
+# HLD Simulator - Engineering Tickets
 
 > Each ticket is self-contained with context, acceptance criteria, and the exact file to create. Tickets are grouped by phase but tagged with dependencies so devs can pick any unblocked ticket.
 
@@ -9,11 +9,11 @@
 - **Blocked by**: Must be merged before this ticket can start.
 - **File**: The file this ticket produces or modifies.
 - **Size**: S (~1-2 hrs), M (~3-5 hrs), L (~1 day), XL (~2+ days).
-- **AC**: Acceptance criteria — the ticket is done when all AC items pass.
+- **AC**: Acceptance criteria - the ticket is done when all AC items pass.
 
 ---
 
-## Phase 0 — Topology JSON Format
+## Phase 0 - Topology JSON Format
 
 ### T-001: Define TypeScript types for the Topology JSON schema
 
@@ -29,18 +29,18 @@
 
 Define and export TypeScript types/interfaces for the full topology JSON. Refer to `IMPLEMENTATION_PLAN.md` Phase 0 for the exact shapes. The types you need to define:
 
-1. `TopologyJSON` — top-level wrapper with `id`, `name`, `version`, `global`, `nodes[]`, `edges[]`, `workload`, `faults[]`, `invariants[]`, `scenarios[]`.
-2. `GlobalConfig` — `simulationDuration`, `seed`, `warmupDuration`, `timeResolution`, `defaultTimeout`.
-3. `ComponentNode` — full node shape including `id`, `type` (use the `ComponentType` union from the schema), `category`, `label`, `position`, `resources`, `queue`, `processing`, `dependencies`, `resilience`, `slo`, `failureModes[]`, `scaling`, `config`.
-4. `EdgeDefinition` — `id`, `source`, `target`, `label`, `mode`, `protocol`, `latency`, `bandwidth`, `maxConcurrentRequests`, `packetLossRate`, `errorRate`, `weight`, `condition`.
-5. `WorkloadProfile` — `sourceNodeId`, `pattern`, `baseRps`, pattern-specific params (`diurnal`, `spike`, `bursty`, `sawtooth`), `requestDistribution[]`.
-6. `FaultSpec` — `targetId`, `faultType`, `timing` (deterministic/probabilistic/conditional), `duration` (fixed/until/permanent), `params`.
-7. `DistributionConfig` — discriminated union: `{ type: "constant", value }`, `{ type: "log-normal", mu, sigma }`, `{ type: "exponential", lambda }`, etc. for all 12 distribution types.
-8. `ResourceConfig`, `QueueConfig`, `ProcessingConfig`, `ResilienceConfig`, `SLOConfig`, `ScalingConfig` — sub-objects of `ComponentNode`.
+1. `TopologyJSON` - top-level wrapper with `id`, `name`, `version`, `global`, `nodes[]`, `edges[]`, `workload`, `faults[]`, `invariants[]`, `scenarios[]`.
+2. `GlobalConfig` - `simulationDuration`, `seed`, `warmupDuration`, `timeResolution`, `defaultTimeout`.
+3. `ComponentNode` - full node shape including `id`, `type` (use the `ComponentType` union from the schema), `category`, `label`, `position`, `resources`, `queue`, `processing`, `dependencies`, `resilience`, `slo`, `failureModes[]`, `scaling`, `config`.
+4. `EdgeDefinition` - `id`, `source`, `target`, `label`, `mode`, `protocol`, `latency`, `bandwidth`, `maxConcurrentRequests`, `packetLossRate`, `errorRate`, `weight`, `condition`.
+5. `WorkloadProfile` - `sourceNodeId`, `pattern`, `baseRps`, pattern-specific params (`diurnal`, `spike`, `bursty`, `sawtooth`), `requestDistribution[]`.
+6. `FaultSpec` - `targetId`, `faultType`, `timing` (deterministic/probabilistic/conditional), `duration` (fixed/until/permanent), `params`.
+7. `DistributionConfig` - discriminated union: `{ type: "constant", value }`, `{ type: "log-normal", mu, sigma }`, `{ type: "exponential", lambda }`, etc. for all 12 distribution types.
+8. `ResourceConfig`, `QueueConfig`, `ProcessingConfig`, `ResilienceConfig`, `SLOConfig`, `ScalingConfig` - sub-objects of `ComponentNode`.
 
 Also define:
-- `ComponentType` — union literal of all ~113 component types from `canonical-catalogue/Component taxonomy.csv`. Group them: `ComputeType | NetworkType | StorageType | MessagingType | ...` then union.
-- `ComponentCategory` — `"compute" | "network" | "storage" | "messaging" | "orchestration" | "security" | "observability" | "devops" | "data-infra" | "real-time" | "integration" | "dns" | "consensus" | "auxiliary"`.
+- `ComponentType` - union literal of all ~113 component types from `canonical-catalogue/Component taxonomy.csv`. Group them: `ComputeType | NetworkType | StorageType | MessagingType | ...` then union.
+- `ComponentCategory` - `"compute" | "network" | "storage" | "messaging" | "orchestration" | "security" | "observability" | "devops" | "data-infra" | "real-time" | "integration" | "dns" | "consensus" | "auxiliary"`.
 
 **AC**:
 - [ ] All types exported from `src/engine/types.ts`
@@ -72,14 +72,14 @@ SCALE_UP | SCALE_DOWN | CIRCUIT_BREAKER_OPEN | CIRCUIT_BREAKER_CLOSE |
 HEALTH_CHECK | CACHE_HIT | CACHE_MISS | DB_FAILOVER
 ```
 
-2. `EventPriority` constants — used for tie-breaking when two events share the same timestamp:
+2. `EventPriority` constants - used for tie-breaking when two events share the same timestamp:
 ```typescript
 export const EventPriority = {
   SYSTEM: 0,      // health checks, config changes
   ARRIVAL: 1,     // request arrivals
   PROCESSING: 2,  // processing start/complete
   DEPARTURE: 3,   // request forwarding
-  TIMEOUT: 4,     // timeouts (process last — give the request a chance)
+  TIMEOUT: 4,     // timeouts (process last - give the request a chance)
 } as const;
 ```
 
@@ -95,7 +95,7 @@ interface SimulationEvent {
 }
 ```
 
-4. `Request` interface — the object that flows through the system:
+4. `Request` interface - the object that flows through the system:
 ```typescript
 interface Request {
   id: string;
@@ -111,7 +111,7 @@ interface Request {
 }
 ```
 
-5. `RequestSpan` interface — one span per node visited:
+5. `RequestSpan` interface - one span per node visited:
 ```typescript
 interface RequestSpan {
   nodeId: string;
@@ -172,7 +172,7 @@ interface RequestSpan {
 
 ---
 
-## Phase 1 — Core Primitives
+## Phase 1 - Core Primitives
 
 ### T-004: Implement BigInt time utilities
 
@@ -211,15 +211,15 @@ export function formatTime(us: bigint): string;     // 1_234_567n → "1.235ms" 
 | **File** | `src/engine/prng.ts` |
 | **Size** | S |
 
-**Context**: The simulation must be deterministic — same seed produces identical results every time. We use the SFC32 algorithm: fast, high-quality, passes the BigCrush statistical test suite, 2^128 period.
+**Context**: The simulation must be deterministic - same seed produces identical results every time. We use the SFC32 algorithm: fast, high-quality, passes the BigCrush statistical test suite, 2^128 period.
 
 **What to build**:
 
-1. `xmur3(str: string): () => number` — hash function that converts a seed string into a sequence of 32-bit integers. Used to generate the 4 initial seeds for SFC32.
+1. `xmur3(str: string): () => number` - hash function that converts a seed string into a sequence of 32-bit integers. Used to generate the 4 initial seeds for SFC32.
 
-2. `sfc32(a: number, b: number, c: number, d: number): () => number` — the core PRNG. Returns a function that produces a float in `[0, 1)` on each call. Must use only 32-bit integer operations (bitwise shifts, unsigned right shift `>>>`, addition with overflow).
+2. `sfc32(a: number, b: number, c: number, d: number): () => number` - the core PRNG. Returns a function that produces a float in `[0, 1)` on each call. Must use only 32-bit integer operations (bitwise shifts, unsigned right shift `>>>`, addition with overflow).
 
-3. `createRandom(seedString: string): RandomGenerator` — the public API:
+3. `createRandom(seedString: string): RandomGenerator` - the public API:
 ```typescript
 interface RandomGenerator {
   next(): number;                    // [0, 1)
@@ -236,7 +236,7 @@ interface RandomGenerator {
 - [ ] Two different seeds produce different sequences
 - [ ] `createRandom("seed-a")` and `createRandom("seed-b")` produce independent sequences
 - [ ] `between(5, 10)` always returns values in `[5, 10)`
-- [ ] `integer(1, 6)` always returns integers 1–6
+- [ ] `integer(1, 6)` always returns integers 1-6
 - [ ] Unit tests: generate 10,000 values, verify uniform distribution (chi-squared or simple bucket check)
 
 ---
@@ -261,7 +261,7 @@ A `Distributions` class that takes a `RandomGenerator` (from T-005) and exposes:
 | `uniform(min, max)` | `min + rng.next() * (max - min)` | Jitter, uniform load |
 | `exponential(rate)` | `-ln(1 - rng.next()) / rate` | Inter-arrival times (Poisson process) |
 | `normal(mean, stddev)` | Box-Muller transform | Natural variation |
-| `logNormal(mu, sigma)` | `exp(normal(mu, sigma))` | **API latency** — most critical distribution |
+| `logNormal(mu, sigma)` | `exp(normal(mu, sigma))` | **API latency** - most critical distribution |
 | `poisson(lambda)` | Knuth's algorithm | Event counts per interval |
 | `weibull(shape, scale)` | `scale * (-ln(1 - rng.next()))^(1/shape)` | Hardware failure modeling |
 | `gamma(shape, rate)` | Marsaglia & Tsang for shape >= 1, rejection for shape < 1 | Aggregated service times |
@@ -277,9 +277,9 @@ fromConfig(config: DistributionConfig): number
 This reads the `type` field and calls the appropriate method. Used everywhere the engine needs to sample a configured distribution.
 
 **Implementation notes**:
-- Box-Muller generates 2 normal samples at once — cache the second for the next call.
+- Box-Muller generates 2 normal samples at once - cache the second for the next call.
 - All methods must use only the injected PRNG (no `Math.random()`).
-- `logNormal` is the most performance-critical — it will be called millions of times.
+- `logNormal` is the most performance-critical - it will be called millions of times.
 
 **AC**:
 - [ ] All 12 distributions implemented and exported
@@ -300,7 +300,7 @@ This reads the `type` field and calls the appropriate method. Used everywhere th
 | **File** | `src/engine/min-heap.ts` |
 | **Size** | S |
 
-**Context**: The event loop needs to always process the earliest event first. A min-heap gives O(log n) insert and O(log n) extract-min — much better than a sorted array (O(n) insert). Events are keyed on `timestamp` (BigInt) with tie-breaking on `priority` (lower number = higher priority).
+**Context**: The event loop needs to always process the earliest event first. A min-heap gives O(log n) insert and O(log n) extract-min - much better than a sorted array (O(n) insert). Events are keyed on `timestamp` (BigInt) with tie-breaking on `priority` (lower number = higher priority).
 
 **What to build**:
 
@@ -334,7 +334,7 @@ export class MinHeap<T extends { timestamp: bigint; priority: number }> {
 
 ---
 
-## Phase 2 — Simulation Engine
+## Phase 2 - Simulation Engine
 
 ### T-008: Implement G/G/c/K node model
 
@@ -344,7 +344,7 @@ export class MinHeap<T extends { timestamp: bigint; priority: number }> {
 | **File** | `src/engine/node.ts` |
 | **Size** | L |
 
-**Context**: Each node in the topology is modeled as a G/G/c/K queue — General arrivals, General service times, `c` parallel workers (servers), `K` max queue capacity. This is the core simulation primitive.
+**Context**: Each node in the topology is modeled as a G/G/c/K queue - General arrivals, General service times, `c` parallel workers (servers), `K` max queue capacity. This is the core simulation primitive.
 
 **What to build**:
 
@@ -355,13 +355,13 @@ export class GGcKNode {
 
 **State** (all private):
 - `id: string`
-- `queue: Request[]` — waiting requests
-- `activeWorkers: number` — currently processing
-- `maxWorkers: number` — `c` from config
-- `maxCapacity: number` — `K` from config
+- `queue: Request[]` - waiting requests
+- `activeWorkers: number` - currently processing
+- `maxWorkers: number` - `c` from config
+- `maxCapacity: number` - `K` from config
 - `status: "idle" | "busy" | "saturated" | "failed"`
-- `metrics: NodeMetrics` — running counters
-- `serviceDistribution: DistributionConfig` — from `config.processing.distribution`
+- `metrics: NodeMetrics` - running counters
+- `serviceDistribution: DistributionConfig` - from `config.processing.distribution`
 - `discipline: "fifo" | "lifo" | "priority" | "wfq"`
 
 **Methods**:
@@ -386,16 +386,16 @@ export class GGcKNode {
    - Update `status`
    - Return `{ request, nextRequest: dequeuedRequest | null }`
 
-4. `fail(currentTime: bigint): void` — set status to `"failed"`, reject all queued requests
-5. `recover(currentTime: bigint): void` — set status to `"idle"`
-6. `getState(): NodeState` — snapshot: `{ queueLength, activeWorkers, status, utilization }`
-7. `getMetrics(): NodeMetrics` — `{ totalArrived, totalProcessed, totalRejected, totalTimedOut, avgQueueLength, avgServiceTime, utilization }`
+4. `fail(currentTime: bigint): void` - set status to `"failed"`, reject all queued requests
+5. `recover(currentTime: bigint): void` - set status to `"idle"`
+6. `getState(): NodeState` - snapshot: `{ queueLength, activeWorkers, status, utilization }`
+7. `getMetrics(): NodeMetrics` - `{ totalArrived, totalProcessed, totalRejected, totalTimedOut, avgQueueLength, avgServiceTime, utilization }`
 
 **Queue discipline logic**:
 - FIFO: `queue.shift()` to dequeue
 - LIFO: `queue.pop()` to dequeue
 - Priority: sort by `request.priority`, dequeue lowest
-- WFQ: weighted fair queuing (stretch goal — start with FIFO)
+- WFQ: weighted fair queuing (stretch goal - start with FIFO)
 
 **Metrics tracking**:
 - Increment `totalArrived` on every arrival
@@ -437,12 +437,12 @@ export class WorkloadGenerator {
 }
 ```
 
-**Traffic patterns** — each pattern determines the inter-arrival time between consecutive requests:
+**Traffic patterns** - each pattern determines the inter-arrival time between consecutive requests:
 
 1. **Constant**: `interArrival = 1000 / baseRps` ms (fixed)
-2. **Poisson**: `interArrival = exponential(baseRps)` — memoryless, realistic
+2. **Poisson**: `interArrival = exponential(baseRps)` - memoryless, realistic
 3. **Bursty**: alternate between `burstRps` and `baseRps` on a configurable cycle (e.g., 5s burst, 10s normal)
-4. **Diurnal**: `currentRps = baseRps * hourlyMultipliers[currentHour]` — simulate 24-hour pattern compressed into sim duration
+4. **Diurnal**: `currentRps = baseRps * hourlyMultipliers[currentHour]` - simulate 24-hour pattern compressed into sim duration
 5. **Spike**: constant `baseRps` except during `[spikeTime, spikeTime + spikeDuration]` where it jumps to `spikeRps`
 6. **Sawtooth**: `currentRps` ramps linearly from `baseRps` to `peakRps` over `rampDuration`, then drops back instantly
 
@@ -548,7 +548,7 @@ export class SimulationEngine {
 }
 ```
 
-**`constructor(topology)`** — initialization:
+**`constructor(topology)`** - initialization:
 1. Parse `global` config. Create master PRNG from `global.seed`.
 2. For each entry in `nodes[]`: instantiate a `GGcKNode(nodeConfig, distributions, this.schedule.bind(this))`.
 3. Build a `RoutingTable` from `edges[]`.
@@ -557,7 +557,7 @@ export class SimulationEngine {
 6. Create the `MinHeap` event queue.
 7. Set `clock = 0n`, `running = true`.
 
-**`run()`** — main event loop:
+**`run()`** - main event loop:
 ```
 while (running && !eventQueue.isEmpty) {
   event = eventQueue.extractMin()
@@ -576,7 +576,7 @@ while (running && !eventQueue.isEmpty) {
 return generateResults()
 ```
 
-**`handleEvent(event)`** — event dispatch:
+**`handleEvent(event)`** - event dispatch:
 
 | Event Type | Handler Logic |
 |------------|---------------|
@@ -594,7 +594,7 @@ return generateResults()
 
 **`generateResults()`**: Call `metricsCollector.generateOutput()`. Also run Little's Law verification per node (compare `L_observed` vs `lambda * W_observed`, flag if error > 10%).
 
-**Edge latency calculation** (simplified for v1 — Phase 3 will enhance):
+**Edge latency calculation** (simplified for v1 - Phase 3 will enhance):
 - Sample from the edge's `latency.distribution` using `distributions.fromConfig()`.
 - Convert to BigInt microseconds.
 - If no distribution specified, use defaults based on `pathType`.
@@ -613,7 +613,7 @@ return generateResults()
 
 ---
 
-## Phase 3 — Network & Edge Modeling
+## Phase 3 - Network & Edge Modeling
 
 ### T-012: Implement NetworkEdge class with latency decomposition
 
@@ -623,7 +623,7 @@ return generateResults()
 | **File** | `src/engine/edge.ts` |
 | **Size** | M |
 
-**Context**: Edges aren't instant pipes — they have propagation delay, transmission time, queuing under congestion, and jitter. This class models realistic network behavior.
+**Context**: Edges aren't instant pipes - they have propagation delay, transmission time, queuing under congestion, and jitter. This class models realistic network behavior.
 
 **What to build**:
 
@@ -670,7 +670,7 @@ interface EdgeState {
 2. **Transmission latency**: `request.sizeBytes / (config.bandwidth * 125)` ms. (Bandwidth in Mbps; 1 Mbps = 125,000 bytes/sec = 125 bytes/ms.)
 
 3. **Queuing latency**: Track `currentLoad` (active in-flight requests on this edge). Calculate utilization = `currentLoad / maxConcurrentRequests`. Apply congestion model:
-   - `delayMultiplier = 1 / (1 - utilization)` (M/M/1 model — latency explodes near saturation)
+   - `delayMultiplier = 1 / (1 - utilization)` (M/M/1 model - latency explodes near saturation)
    - Clamp multiplier to max 50x to prevent infinity.
 
 4. **Jitter**: `uniform(-jitterRange, +jitterRange)` where `jitterRange` = 10% of base latency.
@@ -679,7 +679,7 @@ interface EdgeState {
 
 **Packet loss**:
 - `effectiveLossRate = config.packetLossRate + congestionBonus`
-- `congestionBonus = max(0, (utilization - 0.8) * 0.1)` — packet loss increases above 80% utilization
+- `congestionBonus = max(0, (utilization - 0.8) * 0.1)` - packet loss increases above 80% utilization
 - If `rng.next() < effectiveLossRate` → return `{ lost: true }`
 
 **Load tracking**:
@@ -696,7 +696,7 @@ interface EdgeState {
 
 ---
 
-## Phase 4 — Failure Injection & Propagation
+## Phase 4 - Failure Injection & Propagation
 
 ### T-013: Implement failure injector
 
@@ -807,32 +807,32 @@ interface PropagationResult {
 }
 ```
 
-**Step 1 — Build dependency graph** (in constructor):
+**Step 1 - Build dependency graph** (in constructor):
 - Parse `node.dependencies.critical[]` and `node.dependencies.optional[]`.
 - Also infer dependencies from edges: if edge A→B exists, A depends on B.
 - Build two maps:
   - `upstreamOf(nodeId)` → nodes that call this node (would be affected by slowness)
   - `downstreamOf(nodeId)` → nodes this node calls (would be affected by failure)
 
-**Step 2 — Propagation rules**:
+**Step 2 - Propagation rules**:
 
 For each affected node, check:
 
 | Trigger | Condition | Default Effect |
 |---------|-----------|----------------|
-| Critical dependency failed | `dependencies.critical` includes failed node | `increase_error_rate(0.9)` — 90% of requests fail |
-| Optional dependency failed | `dependencies.optional` includes failed node | `increase_latency(2x)` — fallback path is slower |
-| Upstream queue saturated | Upstream's `queue_depth > 0.9 * capacity` | `reduce_throughput(0.5)` — backpressure |
+| Critical dependency failed | `dependencies.critical` includes failed node | `increase_error_rate(0.9)` - 90% of requests fail |
+| Optional dependency failed | `dependencies.optional` includes failed node | `increase_latency(2x)` - fallback path is slower |
+| Upstream queue saturated | Upstream's `queue_depth > 0.9 * capacity` | `reduce_throughput(0.5)` - backpressure |
 | Timeout rate high | `> 50%` of requests to a dep are timing out | `trigger_circuit_breaker` |
 
-**Step 3 — Cascade walk**:
+**Step 3 - Cascade walk**:
 - Use BFS from the failed node.
 - For each neighbor, evaluate propagation rules.
 - If a rule triggers, apply the effect AND add that node to the BFS queue (it's now degraded, which may trigger rules on ITS neighbors).
 - Track the causal chain: `{ from, to, effect, timestamp }` for every propagation step.
 - **Cycle detection**: Don't revisit a node already in the current cascade.
 
-**Step 4 — Causal graph**:
+**Step 4 - Causal graph**:
 - Store all causal edges as the cascade happens.
 - `getCausalGraph()` returns: `{ rootCause: { nodeId, event, time }, propagation: CausalEdge[] }`.
 
@@ -847,7 +847,7 @@ For each affected node, check:
 
 ---
 
-## Phase 5 — Resilience Patterns
+## Phase 5 - Resilience Patterns
 
 ### T-015: Implement circuit breaker
 
@@ -864,11 +864,11 @@ For each affected node, check:
 ```typescript
 export class CircuitBreaker {
   constructor(config: {
-    failureThreshold: number;  // e.g., 0.5 — trip when 50% of requests fail
+    failureThreshold: number;  // e.g., 0.5 - trip when 50% of requests fail
     failureCount: number;      // minimum requests before evaluating (e.g., 10)
-    recoveryTimeout: number;   // ms — how long to stay OPEN before trying HALF_OPEN
+    recoveryTimeout: number;   // ms - how long to stay OPEN before trying HALF_OPEN
     halfOpenRequests: number;  // how many test requests to allow in HALF_OPEN
-    windowSize: number;        // ms — sliding window for failure tracking
+    windowSize: number;        // ms - sliding window for failure tracking
   })
 
   get state(): "CLOSED" | "OPEN" | "HALF_OPEN";
@@ -942,9 +942,9 @@ export class RetryPolicy {
 
 - `shouldRetry`: return `attempt < maxAttempts`
 - `getDelay`: `delay = min(baseDelay * multiplier^attempt, maxDelay)`. If `jitter: true`, apply full jitter: `delay = uniform(0, delay)`.
-- Retries consume node capacity — this is critical. The engine must schedule retried requests as new `REQUEST_ARRIVAL` events.
+- Retries consume node capacity - this is critical. The engine must schedule retried requests as new `REQUEST_ARRIVAL` events.
 
-#### 2. Rate Limiter — Token Bucket (`rate-limiter.ts`)
+#### 2. Rate Limiter - Token Bucket (`rate-limiter.ts`)
 
 ```typescript
 export class RateLimiter {
@@ -1012,7 +1012,7 @@ export function isExpired(deadline: bigint, currentTime: bigint): boolean;
 
 ---
 
-## Phase 6 — Metrics, Tracing & Output
+## Phase 6 - Metrics, Tracing & Output
 
 ### T-017: Implement metrics collector
 
@@ -1153,7 +1153,7 @@ interface RequestTrace {
 
 | Field | Value |
 |-------|-------|
-| **Blocked by** | T-008 (node — for `getState()`), T-012 (edge — for `getState()`) |
+| **Blocked by** | T-008 (node - for `getState()`), T-012 (edge - for `getState()`) |
 | **File** | `src/engine/metrics.ts` (add to existing metrics module) |
 | **Size** | S |
 
@@ -1182,7 +1182,7 @@ interface TimeSeriesSnapshot {
   }>;
   edges: Record<string, {
     throughput: number;     // requests/sec on this edge
-    latencyP50: number;    // ms — median latency on this edge in last interval
+    latencyP50: number;    // ms - median latency on this edge in last interval
     currentLoad: number;
     packetLoss: number;    // actual loss rate in last interval
   }>;
@@ -1312,7 +1312,7 @@ interface CausalGraph {
 
 ---
 
-## Phase 7 — Scenarios & Chaos
+## Phase 7 - Scenarios & Chaos
 
 ### T-022: Implement chaos experiment runner
 
@@ -1339,7 +1339,7 @@ interface SteadyStateAssertion {
   metric: "error_rate" | "latency_p99" | "throughput";
   operator: "<" | ">" | "<=" | ">=";
   value: number;
-  nodeId?: string;       // optional — global if omitted
+  nodeId?: string;       // optional - global if omitted
 }
 
 type ExperimentStep =
@@ -1474,7 +1474,7 @@ export function composeScenarios(
 ```
 
 - Merge all steps from all scenarios, adjusting timestamps by `offsetMs`.
-- Merge steady-state assertions (union — all must hold).
+- Merge steady-state assertions (union - all must hold).
 - If two faults target the same node at the same time, the later one wins.
 
 **AC**:
@@ -1484,7 +1484,7 @@ export function composeScenarios(
 
 ---
 
-## Phase 8 — UI ↔ Engine Integration
+## Phase 8 - UI ↔ Engine Integration
 
 ### T-025: Implement Web Worker wrapper for the simulation engine
 
@@ -1499,7 +1499,7 @@ export function composeScenarios(
 **What to build**:
 
 ```typescript
-// simulation.worker.ts — runs in worker thread
+// simulation.worker.ts - runs in worker thread
 self.onmessage = (event: MessageEvent<WorkerCommand>) => {
   switch (event.data.type) {
     case "RUN":    handleRun(event.data.payload);    break;
@@ -1628,11 +1628,11 @@ export function useSimulation() {
 
 | Field | Value |
 |-------|-------|
-| **Blocked by** | T-026 (useSimulation — provides snapshots) |
+| **Blocked by** | T-026 (useSimulation - provides snapshots) |
 | **File** | `src/ui/hooks/useLiveVisualization.ts` |
 | **Size** | S |
 
-**Context**: During simulation, React Flow nodes and edges should update visually — node colors change based on utilization, edges change thickness based on throughput. This hook consumes snapshots and computes visual properties.
+**Context**: During simulation, React Flow nodes and edges should update visually - node colors change based on utilization, edges change thickness based on throughput. This hook consumes snapshots and computes visual properties.
 
 **What to build**:
 
@@ -1662,8 +1662,8 @@ interface EdgeVisualStyle {
 
 **Color mapping**:
 - Utilization < 0.6 → green (`#22c55e`)
-- 0.6–0.85 → yellow (`#eab308`)
-- 0.85–0.95 → orange (`#f97316`)
+- 0.6-0.85 → yellow (`#eab308`)
+- 0.85-0.95 → orange (`#f97316`)
 - \> 0.95 or FAILED → red (`#ef4444`)
 
 **Edge thickness**: `strokeWidth = clamp(throughput / maxThroughput * 6, 1, 8)` pixels.
@@ -1691,7 +1691,7 @@ interface EdgeVisualStyle {
 
 **Context**: The React Flow canvas has its own internal node/edge format. We need to convert that into the `TopologyJSON` format the engine expects, filling in defaults for any unconfigured properties.
 
-> **Note (post T-043)**: Once the Topology State Store (T-043) is built, this serializer becomes the `exportTopology()` method on the store. The mapping logic and default values defined here still apply — they move into the store's derived state computation. This ticket should still be built first as a standalone function, then integrated into the store.
+> **Note (post T-043)**: Once the Topology State Store (T-043) is built, this serializer becomes the `exportTopology()` method on the store. The mapping logic and default values defined here still apply - they move into the store's derived state computation. This ticket should still be built first as a standalone function, then integrated into the store.
 
 **What to build**:
 
@@ -1726,7 +1726,7 @@ export function serializeTopology(
 - `rfEdge.id`, `rfEdge.source`, `rfEdge.target` → direct mapping
 - Apply defaults for unconfigured latency, bandwidth, etc.
 
-**Warnings**: If a node has no type configured, or critical fields are missing, add to warnings list (don't fail — use defaults).
+**Warnings**: If a node has no type configured, or critical fields are missing, add to warnings list (don't fail - use defaults).
 
 **Validation**: Run the result through `validateTopology()` from T-003.
 
@@ -1739,7 +1739,7 @@ export function serializeTopology(
 
 ---
 
-## Phase 9 — Advanced Features
+## Phase 9 - Advanced Features
 
 ### T-029: Implement autoscaling simulation
 
@@ -1771,7 +1771,7 @@ interface ScalingAction {
 
 **Logic**:
 - Read the monitored metric from `nodeState` (queue depth, utilization, etc.).
-- **Scale up**: If `metric > scaleUpThreshold` AND `timeSinceLastScale > cooldown` → add 1 replica (increase workers). Apply `coldStartPenalty` — the new worker isn't available until after the penalty delay.
+- **Scale up**: If `metric > scaleUpThreshold` AND `timeSinceLastScale > cooldown` → add 1 replica (increase workers). Apply `coldStartPenalty` - the new worker isn't available until after the penalty delay.
 - **Scale down**: If `metric < scaleDownThreshold` AND `timeSinceLastScale > cooldown` AND `currentReplicas > 1` → remove 1 replica.
 - Respect `maxReplicas` ceiling.
 
@@ -1795,7 +1795,7 @@ interface ScalingAction {
 | **File** | `src/analysis/anti-pattern-detector.ts` |
 | **Size** | S |
 
-**Context**: Before running a simulation, scan the topology for known architectural anti-patterns and warn the user. This is a static analysis — no simulation needed.
+**Context**: Before running a simulation, scan the topology for known architectural anti-patterns and warn the user. This is a static analysis - no simulation needed.
 
 **What to build**:
 
@@ -1867,7 +1867,7 @@ interface CostEstimate {
 }
 ```
 
-**Pricing table** (simplified — use rough averages):
+**Pricing table** (simplified - use rough averages):
 
 | Resource | AWS ($/hr) | GCP ($/hr) | Azure ($/hr) |
 |----------|-----------|-----------|-------------|
@@ -1951,13 +1951,13 @@ Generate a human-readable `summary` string highlighting the most significant dif
 
 ---
 
-## Phase 10 — UI Components
+## Phase 10 - UI Components
 
 ### T-033: Build Node & Edge Inspector Panel
 
 | Field | Value |
 |-------|-------|
-| **Blocked by** | T-001 (types — needs `ComponentNode`, `EdgeDefinition`, `DistributionConfig` types) |
+| **Blocked by** | T-001 (types - needs `ComponentNode`, `EdgeDefinition`, `DistributionConfig` types) |
 | **Files** | `src/ui/components/NodeConfigPanel.tsx`, `src/ui/components/EdgeConfigPanel.tsx` |
 | **Size** | L |
 
@@ -1975,10 +1975,10 @@ A React component that receives a selected node's config and renders editable fo
 
 | Section | Fields | Input type |
 |---------|--------|------------|
-| Identity | `type` (dropdown — grouped by category from `ComponentType`), `label` (text) | dropdown, text |
+| Identity | `type` (dropdown - grouped by category from `ComponentType`), `label` (text) | dropdown, text |
 | Resources | `cpu` (number), `memory` (number, MB), `replicas` (number), `maxReplicas` (number) | number inputs |
 | Queue Model | `workers` (number), `capacity` (number), `discipline` (dropdown: FIFO/LIFO/Priority/WFQ) | number, dropdown |
-| Processing | `distribution.type` (dropdown), distribution params (dynamic — see below), `timeout` (number, ms) | dropdown, number |
+| Processing | `distribution.type` (dropdown), distribution params (dynamic - see below), `timeout` (number, ms) | dropdown, number |
 | Dependencies | `critical[]` (multi-select of other node IDs), `optional[]` (same) | multi-select |
 | Resilience | Circuit breaker toggle + params, retry toggle + params, rate limiter toggle + params, bulkhead toggle + params | toggles + number inputs |
 | SLO Targets | `latencyP99` (number, ms), `availabilityTarget` (number, %), `errorBudget` (number) | number inputs |
@@ -2080,7 +2080,7 @@ Also show a "Presets" section with buttons for the built-in scenarios (Cache Sta
 
 | Button | State | Action |
 |--------|-------|--------|
-| Run (▶) | Shown when `status === "idle"` or `"complete"` | Call `useSimulation.run(topology)` — serialize topology first using T-028 |
+| Run (▶) | Shown when `status === "idle"` or `"complete"` | Call `useSimulation.run(topology)` - serialize topology first using T-028 |
 | Pause (⏸) | Shown when `status === "running"` | Call `useSimulation.pause()` |
 | Resume (▶) | Shown when `status === "paused"` | Call `useSimulation.resume()` |
 | Stop (⏹) | Shown when `status === "running"` or `"paused"` | Call `useSimulation.stop()` |
@@ -2097,10 +2097,10 @@ A segmented button group shown when `status === "running"` or `"paused"`:
 
 | Button | Value | Meaning |
 |--------|-------|---------|
-| `1×`   | 1     | Real-time — snapshots emitted at roughly the pace of simulated time |
+| `1×`   | 1     | Real-time - snapshots emitted at roughly the pace of simulated time |
 | `5×`   | 5     | 5x accelerated |
 | `10×`  | 10    | 10x accelerated |
-| `Max`  | 0     | Batch mode — engine runs at full speed, no throttling |
+| `Max`  | 0     | Batch mode - engine runs at full speed, no throttling |
 
 Default: `Max` (batch). Clicking a button calls `useSimulation.setPlaybackSpeed(value)`. The currently active speed is highlighted. Speed can be changed mid-run without restarting.
 
@@ -2123,11 +2123,11 @@ Default: `Max` (batch). Clicking a button calls `useSimulation.setPlaybackSpeed(
 
 ---
 
-### T-035: Build Results Tray — Summary & Per-Node views
+### T-035: Build Results Tray - Summary & Per-Node views
 
 | Field | Value |
 |-------|-------|
-| **Blocked by** | T-020 (SimulationOutput), T-026 (useSimulation — provides `result`) |
+| **Blocked by** | T-020 (SimulationOutput), T-026 (useSimulation - provides `result`) |
 | **Files** | `src/ui/components/ResultsTray.tsx`, `src/ui/components/MetricsDashboard.tsx`, `src/ui/components/PerNodeTable.tsx`, `src/ui/components/SLOBreachList.tsx` |
 | **Size** | M |
 
@@ -2152,12 +2152,12 @@ Renders 8 metric cards in a 4x2 grid from `SimulationOutput.summary`:
 
 | Card | Value source | Highlight condition |
 |------|-------------|-------------------|
-| P50 Latency | `summary.latency.p50` | — |
-| P95 Latency | `summary.latency.p95` | — |
+| P50 Latency | `summary.latency.p50` | - |
+| P95 Latency | `summary.latency.p95` | - |
 | P99 Latency | `summary.latency.p99` | Red if exceeds any node's `slo.latencyP99` |
-| Throughput | `summary.throughput` | — |
+| Throughput | `summary.throughput` | - |
 | Error Rate | `summary.errorRate` | Red if > 5% |
-| Total Requests | `summary.totalRequests` | — |
+| Total Requests | `summary.totalRequests` | - |
 | Rejected Count | `summary.rejectedRequests` | Red if > 0 |
 | Availability | `1 - summary.errorRate` | Red if < 99% |
 
@@ -2207,7 +2207,7 @@ A small list below the per-node table showing `SimulationOutput.sloBreaches[]`:
 
 ---
 
-### T-036: Build Results Tray — Waterfall Trace View
+### T-036: Build Results Tray - Waterfall Trace View
 
 | Field | Value |
 |-------|-------|
@@ -2215,7 +2215,7 @@ A small list below the per-node table showing `SimulationOutput.sloBreaches[]`:
 | **File** | `src/ui/components/WaterfallView.tsx` |
 | **Size** | M |
 
-**Context**: The Traces tab shows a sampled request's journey through the system as a horizontal waterfall chart — like Chrome DevTools' network panel but for simulated requests.
+**Context**: The Traces tab shows a sampled request's journey through the system as a horizontal waterfall chart - like Chrome DevTools' network panel but for simulated requests.
 
 Refer to `ui.md` Section 3.4 (Tab: Traces) for the exact layout.
 
@@ -2227,16 +2227,16 @@ A component that renders one `RequestTrace` at a time from `SimulationOutput.tra
 - Time axis at the top (0ms to totalLatency)
 - One row per node visited in the trace
 - Each row has a horizontal bar split into segments:
-  - **Edge latency** (gap before the bar — time spent on the network)
-  - **Queue wait** (lighter/hatched segment — time waiting for a worker)
-  - **Processing** (solid segment — time being processed)
+  - **Edge latency** (gap before the bar - time spent on the network)
+  - **Queue wait** (lighter/hatched segment - time waiting for a worker)
+  - **Processing** (solid segment - time being processed)
 - The bar's left edge = span.start (relative to request creation)
 - The bar's right edge = span.end
 - Each row shows the node name and timing breakdown as text
 
 **Controls**:
 - "◀ Prev trace" / "Next trace ▶" buttons to cycle through sampled traces
-- "Show P99 trace" button — jump to the trace with the highest total latency
+- "Show P99 trace" button - jump to the trace with the highest total latency
 - Trace summary at top: request ID, total latency, status (success/timeout/rejected)
 
 **Color coding**:
@@ -2258,7 +2258,7 @@ A component that renders one `RequestTrace` at a time from `SimulationOutput.tra
 
 ---
 
-### T-037: Build Results Tray — Failure Cascade View
+### T-037: Build Results Tray - Failure Cascade View
 
 | Field | Value |
 |-------|-------|
@@ -2290,7 +2290,7 @@ Each row shows:
 - Effect label (crash, timeout_cascade, queue_saturation, retry_amplification, 503_errors)
 - Severity icon (✗ FAILED or ⚠ DEGRADED)
 
-**Root cause highlight**: The first row (root cause) should be visually prominent — larger text, red background.
+**Root cause highlight**: The first row (root cause) should be visually prominent - larger text, red background.
 
 **Impact summary** below the timeline:
 - Total nodes affected
@@ -2312,7 +2312,7 @@ Each row shows:
 
 ---
 
-### T-038: Build Results Tray — Cost & Anti-Pattern views
+### T-038: Build Results Tray - Cost & Anti-Pattern views
 
 | Field | Value |
 |-------|-------|
@@ -2340,9 +2340,9 @@ A table rendered from `CostEstimate` (output of T-031's `calculateCost()`):
 
 Footer row: TOTAL across all nodes.
 
-Provider selector: dropdown (AWS / GCP / Azure) — re-runs `calculateCost` with the selected provider.
+Provider selector: dropdown (AWS / GCP / Azure) - re-runs `calculateCost` with the selected provider.
 
-Note: Cost can be computed without running a simulation — it only needs the topology. Show this tab even before simulation if the user navigates to it.
+Note: Cost can be computed without running a simulation - it only needs the topology. Show this tab even before simulation if the user navigates to it.
 
 #### AntiPatternPanel
 
@@ -2353,11 +2353,11 @@ Each warning shows:
 - Pattern name (e.g., "Single Point of Failure")
 - Description (e.g., "DB has 1 replica but 3 services depend on it")
 - Recommendation (e.g., "Add at least 1 read replica")
-- Affected nodes (clickable — selects on canvas)
+- Affected nodes (clickable - selects on canvas)
 
 Empty state: "No anti-patterns detected. ✓"
 
-Note: Like cost, this is a static analysis — it runs against the topology, not the simulation output. It can be shown before running a simulation.
+Note: Like cost, this is a static analysis - it runs against the topology, not the simulation output. It can be shown before running a simulation.
 
 **AC**:
 - [ ] Cost table shows all nodes with correct $/hour and $/month
@@ -2374,7 +2374,7 @@ Note: Like cost, this is a static analysis — it runs against the topology, not
 
 | Field | Value |
 |-------|-------|
-| **Blocked by** | T-001 (types — needs `ComponentType`, `ComponentCategory`) |
+| **Blocked by** | T-001 (types - needs `ComponentType`, `ComponentCategory`) |
 | **File** | `src/ui/components/NodePalette.tsx` |
 | **Size** | S |
 
@@ -2410,7 +2410,7 @@ A collapsible sidebar listing all node types grouped by `ComponentCategory`:
 ```
 
 **Each entry**:
-- Icon (per category — use the iconography from `ui.md` Section 7)
+- Icon (per category - use the iconography from `ui.md` Section 7)
 - Label (human-readable name derived from the `ComponentType` slug)
 - Draggable via React DnD or React Flow's built-in drag API
 
@@ -2436,7 +2436,7 @@ Only show the most commonly used types by default (~30). Show a "Show all (113)"
 
 ---
 
-## Phase 11 — CLI
+## Phase 11 - CLI
 
 ### T-040: Build CLI runner (`dsds` command)
 
@@ -2457,7 +2457,7 @@ Use a CLI framework (e.g., `commander`, `yargs`, or `citty`) to implement these 
 #### `dsds run <file>`
 
 1. Read and parse the topology JSON file.
-2. Validate with `validateTopology()` — print errors and exit 1 if invalid.
+2. Validate with `validateTopology()` - print errors and exit 1 if invalid.
 3. Create `SimulationEngine(topology)` with seed/duration overrides from flags.
 4. Run the simulation. During execution, show a progress bar: `Simulating... ████████░░░░  68%  (412,000 events)`
 5. Print the formatted output (see `ui.md` Section 4.1 for exact format):
@@ -2467,10 +2467,10 @@ Use a CLI framework (e.g., `commander`, `yargs`, or `citty`) to implement these 
    - Checks section: Little's Law, SLO breaches, seed
 
 **Flags**:
-- `--seed <string>` — override the topology's seed
-- `--duration <ms>` — override simulation duration
-- `--json` — output raw `SimulationOutput` as JSON (for piping to `jq`)
-- `--live` — show live-updating table during simulation (uses ANSI escape codes to overwrite lines)
+- `--seed <string>` - override the topology's seed
+- `--duration <ms>` - override simulation duration
+- `--json` - output raw `SimulationOutput` as JSON (for piping to `jq`)
+- `--live` - show live-updating table during simulation (uses ANSI escape codes to overwrite lines)
 
 #### `dsds validate <file>`
 
@@ -2492,9 +2492,9 @@ For v1, a simple list format is acceptable:
 ```
 Nodes:
   [Users] (source)
-  [Gateway] (load-balancer-l7) — 100 workers, 500 queue
-  [API] (microservice) — 20 workers, 200 queue
-  [DB] (relational-db) — 50 workers, 100 queue
+  [Gateway] (load-balancer-l7) - 100 workers, 500 queue
+  [API] (microservice) - 20 workers, 200 queue
+  [DB] (relational-db) - 50 workers, 100 queue
 
 Edges:
   Users → Gateway (https, ~1ms, same-dc)
@@ -2511,7 +2511,7 @@ Print detailed configuration for a single node or edge (see `ui.md` Section 4.2 
 #### Formatters
 
 Create reusable formatter functions:
-- `formatTable(headers: string[], rows: string[][]): string` — aligned columns with `|` separators
+- `formatTable(headers: string[], rows: string[][]): string` - aligned columns with `|` separators
 - `formatMetric(label: string, value: number, unit: string, breach?: boolean): string`
 - `formatProgressBar(percent: number, width: number): string`
 
@@ -2596,7 +2596,7 @@ After the simulation completes, clear the live display and print the normal fina
 | **Files** | `src/cli/commands/compare.ts`, `src/cli/commands/cost.ts`, `src/cli/commands/lint.ts` |
 | **Size** | S |
 
-**Context**: Additional CLI commands that use the analysis modules. These are thin wrappers — the logic is in the analysis modules; these commands just parse args, call the function, and format output.
+**Context**: Additional CLI commands that use the analysis modules. These are thin wrappers - the logic is in the analysis modules; these commands just parse args, call the function, and format output.
 
 **What to build**:
 
@@ -2647,7 +2647,7 @@ Error Rate      2.07%       0.12%       -94%       B ✓
 | **File** | `src/ui/store/topologyStore.ts` |
 | **Size** | M |
 
-**Context**: Today, topology state is scattered — React Flow holds node/edge positions, the inspector edits individual fields, the serializer (T-028) converts everything at "Run" time, and none of these share state. For the JSON Topology Viewer (T-044) and import/export (T-046) to work, we need a **single canonical store** that all views read from and write to.
+**Context**: Today, topology state is scattered - React Flow holds node/edge positions, the inspector edits individual fields, the serializer (T-028) converts everything at "Run" time, and none of these share state. For the JSON Topology Viewer (T-044) and import/export (T-046) to work, we need a **single canonical store** that all views read from and write to.
 
 This store replaces T-028's role as the "serializer hook". Instead of serializing on demand, the store IS the topology state. `exportTopology()` is just a method that formats the current state as `TopologyJSON`.
 
@@ -2735,7 +2735,7 @@ interface TopologyStore {
 | **File** | `src/ui/components/TopologyViewer.tsx` |
 | **Size** | L |
 
-**Context**: Users need to see the full topology structure at a glance — not one node at a time (inspector) or just visually (canvas). The JSON Topology Viewer is like Chrome DevTools' object inspector or Figma's "Dev Mode": a structured tree view of the entire topology that is both readable and editable.
+**Context**: Users need to see the full topology structure at a glance - not one node at a time (inspector) or just visually (canvas). The JSON Topology Viewer is like Chrome DevTools' object inspector or Figma's "Dev Mode": a structured tree view of the entire topology that is both readable and editable.
 
 This is NOT a raw text editor (no Monaco, no free-form JSON editing). It is a structured tree where users expand sections, click values to edit inline, and see validation errors immediately.
 
@@ -2908,7 +2908,7 @@ interface ImportResult {
 ```
 
 **Auto-layout**: When imported topology has no positions (e.g., hand-written JSON or CLI-generated), use a directed graph layout algorithm. Options:
-- **dagre** (recommended — well-tested, tree/DAG layout)
+- **dagre** (recommended - well-tested, tree/DAG layout)
 - **elk** (more flexible but heavier)
 - Simple heuristic: topological sort → assign x by depth, y by sibling index
 
@@ -2988,21 +2988,21 @@ export function ImportExportControls() {
 
 | Phase | Tickets |
 |-------|---------|
-| 0 — JSON Format | T-001, T-002, T-003 |
-| 1 — Primitives | T-004, T-005, T-006, T-007 |
-| 2 — Engine | T-008, T-009, T-010, T-011 |
-| 3 — Network | T-012 |
-| 4 — Failures | T-013, T-014 |
-| 5 — Resilience | T-015, T-016 |
-| 6 — Metrics & Output | T-017, T-018, T-019, T-020, T-021 |
-| 7 — Scenarios | T-022, T-023, T-024 |
-| 8 — UI Hooks | T-025, T-026, T-027, T-028 |
-| 9 — Advanced Analysis | T-029, T-030, T-031, T-032 |
-| 10 — UI Components | T-033, T-034, T-035, T-036, T-037, T-038, T-039 |
-| 11 — CLI | T-040, T-041, T-042 |
-| 12 — Topology State & Viewer | T-043, T-044, T-045, T-046 |
+| 0 - JSON Format | T-001, T-002, T-003 |
+| 1 - Primitives | T-004, T-005, T-006, T-007 |
+| 2 - Engine | T-008, T-009, T-010, T-011 |
+| 3 - Network | T-012 |
+| 4 - Failures | T-013, T-014 |
+| 5 - Resilience | T-015, T-016 |
+| 6 - Metrics & Output | T-017, T-018, T-019, T-020, T-021 |
+| 7 - Scenarios | T-022, T-023, T-024 |
+| 8 - UI Hooks | T-025, T-026, T-027, T-028 |
+| 9 - Advanced Analysis | T-029, T-030, T-031, T-032 |
+| 10 - UI Components | T-033, T-034, T-035, T-036, T-037, T-038, T-039 |
+| 11 - CLI | T-040, T-041, T-042 |
+| 12 - Topology State & Viewer | T-043, T-044, T-045, T-046 |
 
-### By Independence (can start immediately — no blockers)
+### By Independence (can start immediately - no blockers)
 
 | Ticket | Description |
 |--------|-------------|
@@ -3024,7 +3024,7 @@ export function ImportExportControls() {
 ### Dependency Chain (critical path to MVP)
 
 ```
-T-001 + T-002 + T-004 + T-005   (parallel — no deps)
+T-001 + T-002 + T-004 + T-005   (parallel - no deps)
          │           │       │
          ▼           ▼       ▼
        T-003       T-006   T-007
@@ -3034,7 +3034,7 @@ T-001 + T-002 + T-004 + T-005   (parallel — no deps)
          │           │       │
          └─────┬─────┘───────┘
                ▼
-             T-011  (engine — the big one)
+             T-011  (engine - the big one)
                │
       ┌────────┼────────┬──────────┐
       ▼        ▼        ▼          ▼
@@ -3064,8 +3064,8 @@ T-001 + T-002 + T-004 + T-005   (parallel — no deps)
 **UI components (can develop in parallel with engine)**:
 
 ```
-T-001 ──► T-033 (Inspector Panel)     — only needs types
-T-001 ──► T-039 (Node Palette)        — only needs types
+T-001 ──► T-033 (Inspector Panel)     - only needs types
+T-001 ──► T-039 (Node Palette)        - only needs types
 T-001 ──► T-030 → T-038 (Anti-patterns panel)
 T-001 ──► T-031 → T-038 (Cost panel)
 

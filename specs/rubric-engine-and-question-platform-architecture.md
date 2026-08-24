@@ -1,6 +1,6 @@
 # Rubric Engine & Question Platform Architecture
 
-This document specifies the complete architecture for turning the NS Simulator into a deterministic question and grading platform. It covers three layers: the **grading pipeline** (built), the **question content model** (next), and the **presentation/environment layer** (follow-up) — and defines how they compose into an end-to-end system for system design evaluation.
+This document specifies the complete architecture for turning the NS Simulator into a deterministic question and grading platform. It covers three layers: the **grading pipeline** (built), the **question content model** (next), and the **presentation/environment layer** (follow-up) - and defines how they compose into an end-to-end system for system design evaluation.
 
 It is written at Staff/Principal level to serve both as an implementation guide for the engineering work and as a portfolio-grade architecture artifact.
 
@@ -9,10 +9,10 @@ It is written at Staff/Principal level to serve both as an implementation guide 
 ## Table of Contents
 
 1. [Architectural Mental Model](#architectural-mental-model)
-2. [Layer 1 — Grading Pipeline (Built)](#layer-1--grading-pipeline-built)
-3. [Layer 2 — Question Content Model (Gap 4)](#layer-2--question-content-model-gap-4)
-4. [Layer 3 — Presentation & Environment (Follow-up)](#layer-3--presentation--environment-follow-up)
-5. [Question Types — Taxonomy & Grading Characteristics](#question-types--taxonomy--grading-characteristics)
+2. [Layer 1 - Grading Pipeline (Built)](#layer-1--grading-pipeline-built)
+3. [Layer 2 - Question Content Model (Gap 4)](#layer-2--question-content-model-gap-4)
+4. [Layer 3 - Presentation & Environment (Follow-up)](#layer-3--presentation--environment-follow-up)
+5. [Question Types - Taxonomy & Grading Characteristics](#question-types--taxonomy--grading-characteristics)
 6. [Rubric Domain Extensions](#rubric-domain-extensions)
 7. [Resolved Architectural Decisions](#resolved-architectural-decisions)
 8. [End-to-End Flow](#end-to-end-flow)
@@ -77,7 +77,7 @@ flowchart TB
 
 ---
 
-## Layer 1 — Grading Pipeline (Built)
+## Layer 1 - Grading Pipeline (Built)
 
 These are the engine modules that already exist and are tested. They form the foundation everything else builds on.
 
@@ -87,7 +87,7 @@ These are the engine modules that already exist and are tested. They form the fo
 
 The `SimulationVerdict` is a stable, versioned projection of `SimulationOutput` designed as a public API for grading systems. It ensures the grading pipeline never depends on internal engine types.
 
-> **The shape below is abbreviated for readability — `src/engine/analysis/verdict.ts` is authoritative.** The full contract also carries `sloTargetCount`; additional `summary` counts (`postWarmupSuccessfulRequests`, `postWarmupFailedRequests`, `rejectedRequests`, `timedOutRequests`, `connectionResetRequests`); `perNode.totalConnectionReset`; optional `rootCause` / `affectedComponents` on invariant violations; `connectionReset` (and optional `nodeLabel`) on conservation; and `lambda` / `wSeconds` on Little's Law.
+> **The shape below is abbreviated for readability - `src/engine/analysis/verdict.ts` is authoritative.** The full contract also carries `sloTargetCount`; additional `summary` counts (`postWarmupSuccessfulRequests`, `postWarmupFailedRequests`, `rejectedRequests`, `timedOutRequests`, `connectionResetRequests`); `perNode.totalConnectionReset`; optional `rootCause` / `affectedComponents` on invariant violations; `connectionReset` (and optional `nodeLabel`) on conservation; and `lambda` / `wSeconds` on Little's Law.
 
 ```typescript
 interface SimulationVerdict {
@@ -166,7 +166,7 @@ interface SimulationVerdict {
 }
 ```
 
-**Projection function:** `projectToVerdict(output: SimulationOutput): SimulationVerdict` — straightforward field selection and renaming, ensuring the backend never depends on internal field names.
+**Projection function:** `projectToVerdict(output: SimulationOutput): SimulationVerdict` - straightforward field selection and renaming, ensuring the backend never depends on internal field names.
 
 ### 1.2 Headless Batch Evaluation Runner
 
@@ -197,7 +197,7 @@ The rubric engine is the core grading component that converts a suite's verdicts
 
 #### What a check is
 
-A check is fundamentally an assertion against the verdict's numeric fields — latency thresholds, error rates, SLO breaches, throughput targets, resource utilization limits, invariant violations. Each check has:
+A check is fundamentally an assertion against the verdict's numeric fields - latency thresholds, error rates, SLO breaches, throughput targets, resource utilization limits, invariant violations. Each check has:
 
 | Part                | Purpose                                                                       |
 | ------------------- | ----------------------------------------------------------------------------- |
@@ -229,13 +229,13 @@ interface Rubric {
 
 The resolver supports three categories of metric selectors:
 
-**Direct dotted paths** — navigate into the verdict structure:
+**Direct dotted paths** - navigate into the verdict structure:
 
 - `summary.errorRate` → `verdict.summary.errorRate`
 - `summary.latency.p99` → `verdict.summary.latency.p99`
 - `perNode.<nodeId>.utilization` → `verdict.perNode[nodeId].utilization`
 
-**Derived aggregates** — computed across collections:
+**Derived aggregates** - computed across collections:
 
 - `sloBreaches.count` → `verdict.sloBreaches.length`
 - `invariantViolations.count` → `verdict.invariantViolations.length`
@@ -245,7 +245,7 @@ The resolver supports three categories of metric selectors:
 - `perNode.maxErrorRate` → `max(perNode[*].errorRate)`
 - `perNode.maxLatencyP99` → `max(perNode[*].latencyP99)`
 
-**Null handling:** The resolver is honest about missing data. A null latency percentile or unknown path fails the check with a detail note — **never a silent pass**. This is critical: null latency indicates no successful samples, which should not silently pass a check like `p99 < 200`.
+**Null handling:** The resolver is honest about missing data. A null latency percentile or unknown path fails the check with a detail note - **never a silent pass**. This is critical: null latency indicates no successful samples, which should not silently pass a check like `p99 < 200`.
 
 ```typescript
 function resolveMetric(verdict: SimulationVerdict, metric: string): number | null
@@ -302,7 +302,7 @@ interface GradedEvaluationBatch {
 
 #### Exit code semantics
 
-The CLI exits 0 **only** if every case ran successfully AND (if a rubric is provided) every case passed the rubric. Both runtime errors and rubric failures produce a non-zero exit — natural "green build" semantics.
+The CLI exits 0 **only** if every case ran successfully AND (if a rubric is provided) every case passed the rubric. Both runtime errors and rubric failures produce a non-zero exit - natural "green build" semantics.
 
 #### Verification status
 
@@ -313,11 +313,11 @@ The CLI exits 0 **only** if every case ran successfully AND (if a rubric is prov
 
 ---
 
-## Layer 2 — Question Content Model (Gap 4)
+## Layer 2 - Question Content Model (Gap 4)
 
 This layer defines **what** a question is and **how** a student interacts with it. It builds directly on the grading pipeline without modifying it.
 
-### 2.1 QuestionPackage — What a Question Setter Defines
+### 2.1 QuestionPackage - What a Question Setter Defines
 
 A `QuestionPackage` bundles everything required to pose and grade a single system design question.
 
@@ -333,7 +333,7 @@ interface QuestionPackage {
   tags: string[]
   estimatedTimeMinutes?: number
   
-  /** Question archetype — drives scaffold, UI template, and default rubric. */
+  /** Question archetype - drives scaffold, UI template, and default rubric. */
   type: QuestionType
   
   /** The prompt shown to the student. */
@@ -375,22 +375,22 @@ Setter writes FR/NFR/scale
               └──→ Setter reviews, tunes, overrides as needed
 ```
 
-### 2.2 QuestionPrompt — Structured Interview Requirements
+### 2.2 QuestionPrompt - Structured Interview Requirements
 
-The prompt is not just a text blob — it carries structured fields that drive both the student UI and the auto-generation pipeline.
+The prompt is not just a text blob - it carries structured fields that drive both the student UI and the auto-generation pipeline.
 
 ```typescript
 interface QuestionPrompt {
   /** The human-readable problem statement (markdown). */
   text: string
   
-  /** Functional requirements — what the system must do. */
+  /** Functional requirements - what the system must do. */
   functionalRequirements: string[]
   
-  /** Non-functional requirements — the targets the system must meet. */
+  /** Non-functional requirements - the targets the system must meet. */
   nonFunctionalRequirements: NFRTarget[]
   
-  /** Scale parameters — the load the system must handle. */
+  /** Scale parameters - the load the system must handle. */
   scale: ScaleParameters
   
   /** Any additional context or constraints described in prose. */
@@ -421,9 +421,9 @@ interface ScaleParameters {
 }
 ```
 
-This is what the interview-style UI renders: the FR/NFR panel, the scale numbers, and the read/write ratio — all the things a candidate would need to reason about in a real system design interview.
+This is what the interview-style UI renders: the FR/NFR panel, the scale numbers, and the read/write ratio - all the things a candidate would need to reason about in a real system design interview.
 
-### 2.3 QuestionScaffold — The Starting Canvas
+### 2.3 QuestionScaffold - The Starting Canvas
 
 ```typescript
 interface QuestionScaffold {
@@ -484,7 +484,7 @@ interface QuestionConstraints {
 }
 ```
 
-### 2.5 EvaluationSuiteSpec — What the Student is Tested Against
+### 2.5 EvaluationSuiteSpec - What the Student is Tested Against
 
 The suite defines the workload conditions under which the submission gets evaluated. For interview questions, it is auto-seeded from the scale parameters.
 
@@ -520,7 +520,7 @@ interface EvaluationCaseSpec {
   /** Workload overrides (baseRps, pattern, distribution). */
   workload?: Partial<WorkloadProfile>
   /**
-   * Fault injection specs. NOTE: not yet applied by the CLI evaluator —
+   * Fault injection specs. NOTE: not yet applied by the CLI evaluator -
    * `prepareCase` currently merges only `global` and `workload`. Per-case fault
    * override is a follow-up slice, and archetype 6 (HA/Chaos) depends on it.
    */
@@ -528,9 +528,9 @@ interface EvaluationCaseSpec {
 }
 ```
 
-### 2.6 AttemptState — The Student's Working Envelope
+### 2.6 AttemptState - The Student's Working Envelope
 
-`AttemptState` is the durable envelope around a student's work. It tracks their topology, submission status, latest verdict and grade, and timestamps. It never mutates the canonical question — consistent with the source-overlay principle established in the codebase.
+`AttemptState` is the durable envelope around a student's work. It tracks their topology, submission status, latest verdict and grade, and timestamps. It never mutates the canonical question - consistent with the source-overlay principle established in the codebase.
 
 ```typescript
 interface AttemptState {
@@ -601,11 +601,11 @@ stateDiagram-v2
 
 ---
 
-## Layer 3 — Presentation & Environment (Follow-up)
+## Layer 3 - Presentation & Environment (Follow-up)
 
-The environment layer is not a separate product — it's a **capability and visibility lens** applied over the same `QuestionPackage`. The same question can run in full authoring mode for question setters, in a graded contest mode with curated results, or in a minimal learning mode stripped of grading pressure.
+The environment layer is not a separate product - it's a **capability and visibility lens** applied over the same `QuestionPackage`. The same question can run in full authoring mode for question setters, in a graded contest mode with curated results, or in a minimal learning mode stripped of grading pressure.
 
-> The concrete UI work this implies — and the split of what the simulator builds vs. what the Django backend owns — is specified in the companion doc [`question-platform-ui-changes.md`](./question-platform-ui-changes.md).
+> The concrete UI work this implies - and the split of what the simulator builds vs. what the Django backend owns - is specified in the companion doc [`question-platform-ui-changes.md`](./question-platform-ui-changes.md).
 
 ### 3.1 EnvironmentProfile Schema
 
@@ -664,11 +664,11 @@ interface EnvironmentProfile {
 | **Results shown** | Everything (all tabs)             | Only metrics relevant to question  | Curated + explanations    |
 | **Suite details** | Full scenario definitions         | Hidden (student sees dry-run only) | Visible for learning      |
 | **Rubric checks** | Full authoring view               | Hidden until submit                | Live green/red feedback   |
-| **Editing**       | Full — all nodes, all properties  | Scaffold locked, add nodes only    | Edit freely, no pressure  |
+| **Editing**       | Full - all nodes, all properties  | Scaffold locked, add nodes only    | Edit freely, no pressure  |
 | **Grading**       | Not graded                        | Graded on submit → score           | Not graded, streamlined   |
 | **Chrome**        | Full panels, debugger, terminal   | Clean interview panel              | Minimal, distraction-free |
 
-> **Key insight:** Mode 2 (ASSIGNMENT) and Mode 3 (PRACTICE) differ primarily in `graded` + `rubricChecks` + `chromeDensity`. They share the same underlying content and grading pipeline — the environment profile just controls what's exposed.
+> **Key insight:** Mode 2 (ASSIGNMENT) and Mode 3 (PRACTICE) differ primarily in `graded` + `rubricChecks` + `chromeDensity`. They share the same underlying content and grading pipeline - the environment profile just controls what's exposed.
 
 ### 3.3 Environment Applied to Question Types
 
@@ -683,7 +683,7 @@ QuestionPackage("Design a URL shortener")
 
 ---
 
-## Question Types — Taxonomy & Grading Characteristics
+## Question Types - Taxonomy & Grading Characteristics
 
 All question types share the same grading pipeline. What differs is the **scaffold** (what the student starts with), the **rubric focus** (which checks matter most), and the **constraints** (what the student can modify).
 
@@ -704,7 +704,7 @@ All question types share the same grading pipeline. What differs is the **scaffo
 | 6   | **HA / Chaos Challenge**       | Partial multi-AZ topology | Engine triggers node/zone failures via `DOWN` state during evaluation | Rubric checks SLO compliance *despite* simulated hardware failure                   |
 | 7   | **Trade-off / Constraint Box** | Empty                     | Structural checks + competing metric rubric                           | Rubric instantly fails if forbidden component exists (e.g., `NodeType === 'redis'`) |
 
-> **Dependency:** Archetype 6 (HA/Chaos) requires per-case fault injection in the evaluation suite. The current CLI evaluator (`prepareCase`) merges only `global` and `workload` overrides — suite-level fault override is a follow-up slice (see Build Order & Scope Boundaries).
+> **Dependency:** Archetype 6 (HA/Chaos) requires per-case fault injection in the evaluation suite. The current CLI evaluator (`prepareCase`) merges only `global` and `workload` overrides - suite-level fault override is a follow-up slice (see Build Order & Scope Boundaries).
 
 ### How Question Type Maps to Grading
 
@@ -727,7 +727,7 @@ flowchart LR
   LIMITS -->|validates before| PIPELINE
 ```
 
-All seven types feed into the **same** pipeline — the type mainly controls the scaffold, which rubric metrics are emphasized, and what constraints are active.
+All seven types feed into the **same** pipeline - the type mainly controls the scaffold, which rubric metrics are emphasized, and what constraints are active.
 
 ---
 
@@ -737,7 +737,7 @@ The current rubric only grades **verdict metrics** (behavioral, from the simulat
 
 ### Current: Verdict Checks (Built)
 
-Assertions against `SimulationVerdict` fields — latency, throughput, error rate, SLO breaches, utilization. **Already implemented** in `rubric.ts`.
+Assertions against `SimulationVerdict` fields - latency, throughput, error rate, SLO breaches, utilization. **Already implemented** in `rubric.ts`.
 
 ### Extension 1: Topology / Structural Checks (Follow-up)
 
@@ -782,7 +782,7 @@ interface ExtendedRubric extends Rubric {
 }
 ```
 
-The `gradeVerdict`/`gradeBatch` functions already handle verdict checks. The structural and comparative engines slot in beside them — same interface, different data source.
+The `gradeVerdict`/`gradeBatch` functions already handle verdict checks. The structural and comparative engines slot in beside them - same interface, different data source.
 
 ### Cost Model Dependency
 
@@ -800,7 +800,7 @@ This is a **separate engineering task** and is deferred from gap 4.
 
 These five decisions were evaluated and resolved to maintain momentum while keeping the architecture clean for future expansion.
 
-### Decision 1: Scenario Source — Auto-seed or Hand-written?
+### Decision 1: Scenario Source - Auto-seed or Hand-written?
 
 **Resolution: Hybrid.** Auto-seed the suite from the FR/NFR scale numbers as a default, but allow the setter to override.
 
@@ -808,17 +808,17 @@ These five decisions were evaluated and resolved to maintain momentum while keep
 
 **Implementation:** The `QuestionPrompt.scale` fields drive a `seedSuiteFromScale(scale, nfr)` function that produces a default `EvaluationSuiteSpec`. The setter reviews and overrides as needed.
 
-### Decision 2: Rubric Transparency — Live During Build or After Submit?
+### Decision 2: Rubric Transparency - Live During Build or After Submit?
 
 **Resolution: Controlled by the `EnvironmentProfile`.**
 
 | Mode       | Rubric visibility                                                                   |
 | ---------- | ----------------------------------------------------------------------------------- |
-| PRACTICE   | `LIVE_DURING_BUILD` — checks turn green/red as student designs, tight feedback loop |
-| ASSIGNMENT | `HIDDEN` or `POST_SUBMIT_ONLY` — forces reasoning about design constraints          |
-| AUTHOR     | Full visibility — sees all checks and how they evaluate                             |
+| PRACTICE   | `LIVE_DURING_BUILD` - checks turn green/red as student designs, tight feedback loop |
+| ASSIGNMENT | `HIDDEN` or `POST_SUBMIT_ONLY` - forces reasoning about design constraints          |
+| AUTHOR     | Full visibility - sees all checks and how they evaluate                             |
 
-**Rationale:** Learning benefits from immediate feedback. Evaluation benefits from forcing the student to reason without hints. The same rubric works in both modes — only the visibility changes.
+**Rationale:** Learning benefits from immediate feedback. Evaluation benefits from forcing the student to reason without hints. The same rubric works in both modes - only the visibility changes.
 
 ### Decision 3: Hidden Grading Scenarios in Contest Mode?
 
@@ -830,17 +830,17 @@ These five decisions were evaluated and resolved to maintain momentum while keep
 
 **Implementation:** `EvaluationSuiteSpec.visibleToStudent = false` + `EvaluationSuiteSpec.dryRunCase` for the representative test.
 
-### Decision 4: Cost Model — In v1 or Deferred?
+### Decision 4: Cost Model - In v1 or Deferred?
 
 **Resolution: Defer to the next slice.**
 
 **Rationale:** Per-node cost data introduces a new data dimension (pricing per component type, resource-based cost formulas). Gap 4 should focus on getting `AttemptState` and the verdict-rubric pipeline solid using metrics that already work (latency, throughput, error rate, utilization). The "Build Within Budget" question type ships after the cost model lands.
 
-### Decision 5: Structural Checks — In Scope for Gap 4?
+### Decision 5: Structural Checks - In Scope for Gap 4?
 
 **Resolution: Defer to the next slice.**
 
-**Rationale:** Adding graph-traversal structural checks ("does the read path have a replica?") is a distinct engineering task requiring a topology query mini-language. Ship "Fix" and "Open Build" types first — they rely purely on the existing SLO/verdict metrics. Structural checks follow immediately after gap 4 as a self-contained slice.
+**Rationale:** Adding graph-traversal structural checks ("does the read path have a replica?") is a distinct engineering task requiring a topology query mini-language. Ship "Fix" and "Open Build" types first - they rely purely on the existing SLO/verdict metrics. Structural checks follow immediately after gap 4 as a self-contained slice.
 
 ---
 
@@ -922,10 +922,10 @@ The Game Playground host (the Newton platform iframe wrapper) only understands a
 | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Iframe-hosted simulator                     | NS Simulator embedded in `ASSIGNMENT` or `PRACTICE` environment mode                                                                                                                   |
 | Seeded starting state                       | `QuestionPackage.scaffold` (the topology the student opens)                                                                                                                            |
-| Durable attempt-state blob                  | `AttemptState` (JSON envelope — student topology, status, timestamps)                                                                                                                  |
-| N test cases, each with a boolean pass/fail | `GradedEvaluationBatch.cases[]` — each case has `ran` and `rubric.passed`                                                                                                              |
-| Overall boolean: all tests passed?          | `AttemptState.grade.overallPassed` (derived from `summary.errored === 0 && summary.passed === summary.ran` — a case that could not run is not a pass, matching the CLI exit-code rule) |
-| Visible checklist of tests                  | `RubricResult.checks[]` — each `CheckResult` has `passed: boolean` + human-readable `description`                                                                                      |
+| Durable attempt-state blob                  | `AttemptState` (JSON envelope - student topology, status, timestamps)                                                                                                                  |
+| N test cases, each with a boolean pass/fail | `GradedEvaluationBatch.cases[]` - each case has `ran` and `rubric.passed`                                                                                                              |
+| Overall boolean: all tests passed?          | `AttemptState.grade.overallPassed` (derived from `summary.errored === 0 && summary.passed === summary.ran` - a case that could not run is not a pass, matching the CLI exit-code rule) |
+| Visible checklist of tests                  | `RubricResult.checks[]` - each `CheckResult` has `passed: boolean` + human-readable `description`                                                                                      |
 
 ### The shape the host actually reads
 
@@ -945,7 +945,7 @@ When the iframe sends completion data back to the Game Playground host via `post
 }
 ```
 
-The host doesn't know or care about latency numbers, throughput values, or utilization percentages — it reads the booleans and updates the student's completion status in the LMS.
+The host doesn't know or care about latency numbers, throughput values, or utilization percentages - it reads the booleans and updates the student's completion status in the LMS.
 
 ### What's richer underneath
 
@@ -1001,7 +1001,7 @@ flowchart TB
 | Seeded starting state                        | `QuestionPackage.scaffold.topology`                            | Loaded on iframe boot                                           |
 | Save/restore via attempt blob                | `AttemptState` JSON envelope autosaved                         | Same lifecycle: draft → autosaved → submitted → graded → locked |
 
-The architectural takeaway: **the Game Playground host contract is a thin boolean projection of a rich grading engine**. The engine produces scored, weighted, multi-dimensional results — but the host only needs `N tests × boolean + overall boolean`. This separation means the grading engine can grow in sophistication (structural checks, comparative checks, cost checks) without ever changing the host integration contract.
+The architectural takeaway: **the Game Playground host contract is a thin boolean projection of a rich grading engine**. The engine produces scored, weighted, multi-dimensional results - but the host only needs `N tests × boolean + overall boolean`. This separation means the grading engine can grow in sophistication (structural checks, comparative checks, cost checks) without ever changing the host integration contract.
 
 ---
 
@@ -1033,7 +1033,7 @@ Focus on defining schemas and wiring the lifecycle using the **existing verdict-
 | **EnvironmentProfile**    | Visibility/capability profiles, 3 modes        | Interview mode, learn mode, contest mode     |
 | **Suite auto-seeder**     | `seedSuiteFromScale(scale, nfr)`               | Interview-style question authoring           |
 
-### What Already Exists (Gaps 1–3)
+### What Already Exists (Gaps 1-3)
 
 | Gap | Deliverable                                                 | Status          |
 | --- | ----------------------------------------------------------- | --------------- |
@@ -1050,8 +1050,8 @@ This document integrates and extends the following existing specifications:
 | Existing spec                                            | Relationship                                                                                                                                                                                                                                                                                                            |
 | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `question-creation-feature-spec.md`                      | Defines the Django-side features (10 question types, 4 scoring buckets, structural rules, feedback). This document covers the **engine-side** architecture and the type system that both sides share.                                                                                                                   |
-| `game-playground-evaluation-integration-gap-analysis.md` | Defines the gap matrix and integration principles for Game Playground embedding. This document implements gaps 1–3 and specifies gaps 4+ with concrete types.                                                                                                                                                           |
-| `environment-definition-and-configuration-model.md`      | Defines the simulation environment configuration (defaults, normalization, validation). This document's `EnvironmentProfile` is a **presentation** layer — distinct from the simulation environment. They compose: the simulation environment controls engine behavior, the environment profile controls UI visibility. |
+| `game-playground-evaluation-integration-gap-analysis.md` | Defines the gap matrix and integration principles for Game Playground embedding. This document implements gaps 1-3 and specifies gaps 4+ with concrete types.                                                                                                                                                           |
+| `environment-definition-and-configuration-model.md`      | Defines the simulation environment configuration (defaults, normalization, validation). This document's `EnvironmentProfile` is a **presentation** layer - distinct from the simulation environment. They compose: the simulation environment controls engine behavior, the environment profile controls UI visibility. |
 | `cost-calculation-and-budgeting.md`                      | Defines the per-node cost model. This document's topology checks and budget constraints depend on the cost model as a prerequisite.                                                                                                                                                                                     |
 
 ### Architecture Boundary (Unchanged)
@@ -1063,8 +1063,8 @@ NS Simulator owns:
   ✓ TopologyJSON validation
   ✓ Deterministic simulation execution
   ✓ SimulationVerdict contract
-  ✓ Rubric/check engine (NEW — gap 3)
-  ✓ QuestionPackage + AttemptState schemas (NEW — gap 4)
+  ✓ Rubric/check engine (NEW - gap 3)
+  ✓ QuestionPackage + AttemptState schemas (NEW - gap 4)
   ✓ Seeded reproducibility
 
 Django Backend owns:

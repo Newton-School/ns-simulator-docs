@@ -1,4 +1,4 @@
-# In-App Terminal — Feature Specification
+# In-App Terminal - Feature Specification
 
 This document describes the features required for the NS Simulator's in-app terminal: a Cisco Packet Tracer-inspired contextual CLI embedded inside the simulator's bottom panel. It is written from a feature perspective: what each capability does, why it exists, how it works internally, what engine data it consumes, and what components it requires to be built.
 
@@ -9,17 +9,17 @@ The terminal was designed through two reference documents: a high-level design d
 ## Table of Contents
 
 1. [Problem Context](#problem-context)
-2. [Feature 1 — Context Mode System](#feature-1--context-mode-system)
-3. [Feature 2 — Command Registry & Parser](#feature-2--command-registry--parser)
-4. [Feature 3 — Show Commands (Node Inspection)](#feature-3--show-commands-node-inspection)
-5. [Feature 4 — Config Mutation Commands](#feature-4--config-mutation-commands)
-6. [Feature 5 — Port-Level State Model](#feature-5--port-level-state-model)
-7. [Feature 6 — Per-Type Idiomatic CLI](#feature-6--per-type-idiomatic-cli)
-8. [Feature 7 — Runtime Simulation Control](#feature-7--runtime-simulation-control)
-9. [Feature 8 — Trace & Event Inspection Commands](#feature-8--trace--event-inspection-commands)
-10. [Feature 9 — Diagnostic & Pedagogy Commands](#feature-9--diagnostic--pedagogy-commands)
-11. [Feature 10 — xterm.js Integration & Terminal Tab](#feature-10--xtermjs-integration--terminal-tab)
-12. [Feature 11 — Shared CLI Architecture](#feature-11--shared-cli-architecture)
+2. [Feature 1 - Context Mode System](#feature-1--context-mode-system)
+3. [Feature 2 - Command Registry & Parser](#feature-2--command-registry--parser)
+4. [Feature 3 - Show Commands (Node Inspection)](#feature-3--show-commands-node-inspection)
+5. [Feature 4 - Config Mutation Commands](#feature-4--config-mutation-commands)
+6. [Feature 5 - Port-Level State Model](#feature-5--port-level-state-model)
+7. [Feature 6 - Per-Type Idiomatic CLI](#feature-6--per-type-idiomatic-cli)
+8. [Feature 7 - Runtime Simulation Control](#feature-7--runtime-simulation-control)
+9. [Feature 8 - Trace & Event Inspection Commands](#feature-8--trace--event-inspection-commands)
+10. [Feature 9 - Diagnostic & Pedagogy Commands](#feature-9--diagnostic--pedagogy-commands)
+11. [Feature 10 - xterm.js Integration & Terminal Tab](#feature-10--xtermjs-integration--terminal-tab)
+12. [Feature 11 - Shared CLI Architecture](#feature-11--shared-cli-architecture)
 13. [Relationship to Event Debugger](#relationship-to-event-debugger)
 14. [Engine Integration Requirements](#engine-integration-requirements)
 15. [Source-to-Feature Map](#source-to-feature-map)
@@ -35,14 +35,14 @@ The simulator's interaction model today is entirely graphical:
 1. Users drag nodes from the `LibrarySidebar` onto the React Flow canvas.
 2. Configuration happens through the right-side `PropertiesPanel` / `PropertiesForm`, which exposes node fields from `fieldConfig`.
 3. Simulation is controlled via `SimulationControls` (Run/Pause/Resume/Stop buttons) and the `ScenarioBar`.
-4. Results appear in `ResultsTray` as aggregate tables — summary metrics, per-node metrics, health checks.
+4. Results appear in `ResultsTray` as aggregate tables - summary metrics, per-node metrics, health checks.
 5. A headless CLI exists at `src/cli/index.ts`: it reads a `TopologyJSON` file, validates it, runs the engine synchronously, streams a progress bar to stderr, and prints formatted results. It supports `--json` and `--output <file>`.
 
 ### What's missing
 
 - **No text-based inspection.** The GUI shows aggregate numbers in tables, but there is no way to interrogate a specific node's state in natural system-admin language ("show me the queue depth at payment-svc", "what's the utilization on the gateway"). The `PropertiesPanel` shows configuration, not runtime state.
 
-- **No text-based configuration.** Changing a node's capacity means clicking it, finding the queue section in the properties form, editing the number. There is no way to say `set capacity 200` or `set workers 16` — the kind of interaction that network engineers and backend developers are accustomed to from `psql`, `redis-cli`, `mysql`, or Cisco IOS.
+- **No text-based configuration.** Changing a node's capacity means clicking it, finding the queue section in the properties form, editing the number. There is no way to say `set capacity 200` or `set workers 16` - the kind of interaction that network engineers and backend developers are accustomed to from `psql`, `redis-cli`, `mysql`, or Cisco IOS.
 
 - **No contextual scoping.** The GUI is flat: you click a node to see its properties, click another to see another's. There is no sense of "I'm inside this node, exploring its internals." The terminal's mode system (`sim>` → `node(gateway)>` → `node(gateway)(config)#`) creates a spatial mental model that mirrors how real systems are administered.
 
@@ -50,7 +50,7 @@ The simulator's interaction model today is entirely graphical:
 
 - **No port-level visibility.** The engine models nodes as single-endpoint entities (`GGcKNode` with one queue and one worker pool). Real networking components (load balancers, firewalls, routers) operate on multiple ports with independent connection limits, protocols, and health checks. The terminal introduces the need for port-level state, which doesn't exist in the engine today.
 
-- **No CLI reuse.** The headless CLI (`src/cli/index.ts`) and the in-app terminal should share commands. Today the CLI is a monolithic `main()` function — there is no command registry, no shared parser, no way to reuse `printResults` formatting from the renderer.
+- **No CLI reuse.** The headless CLI (`src/cli/index.ts`) and the in-app terminal should share commands. Today the CLI is a monolithic `main()` function - there is no command registry, no shared parser, no way to reuse `printResults` formatting from the renderer.
 
 ### What the reference documents explore
 
@@ -58,11 +58,11 @@ The two reference documents collectively specify 5 architectural layers (Model, 
 
 ---
 
-## Feature 1 — Context Mode System
+## Feature 1 - Context Mode System
 
 ### What it does
 
-A hierarchical mode state machine that determines what prompt the user sees, what commands are available, and what entity is in scope. When the user types a command, the terminal resolves it against the current mode's command set. Modes form a stack — entering a deeper mode pushes the stack, exiting pops it.
+A hierarchical mode state machine that determines what prompt the user sees, what commands are available, and what entity is in scope. When the user types a command, the terminal resolves it against the current mode's command set. Modes form a stack - entering a deeper mode pushes the stack, exiting pops it.
 
 ### Why it exists
 
@@ -74,9 +74,9 @@ Real system administration is contextual. In Cisco IOS, you `enable` to enter pr
 
 | Mode | Prompt | Available commands | Scope |
 |---|---|---|---|
-| Simulation root | `sim>` | `show topology`, `show nodes`, `show edges`, `select <nodeId>`, `run`, `validate`, `help` | Global — entire topology |
-| Node context | `node(gateway)>` | `show status`, `show queue`, `show connections`, `show config`, `show ports`, `show metrics`, `configure terminal`, `exit`, `help` | Single node — reads runtime state and config |
-| Node config | `node(gateway)(config)#` | `set capacity`, `set workers`, `set queue-discipline`, `set timeout`, `set distribution`, `no <setting>`, `interface port <N>`, `exit`, `end` | Single node — writes to topology store |
+| Simulation root | `sim>` | `show topology`, `show nodes`, `show edges`, `select <nodeId>`, `run`, `validate`, `help` | Global - entire topology |
+| Node context | `node(gateway)>` | `show status`, `show queue`, `show connections`, `show config`, `show ports`, `show metrics`, `configure terminal`, `exit`, `help` | Single node - reads runtime state and config |
+| Node config | `node(gateway)(config)#` | `set capacity`, `set workers`, `set queue-discipline`, `set timeout`, `set distribution`, `no <setting>`, `interface port <N>`, `exit`, `end` | Single node - writes to topology store |
 | Port config | `node(gateway)(config-port:443)#` | `set protocol`, `set max-connections`, `set rate-limit`, `health-check`, `shutdown`, `no shutdown`, `exit` | Single port on a node |
 | Runtime | `sim(runtime)#` | `pause`, `resume`, `step`, `speed`, `stop`, `status`, `show status`, `show events`, `show trace`, `show rejected`, `diagnose`, `exit` | Active simulation |
 
@@ -109,9 +109,9 @@ sim> ──select gateway──→ node(gateway)>
 
 `exit` pops one level (port-config → node-config → node → sim). `end` returns directly to `sim>` from any depth, clearing the stack. `back` is an alias for `exit`.
 
-**Runtime mode entry:** When a simulation starts (via `run` from `sim>` or via the GUI Run button), the terminal auto-transitions to `sim(runtime)#`. When the simulation completes or is stopped, the terminal returns to `sim>`. If the user manually types `exit` during a running simulation, the terminal returns to `sim>` but the simulation keeps running — the mode change only affects what commands are available, not the simulation lifecycle.
+**Runtime mode entry:** When a simulation starts (via `run` from `sim>` or via the GUI Run button), the terminal auto-transitions to `sim(runtime)#`. When the simulation completes or is stopped, the terminal returns to `sim>`. If the user manually types `exit` during a running simulation, the terminal returns to `sim>` but the simulation keeps running - the mode change only affects what commands are available, not the simulation lifecycle.
 
-**Invalid transitions:** Typing a mode-specific command in the wrong mode prints an error: `"Command 'set capacity' is only available in config mode. Type 'configure terminal' to enter config mode."` The error is contextual — it doesn't just say "unknown command" but tells the user how to reach the right mode.
+**Invalid transitions:** Typing a mode-specific command in the wrong mode prints an error: `"Command 'set capacity' is only available in config mode. Type 'configure terminal' to enter config mode."` The error is contextual - it doesn't just say "unknown command" but tells the user how to reach the right mode.
 
 ### What components it requires
 
@@ -123,7 +123,7 @@ HLD examples doc (all walkthrough sections), Implementation plan doc (Model laye
 
 ---
 
-## Feature 2 — Command Registry & Parser
+## Feature 2 - Command Registry & Parser
 
 ### What it does
 
@@ -131,7 +131,7 @@ A shared registry where commands are defined once and resolved at runtime based 
 
 ### Why it exists
 
-The terminal has 50+ commands across 5 modes. Without a registry, command resolution would be a giant switch statement. The registry also enables the shared CLI architecture ([Feature 11](#feature-11--shared-cli-architecture)) — the same command definitions used in the in-app terminal are imported by the headless `nssim` CLI.
+The terminal has 50+ commands across 5 modes. Without a registry, command resolution would be a giant switch statement. The registry also enables the shared CLI architecture ([Feature 11](#feature-11--shared-cli-architecture)) - the same command definitions used in the in-app terminal are imported by the headless `nssim` CLI.
 
 ### How it works internally
 
@@ -238,7 +238,7 @@ interface CommandRegistry {
 
 **Parser behavior:**
 
-The parser is intentionally simple — not a full shell:
+The parser is intentionally simple - not a full shell:
 
 1. Split input on whitespace. First token(s) are the command name (supports multi-word commands like `show status`).
 2. Remaining tokens are positional or flag arguments, matched against `ArgSpec[]`.
@@ -260,17 +260,17 @@ type CommandResult =
 
 ### What components it requires
 
-- **Shared layer:** A `CommandRegistry` class and `CommandDefinition` interface in `src/shared/commands/`. Must be environment-agnostic — no React imports, no DOM access, no Node.js-specific APIs.
+- **Shared layer:** A `CommandRegistry` class and `CommandDefinition` interface in `src/shared/commands/`. Must be environment-agnostic - no React imports, no DOM access, no Node.js-specific APIs.
 - **Renderer-side:** A `useCommandParser` hook that connects the registry to the xterm.js input stream.
 - **CLI-side:** An adapter in `src/cli/` that creates `CommandDeps` from direct engine access.
 
 ### Explored in
 
-Implementation plan doc (Architecture — Command Registry, Phase 1), HLD doc (command syntax throughout).
+Implementation plan doc (Architecture - Command Registry, Phase 1), HLD doc (command syntax throughout).
 
 ---
 
-## Feature 3 — Show Commands (Node Inspection)
+## Feature 3 - Show Commands (Node Inspection)
 
 ### What it does
 
@@ -320,11 +320,11 @@ node(payment-svc)> show status
 
 The status indicator uses the same thresholds as the CLI `--live` mode (#84):
 - `●` OK: utilization < 60%
-- `◐` WARM: 60–85%
-- `◉` HOT: 85–95%
+- `◐` WARM: 60-85%
+- `◉` HOT: 85-95%
 - `✗` FAIL: > 95% or status === `'failed'`
 
-**How data flows:** Show commands in `node>` mode read from `TimeSeriesSnapshot` during a running simulation (the latest snapshot from `useSimulation.state.snapshot`) and from `SimulationOutput.perNode` after completion. If no simulation has run, they fall back to static config data (e.g., `show config` always works; `show status` returns "No simulation data — run a simulation first").
+**How data flows:** Show commands in `node>` mode read from `TimeSeriesSnapshot` during a running simulation (the latest snapshot from `useSimulation.state.snapshot`) and from `SimulationOutput.perNode` after completion. If no simulation has run, they fall back to static config data (e.g., `show config` always works; `show status` returns "No simulation data - run a simulation first").
 
 ### What components it requires
 
@@ -334,11 +334,11 @@ The status indicator uses the same thresholds as the CLI `--live` mode (#84):
 
 ### Explored in
 
-HLD doc (Model layer — all `show` examples), Implementation plan doc (Phase 2 — Show commands).
+HLD doc (Model layer - all `show` examples), Implementation plan doc (Phase 2 - Show commands).
 
 ---
 
-## Feature 4 — Config Mutation Commands
+## Feature 4 - Config Mutation Commands
 
 ### What it does
 
@@ -346,7 +346,7 @@ A family of write commands that modify a node's configuration through text, avai
 
 ### Why it exists
 
-Graphical configuration through the `PropertiesPanel` requires click-navigate-edit-confirm for every field. Text-based configuration is faster for users who know what they want to change: `set capacity 200` is one command versus 4 clicks. It also enables scriptable topology creation — a sequence of terminal commands can build a topology from scratch, which is valuable for testing and reproducibility.
+Graphical configuration through the `PropertiesPanel` requires click-navigate-edit-confirm for every field. Text-based configuration is faster for users who know what they want to change: `set capacity 200` is one command versus 4 clicks. It also enables scriptable topology creation - a sequence of terminal commands can build a topology from scratch, which is valuable for testing and reproducibility.
 
 ### How it works internally
 
@@ -362,7 +362,7 @@ Graphical configuration through the `PropertiesPanel` requires click-navigate-ed
 | `no timeout` | `ComponentNode.processing.timeout` | Resets to `GlobalConfig.defaultTimeout` |
 | `no distribution` | `ComponentNode.processing.distribution` | Resets to `{ type: 'constant', value: 10 }` |
 
-**The `no` prefix convention** comes from Cisco IOS — `no shutdown` re-enables an interface, `no ip route` removes a static route. In the simulator, `no <setting>` resets that setting to its default value. This is documented in the help text for each command.
+**The `no` prefix convention** comes from Cisco IOS - `no shutdown` re-enables an interface, `no ip route` removes a static route. In the simulator, `no <setting>` resets that setting to its default value. This is documented in the help text for each command.
 
 **The `set distribution` command** handles the full `DistributionConfig` union from `src/engine/core/types.ts`:
 
@@ -399,7 +399,7 @@ The mutation path is: command → `CommandDeps.topology.updateNode()` → Zustan
 
 **Port config commands (in `node(config-port:N)#` mode):**
 
-See [Feature 5 — Port-Level State Model](#feature-5--port-level-state-model) for the port config commands.
+See [Feature 5 - Port-Level State Model](#feature-5--port-level-state-model) for the port config commands.
 
 **Post-mutation validation:** After any `set` command, the terminal runs the topology validator (`validateTopology` from `src/engine/validation/validator.ts`) on the modified topology and prints warnings if the change introduces issues (e.g., capacity < workers after a `set workers` command on a different node).
 
@@ -411,11 +411,11 @@ See [Feature 5 — Port-Level State Model](#feature-5--port-level-state-model) f
 
 ### Explored in
 
-HLD doc (Scenario layer — all `set` and `no` examples), Implementation plan doc (Phase 2 — Config mutation).
+HLD doc (Scenario layer - all `set` and `no` examples), Implementation plan doc (Phase 2 - Config mutation).
 
 ---
 
-## Feature 5 — Port-Level State Model
+## Feature 5 - Port-Level State Model
 
 ### What it does
 
@@ -497,16 +497,16 @@ this.ports = portConfigs.map(pc => ({
 }));
 ```
 
-**Runtime behavior:** Port state is primarily cosmetic in the initial implementation — the G/G/c/K admission check still operates at the node level (total `activeWorkers + queueLength >= capacity`). Port-level connection tracking is an accounting layer: when a request arrives at a node, the engine increments the connection count on the port matching the incoming edge's protocol. If the port's `maxConnections` is exceeded, the request is rejected with reason `'port_connection_limit'` — this is a new rejection reason alongside the existing `'capacity_exceeded'` and `'node_failed'`.
+**Runtime behavior:** Port state is primarily cosmetic in the initial implementation - the G/G/c/K admission check still operates at the node level (total `activeWorkers + queueLength >= capacity`). Port-level connection tracking is an accounting layer: when a request arrives at a node, the engine increments the connection count on the port matching the incoming edge's protocol. If the port's `maxConnections` is exceeded, the request is rejected with reason `'port_connection_limit'` - this is a new rejection reason alongside the existing `'capacity_exceeded'` and `'node_failed'`.
 
 **Snapshot inclusion:** `TimeSeriesSnapshot.perNode[nodeId]` gains an optional `ports: PortSnapshot[]` field. The snapshot emitter reads port state from `GGcKNode.getPortStates()`.
 
 **Which node types support ports:** Determined by `ComponentCategory`:
-- `'network-and-edge'` — load balancers, routers, gateways, CDN, API gateway, ingress controller
-- `'security-and-identity'` — firewalls, WAF, bastion host
-- `'storage-and-data'` — databases (client + replication ports)
+- `'network-and-edge'` - load balancers, routers, gateways, CDN, API gateway, ingress controller
+- `'security-and-identity'` - firewalls, WAF, bastion host
+- `'storage-and-data'` - databases (client + replication ports)
 
-Application-layer nodes (`'compute'`, `'messaging-and-streaming'`) don't expose ports — their single-endpoint model remains.
+Application-layer nodes (`'compute'`, `'messaging-and-streaming'`) don't expose ports - their single-endpoint model remains.
 
 ### What components it requires
 
@@ -516,11 +516,11 @@ Application-layer nodes (`'compute'`, `'messaging-and-streaming'`) don't expose 
 
 ### Explored in
 
-HLD doc (per-type examples — load balancer port listing, router interface listing), Implementation plan doc (Phase 2 — Port-level extension).
+HLD doc (per-type examples - load balancer port listing, router interface listing), Implementation plan doc (Phase 2 - Port-level extension).
 
 ---
 
-## Feature 6 — Per-Type Idiomatic CLI
+## Feature 6 - Per-Type Idiomatic CLI
 
 ### What it does
 
@@ -528,7 +528,7 @@ When the user selects a node, the terminal activates a type-specific command set
 
 ### Why it exists
 
-This is the feature that gives the terminal its Packet Tracer identity. The educational value is not just in the simulator's own commands — it's in exposing students to the actual administrative interfaces of the technologies they're designing with. A student configuring a Postgres node should learn that `\dt` lists tables and `\d <table>` describes a table's schema, even though in the simulator context these map to viewing the node's configuration.
+This is the feature that gives the terminal its Packet Tracer identity. The educational value is not just in the simulator's own commands - it's in exposing students to the actual administrative interfaces of the technologies they're designing with. A student configuring a Postgres node should learn that `\dt` lists tables and `\d <table>` describes a table's schema, even though in the simulator context these map to viewing the node's configuration.
 
 ### How it works internally
 
@@ -549,9 +549,9 @@ This is the feature that gives the terminal its Packet Tracer identity. The educ
 
 | psql command | Simulator data | Output |
 |---|---|---|
-| `\dt` | `ComponentNode.config` — hypothetical table definitions if configured, otherwise node edges as "tables" | Table listing |
+| `\dt` | `ComponentNode.config` - hypothetical table definitions if configured, otherwise node edges as "tables" | Table listing |
 | `\d <table>` | Edge schema or config section detail | Column-like field listing |
-| `SELECT * FROM pg_stat_activity` | `TimeSeriesSnapshot.perNode[nodeId]` — active workers mapped to "active connections" | Process list table |
+| `SELECT * FROM pg_stat_activity` | `TimeSeriesSnapshot.perNode[nodeId]` - active workers mapped to "active connections" | Process list table |
 | `\conninfo` | `ComponentNode.label`, node type, edge protocol | Connection summary string |
 
 **How redis-cli commands map:**
@@ -559,7 +559,7 @@ This is the feature that gives the terminal its Packet Tracer identity. The educ
 | redis-cli command | Simulator data | Output |
 |---|---|---|
 | `INFO` | `ComponentNode` config + `TimeSeriesSnapshot` metrics | Multi-section info dump (server, memory, stats, keyspace) |
-| `INFO stats` | `PerNodeMetrics` — throughput, latency, error rate | Stats section only |
+| `INFO stats` | `PerNodeMetrics` - throughput, latency, error rate | Stats section only |
 | `DBSIZE` | `GGcKNode.getState().queueLength` | Integer (queue depth as "key count") |
 | `SLOWLOG` | `DebugEvent[]` filtered to this node, sorted by duration desc | Slow event entries |
 | `CLIENT LIST` | Active workers mapped to "clients", with per-worker metadata | Client list table |
@@ -628,15 +628,15 @@ function getCliProfile(node: ComponentNode): 'postgres' | 'mysql' | 'redis' | 'c
 
 - **Shared layer:** Per-type command files in `src/shared/commands/per-type/`. Each exports a `CommandDefinition[]` that the registry activates conditionally.
 - **Registry:** `CommandRegistry.activateProfile(profile)` that adds/removes commands dynamically when the node context changes.
-- **Engine-side:** No changes — per-type commands read existing data through different lenses.
+- **Engine-side:** No changes - per-type commands read existing data through different lenses.
 
 ### Explored in
 
-HLD doc (all per-type walkthrough sections — Postgres, Redis, Load Balancer, Router, Kafka examples).
+HLD doc (all per-type walkthrough sections - Postgres, Redis, Load Balancer, Router, Kafka examples).
 
 ---
 
-## Feature 7 — Runtime Simulation Control
+## Feature 7 - Runtime Simulation Control
 
 ### What it does
 
@@ -655,12 +655,12 @@ The GUI's `SimulationControls` component exposes Run/Pause/Resume/Stop buttons. 
 
 | Command | Effect | Worker message sent | Source |
 |---|---|---|---|
-| `pause` | Pause simulation | `{ type: 'pause' }` | `WorkerInboundMessage` — already exists in `protocols.ts` |
+| `pause` | Pause simulation | `{ type: 'pause' }` | `WorkerInboundMessage` - already exists in `protocols.ts` |
 | `resume` | Resume simulation | `{ type: 'resume' }` | Already exists |
 | `step [N]` | Step N events (default: 1) | `{ type: 'step', payload: { count: N } }` | Already exists |
-| `speed <multiplier>` | Set playback speed | `{ type: 'set-speed', payload: { speed: multiplier } }` | New — added by #68 |
+| `speed <multiplier>` | Set playback speed | `{ type: 'set-speed', payload: { speed: multiplier } }` | New - added by #68 |
 | `stop` | Stop simulation | `{ type: 'stop' }` | Already exists |
-| `status` | Print current state | — (reads from `SimulationState`) | No message needed |
+| `status` | Print current state | - (reads from `SimulationState`) | No message needed |
 
 **How commands reach the worker:**
 
@@ -688,7 +688,7 @@ sim(runtime)# status
 
 This reads directly from `SimulationState.status`, `SimulationState.progress`, `SimulationState.eventsProcessed`, and `SimulationState.snapshot.currentTime`.
 
-**Runtime show commands:** In `sim(runtime)#` mode, show commands read from the *latest snapshot* rather than post-run data. This means `show status` in runtime mode shows live-ish data (updated every snapshot interval — 1 second of sim-time by default). It is not continuously updating; each invocation reads the most recent snapshot.
+**Runtime show commands:** In `sim(runtime)#` mode, show commands read from the *latest snapshot* rather than post-run data. This means `show status` in runtime mode shows live-ish data (updated every snapshot interval - 1 second of sim-time by default). It is not continuously updating; each invocation reads the most recent snapshot.
 
 For live-updating display, see the `watch` command (stretch goal) and the CLI `--live` mode (#84).
 
@@ -700,11 +700,11 @@ For live-updating display, see the `watch` command (stretch goal) and the CLI `-
 
 ### Explored in
 
-Implementation plan doc (Runtime layer — Phase 3), HLD doc (runtime control examples).
+Implementation plan doc (Runtime layer - Phase 3), HLD doc (runtime control examples).
 
 ---
 
-## Feature 8 — Trace & Event Inspection Commands
+## Feature 8 - Trace & Event Inspection Commands
 
 ### What it does
 
@@ -714,7 +714,7 @@ Text-based inspection of the simulation's event stream, request traces, and fail
 
 The event debugger's visual views (event log table, lifecycle rail, waterfall, cascade view) are powerful for exploration but require mouse interaction. The terminal's trace commands serve users who want specific answers fast: "show me the last 10 rejection events", "trace request req-9148 through the topology", "why was req-5001 rejected?"
 
-These commands also work in headless mode (via the shared CLI) where there is no GUI at all — making them essential for automated testing and CI pipelines.
+These commands also work in headless mode (via the shared CLI) where there is no GUI at all - making them essential for automated testing and CI pipelines.
 
 ### How it works internally
 
@@ -775,16 +775,16 @@ sim(runtime)# show cascade
 ### What components it requires
 
 - **Shared layer:** Trace and event command definitions in `src/shared/commands/trace/`.
-- **Engine-side:** Requires #38 (canonical event stream) to be complete — `DebugEvent[]` is the data source. Requires #35 for cascade commands.
+- **Engine-side:** Requires #38 (canonical event stream) to be complete - `DebugEvent[]` is the data source. Requires #35 for cascade commands.
 - **Renderer-side:** `CommandDeps.debug.events` mapped to `SimulationState.debugEvents` from the `useSimulation` hook.
 
 ### Explored in
 
-Implementation plan doc (Trace layer — Phase 3), HLD doc (trace examples in runtime walkthrough).
+Implementation plan doc (Trace layer - Phase 3), HLD doc (trace examples in runtime walkthrough).
 
 ---
 
-## Feature 9 — Diagnostic & Pedagogy Commands
+## Feature 9 - Diagnostic & Pedagogy Commands
 
 ### What it does
 
@@ -792,7 +792,7 @@ Higher-level analysis commands that synthesize data from multiple sources to pro
 
 ### Why it exists
 
-This is the feature that differentiates the simulator terminal from a real system's CLI. A real `psql` shows connection counts; it doesn't explain *why* connections are being refused in plain English. The simulator's diagnostic commands bridge the gap between "what is happening" and "why is it happening" — which is the core value proposition for a learning tool.
+This is the feature that differentiates the simulator terminal from a real system's CLI. A real `psql` shows connection counts; it doesn't explain *why* connections are being refused in plain English. The simulator's diagnostic commands bridge the gap between "what is happening" and "why is it happening" - which is the core value proposition for a learning tool.
 
 ### How it works internally
 
@@ -875,7 +875,7 @@ sim(runtime)# why-rejected req-9148
     • Add upstream load balancing to distribute traffic
 ```
 
-The data comes from `AdmissionDecision.nodeState`, `AdmissionDecision.equation`, and `AdmissionDecision.slots` — the same types used by the Node Intake Lens visual component.
+The data comes from `AdmissionDecision.nodeState`, `AdmissionDecision.equation`, and `AdmissionDecision.slots` - the same types used by the Node Intake Lens visual component.
 
 **How `ping` and `traceroute` work:**
 
@@ -906,15 +906,15 @@ The path is computed by walking `RoutingTable.getOutgoingEdges()` from source, p
 
 ### Explored in
 
-Implementation plan doc (Pedagogy layer — Phase 5), HLD doc (diagnostic examples in runtime walkthrough).
+Implementation plan doc (Pedagogy layer - Phase 5), HLD doc (diagnostic examples in runtime walkthrough).
 
 ---
 
-## Feature 10 — xterm.js Integration & Terminal Tab
+## Feature 10 - xterm.js Integration & Terminal Tab
 
 ### What it does
 
-Renders the terminal as a tab in the Results Tray bottom panel using xterm.js — a full terminal emulator in the browser. Handles input capture, output rendering, ANSI color/formatting, panel resize, and theme synchronization.
+Renders the terminal as a tab in the Results Tray bottom panel using xterm.js - a full terminal emulator in the browser. Handles input capture, output rendering, ANSI color/formatting, panel resize, and theme synchronization.
 
 ### Why it exists
 
@@ -979,7 +979,7 @@ Tables are rendered using Unicode box-drawing characters (`─`, `│`, `┌`, `
 **Theme synchronization:** The terminal theme (background, foreground, cursor, selection colors) is derived from the app's dark/light mode setting. When the theme changes, `terminal.options.theme` is updated.
 
 **State persistence across collapse/expand:** When the Results Tray is collapsed and re-expanded, the terminal tab must preserve:
-- Scrollback buffer (xterm.js handles this natively — the `Terminal` instance survives in memory)
+- Scrollback buffer (xterm.js handles this natively - the `Terminal` instance survives in memory)
 - Command history (stored in a ref, not in DOM state)
 - Current mode/prompt (stored in `TerminalContext`)
 
@@ -993,11 +993,11 @@ This requires the `Terminal` instance to be created once and attached/detached f
 
 ### Explored in
 
-Implementation plan doc (UI Architecture — xterm.js, Bottom Panel Tab, Phase 1).
+Implementation plan doc (UI Architecture - xterm.js, Bottom Panel Tab, Phase 1).
 
 ---
 
-## Feature 11 — Shared CLI Architecture
+## Feature 11 - Shared CLI Architecture
 
 ### What it does
 
@@ -1114,14 +1114,14 @@ function buildCliDeps(topology: TopologyJSON, engine: SimulationEngine): Command
         const idx = topology.nodes.findIndex(n => n.id === id);
         if (idx >= 0) topology.nodes[idx] = { ...topology.nodes[idx], ...patch };
       },
-      markDirty: () => { /* no-op in CLI — file not watched */ },
+      markDirty: () => { /* no-op in CLI - file not watched */ },
     },
     simulation: {
       state: { status: 'idle', progress: 0, /* ... */ },
       controls: { run: () => engine.run(), /* ... */ },
     },
     debug: { events: [], lifecycle: null, snapshots: [] },
-    terminal: { /* CLI has no mode system — commands run directly */ },
+    terminal: { /* CLI has no mode system - commands run directly */ },
   };
 }
 ```
@@ -1143,29 +1143,29 @@ The `nssim` CLI becomes a thin adapter that creates `CommandDeps` from file-base
 - **Shared layer:** The entire `src/shared/commands/` directory. `CommandRegistry`, `CommandDeps` interface, all command definitions.
 - **Renderer-side:** `useCommandDeps` hook that adapts the Zustand store and hooks to `CommandDeps`.
 - **CLI-side:** `adapter.ts` that adapts direct engine/file access to `CommandDeps`.
-- **Build:** The `src/shared/` directory must be importable from both the Vite renderer build and the Node.js CLI build. This requires careful TypeScript path configuration — no browser APIs in shared code, no Node.js APIs in shared code.
+- **Build:** The `src/shared/` directory must be importable from both the Vite renderer build and the Node.js CLI build. This requires careful TypeScript path configuration - no browser APIs in shared code, no Node.js APIs in shared code.
 
 ### Explored in
 
-Implementation plan doc (Architecture — Shared command layer, CLI integration, Phase 4).
+Implementation plan doc (Architecture - Shared command layer, CLI integration, Phase 4).
 
 ---
 
 ## Relationship to Event Debugger
 
-The terminal and event debugger are not independent features — they share the same data pipeline and live in the same UI container. Understanding their relationship is critical for implementation ordering.
+The terminal and event debugger are not independent features - they share the same data pipeline and live in the same UI container. Understanding their relationship is critical for implementation ordering.
 
 ### Shared data sources
 
 | Data type | Engine origin | Event Debugger consumer | Terminal consumer |
 |---|---|---|---|
-| `DebugEvent[]` | #38 — canonical event stream | Event Log tab, all display variants | `show events`, `show rejected`, `show timeouts` |
-| `RequestLifecycle` | #38 — assembled from events + trace spans | Lifecycle Rail, Sequence Diagram, Stack Trace, State Machine, Filmstrip | `show trace <requestId>` |
+| `DebugEvent[]` | #38 - canonical event stream | Event Log tab, all display variants | `show events`, `show rejected`, `show timeouts` |
+| `RequestLifecycle` | #38 - assembled from events + trace spans | Lifecycle Rail, Sequence Diagram, Stack Trace, State Machine, Filmstrip | `show trace <requestId>` |
 | `NodeSnapshot` | `GGcKNode.getState()` + config limits | Request Detail Inspector, Intake Lens | `show status`, `show queue`, `why-rejected` |
 | `AdmissionDecision` | `GGcKNode.handleArrival()` | Node Intake Lens (#157) | `why-rejected <requestId>` |
-| `TimeSeriesSnapshot` | #33 — periodic snapshots | Canvas debug overlay (#158), filmstrip | `show status`, `diagnose`, runtime `show` commands |
-| `CausalGraph` | #35 — causal failure graph | Failure Cascade view (#80) | `show cascade` |
-| Worker protocol | #68 — `PAUSE`, `RESUME`, `STEP`, `SET_SPEED` | Playback controls via `DebugControls` | `pause`, `resume`, `step`, `speed` commands |
+| `TimeSeriesSnapshot` | #33 - periodic snapshots | Canvas debug overlay (#158), filmstrip | `show status`, `diagnose`, runtime `show` commands |
+| `CausalGraph` | #35 - causal failure graph | Failure Cascade view (#80) | `show cascade` |
+| Worker protocol | #68 - `PAUSE`, `RESUME`, `STEP`, `SET_SPEED` | Playback controls via `DebugControls` | `pause`, `resume`, `step`, `speed` commands |
 | `SimulationState` | `useSimulation` hook (#69) | All debugger UI components | `status` command, all runtime show commands |
 
 ### Shared UI container
@@ -1182,7 +1182,7 @@ Both the terminal and the event debugger live in the Results Tray bottom panel (
 | Concept | Why the debugger doesn't need it |
 |---|---|
 | Context modes (sim/node/config/port/runtime) | The debugger operates on events, not on node contexts |
-| Config mutation (`set capacity`, `set workers`) | The debugger is read-only — it doesn't change topology |
+| Config mutation (`set capacity`, `set workers`) | The debugger is read-only - it doesn't change topology |
 | Port-level state (`PortConfig`, `PortState`) | The debugger operates at the request/event level, not port level |
 | Per-type CLI commands (psql, redis-cli) | The debugger has a uniform event schema regardless of node type |
 | Command registry and parser | The debugger uses visual UI controls, not text input |
@@ -1203,11 +1203,11 @@ This is the only significant engine-side addition. All other terminal features c
 
 ### 2. Node config mutation path
 
-The terminal writes to `ComponentNode` fields through the Zustand store (same path as `PropertiesPanel`). The engine itself is not modified — config changes affect the *next* simulation run, not a running simulation. If "live config modification during simulation" is desired later, the worker would need a new inbound message type (`UpdateNodeConfig`), but this is out of scope for the initial terminal implementation.
+The terminal writes to `ComponentNode` fields through the Zustand store (same path as `PropertiesPanel`). The engine itself is not modified - config changes affect the *next* simulation run, not a running simulation. If "live config modification during simulation" is desired later, the worker would need a new inbound message type (`UpdateNodeConfig`), but this is out of scope for the initial terminal implementation.
 
 ### 3. Expected path computation utility
 
-The `ping` and `traceroute` commands need a utility that walks the topology's edges from node A to node B. The event debugger's `ExpectedPath` type (from `event-debugger-schema.md`) describes this, but the actual implementation — walking `RoutingTable.getOutgoingEdges()` recursively — doesn't exist yet. This utility should be shared between the debugger (for the Actual vs Expected Path Diff view) and the terminal (for `ping`/`traceroute`).
+The `ping` and `traceroute` commands need a utility that walks the topology's edges from node A to node B. The event debugger's `ExpectedPath` type (from `event-debugger-schema.md`) describes this, but the actual implementation - walking `RoutingTable.getOutgoingEdges()` recursively - doesn't exist yet. This utility should be shared between the debugger (for the Actual vs Expected Path Diff view) and the terminal (for `ping`/`traceroute`).
 
 ### 4. Diagnostic analysis functions
 
@@ -1219,14 +1219,14 @@ The `diagnose` command runs checks (queue saturation, upstream pressure, SLO bre
 
 | Feature | HLD Examples Doc | Implementation Plan Doc |
 |---|---|---|
-| 1. Context Mode System | All walkthrough sections (prompt examples) | Phase 1 — Model layer |
-| 2. Command Registry & Parser | Implicit (command syntax throughout) | Architecture — Command Registry |
-| 3. Show Commands | Model layer examples (show status, show queue, etc.) | Phase 2 — Show commands |
-| 4. Config Mutation Commands | Scenario layer examples (set, no) | Phase 2 — Config mutation |
-| 5. Port-Level State Model | Per-type examples (LB ports, router interfaces) | Phase 2 — Port-level extension |
-| 6. Per-Type Idiomatic CLI | All per-type sections (psql, redis, IOS, kafka) | Phase 4 — Per-type extensions |
-| 7. Runtime Simulation Control | Runtime layer examples (pause, resume, speed) | Phase 3 — Runtime layer |
-| 8. Trace & Event Inspection | Trace layer examples (show events, show trace) | Phase 3 — Trace layer |
-| 9. Diagnostic Commands | Pedagogy layer examples (diagnose, why-rejected) | Phase 5 — Pedagogy layer |
-| 10. xterm.js Integration | Implicit (terminal UI assumed) | Architecture — UI placement |
-| 11. Shared CLI Architecture | CLI reuse references | Architecture — Shared command layer |
+| 1. Context Mode System | All walkthrough sections (prompt examples) | Phase 1 - Model layer |
+| 2. Command Registry & Parser | Implicit (command syntax throughout) | Architecture - Command Registry |
+| 3. Show Commands | Model layer examples (show status, show queue, etc.) | Phase 2 - Show commands |
+| 4. Config Mutation Commands | Scenario layer examples (set, no) | Phase 2 - Config mutation |
+| 5. Port-Level State Model | Per-type examples (LB ports, router interfaces) | Phase 2 - Port-level extension |
+| 6. Per-Type Idiomatic CLI | All per-type sections (psql, redis, IOS, kafka) | Phase 4 - Per-type extensions |
+| 7. Runtime Simulation Control | Runtime layer examples (pause, resume, speed) | Phase 3 - Runtime layer |
+| 8. Trace & Event Inspection | Trace layer examples (show events, show trace) | Phase 3 - Trace layer |
+| 9. Diagnostic Commands | Pedagogy layer examples (diagnose, why-rejected) | Phase 5 - Pedagogy layer |
+| 10. xterm.js Integration | Implicit (terminal UI assumed) | Architecture - UI placement |
+| 11. Shared CLI Architecture | CLI reuse references | Architecture - Shared command layer |

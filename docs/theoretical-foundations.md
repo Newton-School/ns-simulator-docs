@@ -6,8 +6,8 @@
 
 ## Table of Contents
 
-1. [Queueing Theory — The Core Foundation](#1-queueing-theory--the-core-foundation)
-2. [Transportation: Foundations and Methods — Network Flow Theory](#2-transportation-foundations-and-methods--network-flow-theory)
+1. [Queueing Theory - The Core Foundation](#1-queueing-theory--the-core-foundation)
+2. [Transportation: Foundations and Methods - Network Flow Theory](#2-transportation-foundations-and-methods--network-flow-theory)
 3. [Discrete Event Simulation (DES) Theory](#3-discrete-event-simulation-des-theory)
 4. [Probability & Stochastic Processes](#4-probability--stochastic-processes)
 5. [Reliability Theory & Chaos Engineering](#5-reliability-theory--chaos-engineering)
@@ -16,9 +16,9 @@
 
 ---
 
-## 1. Queueing Theory — The Core Foundation
+## 1. Queueing Theory - The Core Foundation
 
-Queueing theory is not just applicable here — it is **the backbone** of the entire simulator. Every node in the system is modeled as a **G/G/c/K queue** using Kendall notation.
+Queueing theory is not just applicable here - it is **the backbone** of the entire simulator. Every node in the system is modeled as a **G/G/c/K queue** using Kendall notation.
 
 ### Kendall Notation Breakdown
 
@@ -31,14 +31,14 @@ Queueing theory is not just applicable here — it is **the backbone** of the en
 
 ### Key Queueing Theory Concepts Directly Used
 
-- **Utilization (ρ = λ / (c × μ))** — The stability condition. If ρ ≥ 1, the system overloads. This is how the simulator detects bottlenecks.
-- **Little's Law (L = λ × W)** — Used to *validate simulator correctness*. Average items in system = arrival rate × average time in system. Always holds.
-- **M/M/1 and M/M/c queues** — Used for congestion modeling: delay = 1/(1−ρ), which shows how latency explodes as utilization approaches 1.
-- **Waiting time formulas** — W = Wq + 1/μ (total wait = queue wait + service time).
+- **Utilization (ρ = λ / (c × μ))** - The stability condition. If ρ ≥ 1, the system overloads. This is how the simulator detects bottlenecks.
+- **Little's Law (L = λ × W)** - Used to *validate simulator correctness*. Average items in system = arrival rate × average time in system. Always holds.
+- **M/M/1 and M/M/c queues** - Used for congestion modeling: delay = 1/(1−ρ), which shows how latency explodes as utilization approaches 1.
+- **Waiting time formulas** - W = Wq + 1/μ (total wait = queue wait + service time).
 
 ### Use Cases in the Simulator
 
-- Modeling API servers, databases, load balancers, message queues — all as queues.
+- Modeling API servers, databases, load balancers, message queues - all as queues.
 - Predicting when a component will saturate under load.
 - Sizing capacity (how many workers `c` do you need for a given arrival rate `λ`?).
 - Detecting cascade failures when queues fill up (backpressure propagation).
@@ -58,13 +58,13 @@ Queueing theory is not just applicable here — it is **the backbone** of the en
 
 ---
 
-## 2. Transportation: Foundations and Methods — Network Flow Theory
+## 2. Transportation: Foundations and Methods - Network Flow Theory
 
 While not explicitly named as "transportation theory," the concepts from **network flow and transportation science** are deeply embedded throughout the simulator.
 
 ### 2.1 Network Latency Physics
 
-The simulator models latency using a decomposition directly from transportation network modeling — modeling how "goods" (packets/requests) travel through a network with delays at each stage:
+The simulator models latency using a decomposition directly from transportation network modeling - modeling how "goods" (packets/requests) travel through a network with delays at each stage:
 
 ```
 L = P + T + Pr + Q + J
@@ -72,7 +72,7 @@ L = P + T + Pr + Q + J
 
 | Component | Name | Definition |
 |-----------|------|------------|
-| **P** | Propagation delay | Distance ÷ speed of light — physical transportation of signals |
+| **P** | Propagation delay | Distance ÷ speed of light - physical transportation of signals |
 | **T** | Transmission delay | Message size ÷ bandwidth |
 | **Pr** | Processing delay | Per-hop router/switch overhead |
 | **Q** | Queuing delay | Congestion-dependent, variable |
@@ -82,23 +82,23 @@ L = P + T + Pr + Q + J
 
 | Path | Latency Range |
 |------|---------------|
-| Same rack | 0.1–0.5 ms |
-| Same datacenter | 0.5–2 ms |
-| Same region | 1–3 ms |
-| Cross-region | 60–80 ms |
-| Cross-continent | 100–300 ms |
+| Same rack | 0.1-0.5 ms |
+| Same datacenter | 0.5-2 ms |
+| Same region | 1-3 ms |
+| Cross-region | 60-80 ms |
+| Cross-continent | 100-300 ms |
 
 ### 2.2 Routing and Load Balancing
 
 The simulator has **Routing Nodes** that direct traffic using concepts from operations research:
 
-- **Weighted edges** — Probabilistic traffic splitting (like flow distribution in transportation networks).
-- **Round-robin, least-connections, consistent hashing** — Assignment and allocation problems from operations research.
-- **L4/L7 load balancers** — Traffic distribution optimization across multiple servers.
+- **Weighted edges** - Probabilistic traffic splitting (like flow distribution in transportation networks).
+- **Round-robin, least-connections, consistent hashing** - Assignment and allocation problems from operations research.
+- **L4/L7 load balancers** - Traffic distribution optimization across multiple servers.
 
 ### 2.3 Dependency Graphs as Transportation Networks
 
-Request journeys traverse a **directed graph** of components — essentially a **shortest path / critical path problem**:
+Request journeys traverse a **directed graph** of components - essentially a **shortest path / critical path problem**:
 
 - Requests fork to multiple dependencies (parallel paths).
 - Total latency = max latency across parallel paths (critical path).
@@ -106,7 +106,7 @@ Request journeys traverse a **directed graph** of components — essentially a *
 
 ### 2.4 Capacity Planning
 
-The concept of **throughput capacity** at each node and edge mirrors **link capacity** in transportation networks. When demand (λ) exceeds capacity (c × μ), congestion occurs — identical to traffic congestion theory.
+The concept of **throughput capacity** at each node and edge mirrors **link capacity** in transportation networks. When demand (λ) exceeds capacity (c × μ), congestion occurs - identical to traffic congestion theory.
 
 ---
 
@@ -138,15 +138,15 @@ M = <X, Y, S, δext, δint, λ, ta>
 
 ### Composition
 
-- **Atomic DEVS** — Smallest unit of model (a single component).
-- **Coupled DEVS** — Hierarchical composition of atomic models into larger systems.
+- **Atomic DEVS** - Smallest unit of model (a single component).
+- **Coupled DEVS** - Hierarchical composition of atomic models into larger systems.
 - This enables modeling subsystems as composite nodes that contain their own internal event flows.
 
 ### Engine Implementation
 
-- **Min-Heap event queue** — Binary heap stored as array for O(log n) insert and extract-min.
-- **BigInt microseconds** — Exact precision without floating-point errors.
-- **Seeded PRNGs (SFC32)** — Deterministic, reproducible simulations. Same seed = identical results.
+- **Min-Heap event queue** - Binary heap stored as array for O(log n) insert and extract-min.
+- **BigInt microseconds** - Exact precision without floating-point errors.
+- **Seeded PRNGs (SFC32)** - Deterministic, reproducible simulations. Same seed = identical results.
 
 ---
 
@@ -158,7 +158,7 @@ The simulator uses a rich library of distributions from stochastic process theor
 
 | Distribution | Use Case in Simulator |
 |-------------|----------------------|
-| **Exponential** | Inter-arrival times, service times (memoryless property — Poisson process) |
+| **Exponential** | Inter-arrival times, service times (memoryless property - Poisson process) |
 | **Log-Normal** | Network latency modeling (captures long tail) |
 | **Weibull** | Hardware failure times (reliability engineering) |
 | **Gamma** | Aggregated service times (sum of exponential events) |
@@ -211,11 +211,11 @@ Directly from reliability engineering and fault-tolerant systems research.
 
 ### Cascade Failure Patterns
 
-1. **Cascading Timeouts** — Downstream service slows → upstream retries → creates waves of overload.
-2. **Backpressure & Queue Saturation** — Slow dependency → queue buildup → rejection → upstream errors spike.
-3. **Thundering Herd** — Cache expiry → all requests hit origin → origin overloads.
-4. **Resource Exhaustion** — Connection pools, file descriptors, NAT ports exhaust → immediate failures.
-5. **Split-Brain** — Network partition → both sides operate independently → write conflicts.
+1. **Cascading Timeouts** - Downstream service slows → upstream retries → creates waves of overload.
+2. **Backpressure & Queue Saturation** - Slow dependency → queue buildup → rejection → upstream errors spike.
+3. **Thundering Herd** - Cache expiry → all requests hit origin → origin overloads.
+4. **Resource Exhaustion** - Connection pools, file descriptors, NAT ports exhaust → immediate failures.
+5. **Split-Brain** - Network partition → both sides operate independently → write conflicts.
 
 ### Resilience Patterns
 
@@ -229,12 +229,12 @@ Directly from reliability engineering and fault-tolerant systems research.
 
 ### Chaos Engineering Workflow
 
-1. **Define Steady State** — What is "normal"? (e.g., P99 < 200ms, error rate < 0.1%)
-2. **Hypothesize** — "If [failure X] occurs, [expected outcome] will happen."
-3. **Design Experiment** — Specify failure type, target, duration, abort conditions.
-4. **Run in Simulation** — Execute with deterministic seeds.
-5. **Analyze** — Did steady state hold? If not, find and fix the weakness.
-6. **Verify in Production** — With same parameters.
+1. **Define Steady State** - What is "normal"? (e.g., P99 < 200ms, error rate < 0.1%)
+2. **Hypothesize** - "If [failure X] occurs, [expected outcome] will happen."
+3. **Design Experiment** - Specify failure type, target, duration, abort conditions.
+4. **Run in Simulation** - Execute with deterministic seeds.
+5. **Analyze** - Did steady state hold? If not, find and fix the weakness.
+6. **Verify in Production** - With same parameters.
 
 ---
 

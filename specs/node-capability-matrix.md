@@ -41,17 +41,17 @@ the typed sections `queue.*`, `processing.*`, `resources.*`, `resilience.*`,
 
 ---
 
-## Trait Glossary — what each trait is and why it exists
+## Trait Glossary - what each trait is and why it exists
 
 The "why it exists" is the reason the *simulator* needs the trait: without it, some
 design decision can't be *felt* in the physics (it would be graded only by rubric
 text, or not at all), so students couldn't learn it by running the sim.
 
-### Existing traits (✅ — 12 modules, live today)
+### Existing traits (✅ - 12 modules, live today)
 
 | Trait | What it models | Why it exists |
 |-------|----------------|---------------|
-| `cache` | `cacheHitRate` hit/miss: a hit terminates fast, a miss forwards to origin | Caching is the #1 lever for read-heavy systems. Without a hit/miss model, "put a cache in front of the hot store" can't reduce load in the sim — the core reinforcing-loop lesson. |
+| `cache` | `cacheHitRate` hit/miss: a hit terminates fast, a miss forwards to origin | Caching is the #1 lever for read-heavy systems. Without a hit/miss model, "put a cache in front of the hot store" can't reduce load in the sim - the core reinforcing-loop lesson. |
 | `healthAware` | Routes requests away from unhealthy targets (+ round-robin) | Real load balancers shed dead backends. Needed so removing redundancy or health checks visibly hurts availability. |
 | `contentRouting` | Attribute/path-based routing via edge `condition` (`request.type === …`) | Separating hot/cold paths (reads vs writes) is fundamental. The sim needs typed routing so the read/write **ratio actually changes where traffic goes**. |
 | `rateLimiter` | Token-bucket admission; rejects requests over the limit | Protects downstreams from overload; lets questions test admission control / back-pressure at the edge. |
@@ -71,13 +71,13 @@ text, or not at all), so students couldn't learn it by running the sim.
 | `healthProber` | Actively probes backends to produce the health signal `healthAware` consumes | The routing exists but nothing *generates* health yet. File is present (`src/engine/traits/healthProber.ts`); needs wiring, not writing. |
 | edge/scenario **fault injection** | Injects errors/latency on edges & scenarios | Already implemented; a `chaos-engineering-framework` node would just surface it on the canvas. |
 
-### Proposed new traits (🔧 — ordered by leverage)
+### Proposed new traits (🔧 - ordered by leverage)
 
 | Trait | What it models | Why it exists |
 |-------|----------------|---------------|
 | `storageProfile` | Distinct per-store latency / throughput / ingest curves | **Biggest gap.** Today every store is physically identical, so "choose the right database" is graded only by rubric text. This makes the wrong store actually slower / saturate. |
 | `broadcastFanout` | True 1→N delivery to *all* out-edges | Pub/sub's defining behavior. Without it, fan-out questions grade structurally while the simulation silently delivers to only one consumer. |
-| `retryBackoff` | Re-issue on downstream failure with backoff + DLQ | Retries turn transient failures into latency and amplification (retry storms) — core resilience physics. |
+| `retryBackoff` | Re-issue on downstream failure with backoff + DLQ | Retries turn transient failures into latency and amplification (retry storms) - core resilience physics. |
 | `computeContention` | CPU-core / thread-pool saturation + boot delay | Real services are bound by cores and pools, not an abstract "worker" count. Needed for accurate sizing and saturation. |
 | `consistencyModel` | one vs quorum vs strong → latency & staleness | The central distributed-data tradeoff; needed so stronger consistency costs latency. |
 | `lockLease` | Lock acquire/contention + TTL lease | Mutual exclusion prevents double-book / double-spend; needed to model contention and correctness under concurrency. |
@@ -94,7 +94,7 @@ text, or not at all), so students couldn't learn it by running the sim.
 | `cryptoCost` | Encrypt / verify latency + op quotas | Crypto is CPU-heavy and quota-limited; needed to model KMS / TLS as a real bottleneck. |
 | `inspectionCost` | Per-byte / per-rule scan + block rate | Security scanning adds latency and can drop traffic; needed so a WAF isn't free. |
 | `telemetrySink` | Ingest cap + sampling + query cost (off request path) | Observability has its own load; needed to model sampling tradeoffs and telemetry back-pressure. |
-| `scheduler` | Placement / bin-packing + autoscale reaction time & cooldown | So scaling isn't instantaneous — capacity follows demand with a lag. |
+| `scheduler` | Placement / bin-packing + autoscale reaction time & cooldown | So scaling isn't instantaneous - capacity follows demand with a lag. |
 | `windowing` | Windowed aggregation + watermark lag + state | Stream analytics is a distinct stateful compute model. |
 | `changeStream` | CDC capture lag + ordering | Data-pipeline latency and ordering guarantees. |
 | `requestMix` (extend source) | Typed traffic weights + payload sizing on the source | So read/write ratios and payload sizes actually drive routing and bandwidth. |
@@ -109,18 +109,18 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 
 | Node | 📦 | Trait | Why this node needs it | Config → behavior |
 |------|----|-------|------------------------|-------------------|
-| `api-endpoint` | 📦 | ✅`source.workload` +🔧`requestMix` | 🟢 It's the traffic origin — its pattern & mix define the load everything else must survive | `sim.requestMix[]` → typed traffic; `sim.payloadBytes`; `sim.closedLoop`+`sim.thinkTimeMs` |
-| `microservice` | 📦 | 🔧`computeContention` +🔧`retryBackoff` | Stateless handlers saturate on CPU/threads and cascade downstream failures — the core resilience surface | `sim.cpuBoundRatio`, `sim.threadPool`, `sim.dependencyFanout`, `resilience.retry.*` |
+| `api-endpoint` | 📦 | ✅`source.workload` +🔧`requestMix` | 🟢 It's the traffic origin - its pattern & mix define the load everything else must survive | `sim.requestMix[]` → typed traffic; `sim.payloadBytes`; `sim.closedLoop`+`sim.thinkTimeMs` |
+| `microservice` | 📦 | 🔧`computeContention` +🔧`retryBackoff` | Stateless handlers saturate on CPU/threads and cascade downstream failures - the core resilience surface | `sim.cpuBoundRatio`, `sim.threadPool`, `sim.dependencyFanout`, `resilience.retry.*` |
 | `batch-worker` | 📦 | 🔧`batching` | Throughput comes from processing many items per pull, not per-request speed | `sim.batchSize`, `sim.prefetch`, `sim.parallelism` |
 | `sidecar` | 📦 | ✅`circuitBreaker` | Proxies every call; a tripped breaker here protects the whole mesh | `sim.proxyOverheadMs`, `sim.mtlsMs` |
 | `serverless-function` | 📦 | ✅`coldStart` | Scales from zero, so the first request after idle pays a cold-start penalty | `sim.coldStartLatencyMs`,`sim.idleTimeoutMs`,`sim.maxConcurrency` **(current)** |
-| `faas-background` | | ➕`coldStart` +🔧`retryBackoff` | Event-triggered and retried async — same cold-start + retry concerns | `sim.triggerBatch`, `resilience.retry.*`, `sim.coldStartLatencyMs` |
+| `faas-background` | | ➕`coldStart` +🔧`retryBackoff` | Event-triggered and retried async - same cold-start + retry concerns | `sim.triggerBatch`, `resilience.retry.*`, `sim.coldStartLatencyMs` |
 | `container` | | 🔧`computeContention` | Hard CPU/memory limits throttle it before the queue does | `resources.cpu/memory`, `sim.restartOnCrash` |
 | `vm-instance` | | 🔧`computeContention` | Slow to boot, so scale-out lags demand | `sim.bootMs`, `sim.noisyNeighborVariance` |
 | `edge-compute` | 📦 | 🔧`geoLatency` | Runs at PoPs; distance to the user dominates its latency | `sim.popLatencyMs`, constrained `resources.*` |
 | `gpu-node` | | 🔧`batching` | Efficient only when inference is batched; VRAM caps concurrency | `sim.batchWindowMs`+`sim.maxBatch`, `sim.vramMB`, `sim.modelLoadMs` |
 | `auth-service` | 📦 | ➕`cache` | Verifies a token on every request; a token cache is the difference between fast and a bottleneck | `sim.tokenVerifyMs`, `sim.tokenCacheHitRate` |
-| `search-service` | 📦 | 🔧`fanoutQuery` | Answers by scattering to shards and gathering — latency is the slowest shard | `sim.shardCount`+`sim.fanoutLatencyMs`, `sim.queryCostMs` |
+| `search-service` | 📦 | 🔧`fanoutQuery` | Answers by scattering to shards and gathering - latency is the slowest shard | `sim.shardCount`+`sim.fanoutLatencyMs`, `sim.queryCostMs` |
 
 ### Network & Edge
 
@@ -128,20 +128,20 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 |------|----|-------|------------------------|-------------------|
 | `load-balancer` | 📦 | ✅`healthAware` | Its whole job is steering traffic away from unhealthy backends | `sim.sticky`, `sim.sslTerminationMs`, `sim.drainMs` |
 | `load-balancer-l4` | | ✅`healthAware` | Pins flows by connection; can exhaust NAT ports at scale | `sim.flowHash`, `sim.natPorts` |
-| `load-balancer-l7` | | ✅`contentRouting`+`healthAware` | Routes on headers/paths and terminates TLS — real per-request cost | `sim.tlsTerminationMs`, `sim.headerRouteCostMs` |
+| `load-balancer-l7` | | ✅`contentRouting`+`healthAware` | Routes on headers/paths and terminates TLS - real per-request cost | `sim.tlsTerminationMs`, `sim.headerRouteCostMs` |
 | `global-traffic-manager` | | 🔧`geoLatency` | Steers each user to the nearest healthy region | `sim.geoSteering`+`sim.regionLatencyMs[]`, `sim.failoverRegion` |
 | `edge-router` | 📦 | 🔧`capacityLimit` | Spreads flows across paths; bounded by link capacity | `sim.ecmpPaths`, `sim.routeLookupMs` |
-| `nat-gateway` | 📦 | 🔧`capacityLimit` | Finite source ports — exhaustion is a classic outage | `sim.maxPorts` → errors, `sim.connTrackMs` |
+| `nat-gateway` | 📦 | 🔧`capacityLimit` | Finite source ports - exhaustion is a classic outage | `sim.maxPorts` → errors, `sim.connTrackMs` |
 | `transit-gateway` | | 🔧`capacityLimit` | Bandwidth-capped interconnect between networks | `sim.bandwidthMbps` |
 | `vpn-gateway` | 📦 | 🔧`capacityLimit` | Encryption + tunnel bandwidth cap throughput | `sim.encryptMsPerKB`, `sim.tunnelBandwidthMbps` |
 | `cdn` | 📦 | ✅`cache` +🔧`geoLatency` | Absorbs read traffic at the edge; only misses hit origin | `sim.ttlMs`+`sim.invalidationRate`, `sim.popLatencyMs`, `sim.dynamicRatio` |
-| `api-gateway` | | ✅`contentRouting`+`healthAware`+`rateLimiter` | The policy choke point — auth, routing, and rate limits all live here | `sim.authMs`, `sim.transformMs`, `sim.quotaPerKey` |
+| `api-gateway` | | ✅`contentRouting`+`healthAware`+`rateLimiter` | The policy choke point - auth, routing, and rate limits all live here | `sim.authMs`, `sim.transformMs`, `sim.quotaPerKey` |
 | `service-mesh` | 📦 | ✅`circuitBreaker` | Enforces retries/breakers/mTLS between every service | `sim.sidecarLatencyMs`, `sim.mtlsMs`, `resilience.retry.*` |
-| `ingress-controller` | | ✅`contentRouting`+`healthAware` | Cluster entry point — TLS + path routing cost | `sim.tlsMs`, `sim.rewriteCostMs`, `sim.perRouteLimit` |
+| `ingress-controller` | | ✅`contentRouting`+`healthAware` | Cluster entry point - TLS + path routing cost | `sim.tlsMs`, `sim.rewriteCostMs`, `sim.perRouteLimit` |
 | `reverse-proxy` | | ✅`cache`+`healthAware` | Caches and buffers in front of an origin | `sim.compressionMs`, `sim.bufferBytes`, `sim.connReuse` |
 | `high-perf-nic` | 📦 | 🔧`capacityLimit` | Line-rate throughput with kernel-bypass/offload | `sim.lineRateGbps`, `sim.offload` |
 | `network-policy` | | 🔧`inspectionCost` | Evaluates allow/deny per packet (mostly non-runtime) | `sim.evalMs` |
-| `routing-rule` | 📦 | ➕`contentRouting` | Matches attributes and forwards — same primitive as content routing | `sim.matchCostMs` |
+| `routing-rule` | 📦 | ➕`contentRouting` | Matches attributes and forwards - same primitive as content routing | `sim.matchCostMs` |
 | `routing-policy` | 📦 | ➕`contentRouting` | Policy-based forwarding decision per request | `sim.policyEvalMs` |
 
 ### Storage & Data
@@ -162,8 +162,8 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 | `vector-db` | 📦 | 🔧`storageProfile` | ANN search trades recall for latency | `sim.annMs`+`sim.recall`, `sim.indexBuildMs` |
 | `data-warehouse` | 📦 | 🔧`storageProfile` | MPP scans; concurrency scaling under load | `sim.scanGB`+`sim.mppSlots`, `sim.resultCacheHitRate` |
 | `data-lake` | 📦 | 🔧`storageProfile` | Cheap scans over partitioned object files, schema-on-read | `sim.scanGB`, `sim.partitions`, `sim.schemaOnReadMs` |
-| `archive-storage` | | 🔧`tieredRetrieval` | Cold — retrieval takes minutes, not milliseconds | `sim.retrievalMs`, `sim.minDurationMs` |
-| `schema-registry` | | ➕`cache` | Hot lookup on the write path — cache it or it bottlenecks | `sim.lookupCacheHitRate`, `sim.compatCheckMs` |
+| `archive-storage` | | 🔧`tieredRetrieval` | Cold - retrieval takes minutes, not milliseconds | `sim.retrievalMs`, `sim.minDurationMs` |
+| `schema-registry` | | ➕`cache` | Hot lookup on the write path - cache it or it bottlenecks | `sim.lookupCacheHitRate`, `sim.compatCheckMs` |
 | `cdc` | | 🔧`changeStream` | Streams DB changes with capture lag + ordering | `sim.captureLagMs`, `sim.throughputRps`, `sim.ordered` |
 | `backup-service` | | 🔧`batching` | Throughput-bound snapshot job with RPO/RTO | `sim.snapshotMBps`, `sim.rpoMs`/`sim.rtoMs` |
 | `kms-storage` | | 🔧`cryptoCost` | Key ops are latency + quota bound | `sim.cryptoMs`, `sim.opQuotaPerSec` |
@@ -174,7 +174,7 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 |------|----|-------|------------------------|-------------------|
 | `queue` | 📦 | ✅`ackAndRelease` | Decouples producers from consumers; ack/visibility/DLQ define delivery | `sim.visibilityTimeoutMs`, `sim.dlqAfter`, `sim.ordering=fifo`, `sim.prefetch` |
 | `stream` | 📦 | ✅`consumerLag` | A partitioned, replayable log; lag is the health signal | `sim.partitions`+`sim.ordering`, `sim.retentionMs`+`sim.replay`, `sim.consumerGroups` |
-| `message-broker` | 📦 | 🔧`broadcastFanout` | Must deliver each event to *every* subscriber — the whole point of pub/sub | `sim.fanout=broadcast\|work-queue`, `sim.consumerGroups`, `sim.deliveryGuarantee` |
+| `message-broker` | 📦 | 🔧`broadcastFanout` | Must deliver each event to *every* subscriber - the whole point of pub/sub | `sim.fanout=broadcast\|work-queue`, `sim.consumerGroups`, `sim.deliveryGuarantee` |
 | `pub-sub` | 📦 | 🔧`broadcastFanout` | Broadcast with per-subscription filters | `sim.fanout=broadcast`, `sim.subscriptionFilter`, `sim.retentionMs` |
 | `event-bus` | | 🔧`broadcastFanout` | Rule-routed broadcast of events | `sim.routingRules[]`, `sim.fanout` |
 | `event-sourcing-store` | | 🔧`logReplay` | Append-only; rebuilding state means replaying the whole log | `sim.appendMs`+`sim.replayCostPerEvent`, `sim.snapshotEvery` |
@@ -210,7 +210,7 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 
 | Node | 📦 | Trait | Why this node needs it | Config → behavior |
 |------|----|-------|------------------------|-------------------|
-| `third-party-api-connector` | | ✅`rateLimiter` +🔧`externalLatency` | An external dependency — variable latency, provider quotas, retries | `sim.externalLatencyMs`, `resilience.retry.*`, `sim.quota` |
+| `third-party-api-connector` | | ✅`rateLimiter` +🔧`externalLatency` | An external dependency - variable latency, provider quotas, retries | `sim.externalLatencyMs`, `resilience.retry.*`, `sim.quota` |
 | `llm-gateway` | 📦 | 🔧`tokenCost` | Latency scales with generated tokens, not request count | `sim.msPerToken`+`sim.outputTokens`, `sim.streaming`, `sim.providerRateLimit` |
 | `payment-gateway` | | 🔧`externalLatency` +🔧`retryBackoff` | External and must be idempotent + retried | `sim.externalLatencyMs`, `sim.idempotencyKey`, `resilience.retry.*` |
 | `webhook-gateway` | | 🔧`retryBackoff` +🔧`broadcastFanout` | Delivers to many endpoints with retries/backoff | `resilience.retry.*`+`sim.backoff`, `sim.fanoutTargets` |
@@ -228,8 +228,8 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 
 | Node | 📦 | Trait | Why this node needs it | Config → behavior |
 |------|----|-------|------------------------|-------------------|
-| `service-registry` | 📦 | ➕`cache` | Hot discovery lookup — a client-side cache decides if it's a bottleneck | `sim.lookupMs`+`sim.cacheTtlMs` |
-| `config-store` | 📦 | ➕`cache` | Read-heavy config with watch/notify — cache reads | `sim.readCacheHitRate`, `sim.watchFanout` |
+| `service-registry` | 📦 | ➕`cache` | Hot discovery lookup - a client-side cache decides if it's a bottleneck | `sim.lookupMs`+`sim.cacheTtlMs` |
+| `config-store` | 📦 | ➕`cache` | Read-heavy config with watch/notify - cache reads | `sim.readCacheHitRate`, `sim.watchFanout` |
 | `secrets-manager` | 📦 | ➕`cache` | Fetched on startup/rotation; cache + TTL matter | `sim.fetchMs`+`sim.cacheTtlMs`, `sim.rotationMs` |
 | `kubernetes-cluster` | | 🔧`scheduler` | Placement/bin-packing/autoscale have real reaction time | `sim.scheduleMs`, `sim.binPacking`, `scaling.*` |
 | `cluster-autoscaler` | | 🔧`scheduler` | Scale reaction time + cooldown govern how fast capacity follows demand | `scaling.scaleUpThreshold`+`scaling.cooldown` |
@@ -237,16 +237,16 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 | `container-registry` | | ➕`cache` | Image pulls are bandwidth-bound; a pull-through cache helps | `sim.pullMBps`+`sim.cacheHitRate` |
 | `container-runtime` | | 🔧`computeContention` | Container start latency lags scale-out | `sim.startMs` |
 | `provisioner` | | 🔧`scheduler` | Provision time delays new capacity | `sim.provisionMs` |
-| `tool-registry` | 📦 | ➕`cache` | Agentic tool lookup — hot read path | `sim.lookupMs` |
+| `tool-registry` | 📦 | ➕`cache` | Agentic tool lookup - hot read path | `sim.lookupMs` |
 | `agent-orchestrator` | 📦 | 🔧`scheduler` | Dispatches agent tasks with scheduling latency | `sim.dispatchMs` |
 | `ci-cd-runner` | | 🔧`scheduler` | Off-path pipeline stages with concurrency limits | `sim.stageCount`+`sim.stageMs` |
-| `iac-engine` | | — | Off-path apply/plan work, not on the request path | `sim.applyMs` |
+| `iac-engine` | | - | Off-path apply/plan work, not on the request path | `sim.applyMs` |
 
 ### Security & Identity
 
 | Node | 📦 | Trait | Why this node needs it | Config → behavior |
 |------|----|-------|------------------------|-------------------|
-| `waf` | 📦 | 🔧`inspectionCost` | Inspects every request — cost + block rate + false positives | `sim.inspectMs`+`sim.blockRate`, `sim.falsePositiveRate` |
+| `waf` | 📦 | 🔧`inspectionCost` | Inspects every request - cost + block rate + false positives | `sim.inspectMs`+`sim.blockRate`, `sim.falsePositiveRate` |
 | `firewall` | 📦 | 🔧`inspectionCost` | Evaluates rules per connection | `sim.ruleEvalMs`, `sim.connTrack` |
 | `identity-provider` | | 🔧`externalLatency` +➕`cache` | External auth + federation latency; cache tokens | `sim.authMs`+`sim.federationMs`, `sim.tokenCacheHitRate` |
 | `iam-rbac` | | ➕`cache` +🔧`inspectionCost` | Authz check per request; cache decisions | `sim.authzMs`+`sim.policyCacheHitRate` |
@@ -255,13 +255,13 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 | `siem` | | 🔧`telemetrySink` | Ingest + query load, off the request path | `sim.ingestRps`+`sim.queryMs` |
 | `certificate-authority` | | 🔧`cryptoCost` | Issue/verify are crypto-bound | `sim.issueMs`/`sim.verifyMs` |
 | `bastion-host` | | 🔧`computeContention` | Proxies interactive sessions | `sim.proxyMs` |
-| `secrets-rotation` | | — | Control-plane rotation, off critical path | `sim.rotationMs` |
+| `secrets-rotation` | | - | Control-plane rotation, off critical path | `sim.rotationMs` |
 | `privilege-escalation-control` | | 🔧`inspectionCost` | Checks each escalation request | `sim.checkMs` |
 
 ### Observability
 
 All are generic **telemetry sinks** (`telemetrySink`), off the request critical
-path — they govern their *own* ingest load, they don't shape request latency.
+path - they govern their *own* ingest load, they don't shape request latency.
 
 | Node | 📦 | Trait | Why this node needs it |
 |------|----|-------|------------------------|
@@ -281,8 +281,8 @@ Mostly control-plane / off the request path.
 
 | Node | 📦 | Trait | Why this node needs it | Config → behavior |
 |------|----|-------|------------------------|-------------------|
-| `feature-flag-service` | 📦 | ➕`cache` | Evaluated per request — cache flags locally | `sim.flagEvalMs`+`sim.cacheHitRate` |
-| `chaos-engineering-framework` | | ⚠ fault system | Injects faults to test resilience — reuse existing edge/scenario faults | `sim.faultRate`+`sim.faultType` |
+| `feature-flag-service` | 📦 | ➕`cache` | Evaluated per request - cache flags locally | `sim.flagEvalMs`+`sim.cacheHitRate` |
+| `chaos-engineering-framework` | | ⚠ fault system | Injects faults to test resilience - reuse existing edge/scenario faults | `sim.faultRate`+`sim.faultType` |
 | `deployment-controller` | | 🔧`scheduler` | Rollout progresses over time | `sim.rolloutMs` |
 | `artifact-repository` | | ➕`cache` | Bandwidth-bound artifact pulls | `sim.pullMBps`+`sim.cacheHitRate` |
 | `build-system` | | 🔧`scheduler` | Concurrency-limited build jobs | `sim.buildMs`, `sim.concurrency` |
@@ -307,7 +307,7 @@ Mostly control-plane / off the request path.
 | `websockets-gateway` | | 🔧`persistentConnFanout` | Holds millions of persistent connections + fan-out messaging | `sim.maxConnections`+`sim.fanoutMsg`, `sim.backpressure` |
 | `transcoder` | | 🔧`batching` | CPU/GPU-heavy per stream & format | `sim.cpuMsPerSec`+`sim.formatCount`, `sim.gpu` |
 | `signaling-server` | | 🔧`persistentConnFanout` | Session setup + per-connection state | `sim.setupMs`+`sim.connState` |
-| `sfu-mcu` | | 🔧`persistentConnFanout` | Mixes/forwards media — CPU + bandwidth bound | `sim.mixCpuMs`+`sim.bandwidthMbps` |
+| `sfu-mcu` | | 🔧`persistentConnFanout` | Mixes/forwards media - CPU + bandwidth bound | `sim.mixCpuMs`+`sim.bandwidthMbps` |
 | `webrtc-mesh` | | 🔧`persistentConnFanout` | Peer fan-out + NAT traversal | `sim.peerFanout`+`sim.natTraversalMs` |
 
 ---
@@ -359,7 +359,7 @@ Mostly control-plane / off the request path.
 **Highest-leverage next steps:** `storageProfile` (stores are identical today),
 `broadcastFanout` (`message-broker` doesn't broadcast), and wiring the eponymous
 coordination nodes (`rate-limiter`→`rateLimiter`, `circuit-breaker-controller`→
-`circuitBreaker`, plus new `lockLease`/`idempotencyDedup`) — which unblocks the
+`circuitBreaker`, plus new `lockLease`/`idempotencyDedup`) - which unblocks the
 deferred `payment-system` / `ticketmaster` / `rate-limiter` questions.
 
 _Source of truth: `src/engine/traits/` (`appliesTo` + config `path`s per module) +

@@ -2,7 +2,7 @@
 
 Technical feature specification defining how requests are rejected, the five rejection pathways, the event flow from rejection trigger to terminal state, the metrics recorded for rejected requests, and the downstream effects on SLO breach detection, availability, and conservation accounting.
 
-This spec consolidates the rejection logic scattered across `GGcKNode.handleArrival`, `engine.ts` security policy, edge transfer error handling, and post-processing error rate checks into a single reference. It exists because rejection is one of three terminal states a request can reach (alongside success and timeout), and every node in the topology can reject requests — yet the reasons, mechanics, and metric implications differ across pathways.
+This spec consolidates the rejection logic scattered across `GGcKNode.handleArrival`, `engine.ts` security policy, edge transfer error handling, and post-processing error rate checks into a single reference. It exists because rejection is one of three terminal states a request can reach (alongside success and timeout), and every node in the topology can reject requests - yet the reasons, mechanics, and metric implications differ across pathways.
 
 ---
 
@@ -25,7 +25,7 @@ This spec consolidates the rejection logic scattered across `GGcKNode.handleArri
 
 ### Capability definition
 
-Request Rejection Behaviour defines the complete lifecycle of a rejected request: the five distinct triggers that cause rejection, the event creation and dispatch that moves a rejection through the engine, the metrics that record each rejection for post-warmup analysis, and the downstream effects on availability, error rates, SLO breach detection, and conservation accounting. A rejected request is terminal — it is removed from the active request map, its spans are flushed to the tracer, and it is never forwarded or retried.
+Request Rejection Behaviour defines the complete lifecycle of a rejected request: the five distinct triggers that cause rejection, the event creation and dispatch that moves a rejection through the engine, the metrics that record each rejection for post-warmup analysis, and the downstream effects on availability, error rates, SLO breach detection, and conservation accounting. A rejected request is terminal - it is removed from the active request map, its spans are flushed to the tracer, and it is never forwarded or retried.
 
 ### Classification
 
@@ -69,11 +69,11 @@ Request Rejection Behaviour defines the complete lifecycle of a rejected request
 | 4 | `edge_error_rate` | `engine.ts:enqueueEdgeTransfer` (line 743-753) | `random() < edge.errorRate` |
 | 5 | `node_error_rate` | `engine.ts:handleProcessingComplete` (line 352-366) | `random() < nodeErrorRate` (via `shouldFailAtNode`) |
 
-**Terminal handler:** `handleRequestRejected` at `engine.ts:468-488` — records metrics, flushes spans to tracer, marks status `'rejected'`, sets `metadata.__terminal = 'rejected'`, deletes from `requestById`.
+**Terminal handler:** `handleRequestRejected` at `engine.ts:468-488` - records metrics, flushes spans to tracer, marks status `'rejected'`, sets `metadata.__terminal = 'rejected'`, deletes from `requestById`.
 
-**Metrics recording:** `MetricsCollector.recordRejection` at `metrics.ts:213-231` — increments global `totalRequests`, `failedRequests`, `rejectedRequests`; increments per-node `totalArrived`, `totalRejected`; gates post-warmup counters by `nodeArrivalTime`.
+**Metrics recording:** `MetricsCollector.recordRejection` at `metrics.ts:213-231` - increments global `totalRequests`, `failedRequests`, `rejectedRequests`; increments per-node `totalArrived`, `totalRejected`; gates post-warmup counters by `nodeArrivalTime`.
 
-**Availability derivation:** `getPerNodeMetrics` at `metrics.ts:325-385` — computes `errorRate = (postWarmupRejected + postWarmupTimedOut) / postWarmupArrived`, then `availability = 1 - errorRate`.
+**Availability derivation:** `getPerNodeMetrics` at `metrics.ts:325-385` - computes `errorRate = (postWarmupRejected + postWarmupTimedOut) / postWarmupArrived`, then `availability = 1 - errorRate`.
 
 ### What's missing
 
@@ -84,9 +84,9 @@ Request Rejection Behaviour defines the complete lifecycle of a rejected request
 | No per-reason metrics in `PerNodeMetrics` or `SimulationSummary` | Users cannot distinguish capacity rejections from security blocks or error rate failures |
 | `node_failed` bulk rejection in `fail()` increments `metrics.totalRejections` but never calls `recordRejection` | Conservation check will under-count rejections; queued requests silently disappear |
 | No rejection event in debug event log for bulk `fail()` rejects | Debugger cannot trace why queued requests vanished |
-| Security policy `droppedPackets` schedules a timeout, not a rejection | A "dropped" request looks like a timeout, not a security action — misleading in metrics |
+| Security policy `droppedPackets` schedules a timeout, not a rejection | A "dropped" request looks like a timeout, not a security action - misleading in metrics |
 | No backpressure or retry semantics | Rejected requests are always terminal; no circuit breaker or retry-with-backoff |
-| Rejection reason not stored on the request object | Tracer knows status='rejected' but not why — limits diagnostic value |
+| Rejection reason not stored on the request object | Tracer knows status='rejected' but not why - limits diagnostic value |
 
 ---
 
@@ -108,9 +108,9 @@ handleArrival(request, currentTime):
   else → process or queue
 ```
 
-This is the queue-model admission gate. The check is `>=`, meaning `maxCapacity` is an inclusive limit — when `activeWorkers + queue.length` equals `maxCapacity`, no more requests can enter. The rejection increments `this.metrics.totalRejections` inside the node, then the engine wraps it in a `request-rejected` event at `engine.ts:324-334`.
+This is the queue-model admission gate. The check is `>=`, meaning `maxCapacity` is an inclusive limit - when `activeWorkers + queue.length` equals `maxCapacity`, no more requests can enter. The rejection increments `this.metrics.totalRejections` inside the node, then the engine wraps it in a `request-rejected` event at `engine.ts:324-334`.
 
-**Configuration:** `maxCapacity` comes from `node.queue.capacity` (defaulted to `100` by `withNodeDefaults` at `engine.ts:627-636`). It represents K in the G/G/c/K model — total system capacity including both active workers and queued items.
+**Configuration:** `maxCapacity` comes from `node.queue.capacity` (defaulted to `100` by `withNodeDefaults` at `engine.ts:627-636`). It represents K in the G/G/c/K model - total system capacity including both active workers and queued items.
 
 **Lifecycle stage:** Pre-processing. The request never enters the queue or touches a worker.
 
@@ -126,7 +126,7 @@ if this.status === 'failed':
 
 This fires when the node is in `'failed'` state, set by `GGcKNode.fail()` at line 189-197. The `fail()` method is triggered by a `node-failure` event (dispatched at `engine.ts:261-262`), which drains the queue, clears all active workers, and transitions status to `'failed'`. Recovery happens via `node-recovery` event calling `recover()` at line 201-202, which resets status to `'idle'`.
 
-**Critical gap:** When `fail()` fires, it bulk-rejects all queued requests by setting `metrics.totalRejections += queue.length` and clearing the queue — but it never calls `recordRejection` on the `MetricsCollector` for these requests, and no `request-rejected` events are created. These requests silently vanish from the simulation.
+**Critical gap:** When `fail()` fires, it bulk-rejects all queued requests by setting `metrics.totalRejections += queue.length` and clearing the queue - but it never calls `recordRejection` on the `MetricsCollector` for these requests, and no `request-rejected` events are created. These requests silently vanish from the simulation.
 
 **Lifecycle stage:** Pre-processing. Identical position to capacity-exceeded, but the node refuses all work regardless of load.
 
@@ -148,7 +148,7 @@ applySecurityPolicy(nodeId, request):
 This runs at the top of `handleRequestArrival` (line 319), before the node's `handleArrival` is called. Two sub-behaviours:
 
 - **`blockRate`**: Probability of outright rejection. Creates a `request-rejected` event with reason `'security_blocked'`. The request never reaches the node's queue.
-- **`droppedPackets`**: Probability of silent drop. Creates a `request-timeout` event instead of rejection. This means a security drop looks identical to a timeout in metrics — there is no way to distinguish a security-dropped request from one that genuinely timed out.
+- **`droppedPackets`**: Probability of silent drop. Creates a `request-timeout` event instead of rejection. This means a security drop looks identical to a timeout in metrics - there is no way to distinguish a security-dropped request from one that genuinely timed out.
 
 **Configuration:** `SecurityPolicyConfig` is read from `node.config.securityPolicy` at `engine.ts:644-666`. Both `blockRate` and `droppedPackets` are clamped to `[0, 1]`. If both are zero, no policy is stored.
 
@@ -167,7 +167,7 @@ enqueueEdgeTransfer(request, edge, targetNodeId):
 
 This fires during edge transfer, after the request has departed its source node but before it arrives at the target. The rejection is attributed to the *target* node (`targetNodeId`), even though the error occurred on the edge. The `nodeArrivalTime` is set to `this.clock` (the departure time from source), not the would-be arrival time.
 
-**Note:** `packetLossRate` produces a timeout, not a rejection — similar to `droppedPackets` in security policy. Only `errorRate` produces a true rejection.
+**Note:** `packetLossRate` produces a timeout, not a rejection - similar to `droppedPackets` in security policy. Only `errorRate` produces a true rejection.
 
 **Configuration:** `edge.errorRate` comes from `EdgeDefinition.errorRate`. Default is `0` in the engine (no edge defaults applied); the renderer applies `0.001` (0.1%) via `EDGE_DEFAULTS`.
 
@@ -188,9 +188,9 @@ handleProcessingComplete(event):
   // else resolve routes and forward
 ```
 
-This fires *after* the request has been fully processed — the worker has completed, the span has been recorded, and the worker slot has been freed. The random check in `shouldFailAtNode` (`engine.ts:702-706`) samples against `nodeErrorRate` from `node.config.nodeErrorRate` (read at line 638-641, clamped to `[0, 1]`).
+This fires *after* the request has been fully processed - the worker has completed, the span has been recorded, and the worker slot has been freed. The random check in `shouldFailAtNode` (`engine.ts:702-706`) samples against `nodeErrorRate` from `node.config.nodeErrorRate` (read at line 638-641, clamped to `[0, 1]`).
 
-**Key detail:** The rejection uses `completedSpan.arrivalTime` as the `nodeArrivalTime` for warmup gating. This is correct — it attributes the rejection to the time window when the request entered the node, not when processing completed.
+**Key detail:** The rejection uses `completedSpan.arrivalTime` as the `nodeArrivalTime` for warmup gating. This is correct - it attributes the rejection to the time window when the request entered the node, not when processing completed.
 
 **Lifecycle stage:** Post-processing. The request has consumed resources (worker time, queue wait) and is rejected at the point of departure. This models application-level errors (e.g., a 500 response after processing).
 
@@ -251,7 +251,7 @@ All five rejection pathways converge at `handleRequestRejected` in `engine.ts:46
 ```typescript
 const reason = (event.data.reason as string | undefined) ?? 'rejected'
 ```
-The reason is extracted from `event.data.reason` with a fallback to the generic string `'rejected'`. This cast to `string` is the only place the reason is read — there is no typed enum or validation.
+The reason is extracted from `event.data.reason` with a fallback to the generic string `'rejected'`. This cast to `string` is the only place the reason is read - there is no typed enum or validation.
 
 **Step 2: Record metrics**
 ```typescript
@@ -290,15 +290,15 @@ The request is marked terminal and removed from the active map. No further event
 
 ### Event priority
 
-Rejection events are created with `createEvent` using default priority. Per the event system, `request-rejected` maps to `EventPriority.DEPARTURE` (3). This means rejections are processed after arrivals and processing-completes in the same time tick, which is correct — a request must arrive before it can be rejected.
+Rejection events are created with `createEvent` using default priority. Per the event system, `request-rejected` maps to `EventPriority.DEPARTURE` (3). This means rejections are processed after arrivals and processing-completes in the same time tick, which is correct - a request must arrive before it can be rejected.
 
 ### Interaction with timeout cancellation
 
-When a request is rejected at admission (`capacity_exceeded`, `node_failed`), no timeout was ever scheduled — `scheduleNodeTimeout` at `engine.ts:337` only runs if admission succeeds. Therefore there is no dangling timeout to worry about.
+When a request is rejected at admission (`capacity_exceeded`, `node_failed`), no timeout was ever scheduled - `scheduleNodeTimeout` at `engine.ts:337` only runs if admission succeeds. Therefore there is no dangling timeout to worry about.
 
 When a request is rejected post-processing (`node_error_rate`), a timeout *was* scheduled at admission. However, by the time rejection fires, the request has already been through `handleCompletion`, and `handleRequestRejected` deletes it from `requestById`. If the timeout event fires later, `getRequest(event)` returns `undefined` and the handler exits early. This is the standard stale-event pattern.
 
-When a request is rejected on the edge (`edge_error_rate`), the timeout was scheduled at the *source* node. The rejection event targets the *target* node. The source node's timeout may still fire, but `getRequest(event, false)` — called with `false` in `handleRequestRejected` — does not delete from the request map. Wait — actually `handleRequestRejected` *does* delete from `requestById` at line 487. So if the source timeout fires after the edge rejection, the request is already gone and the timeout handler exits early.
+When a request is rejected on the edge (`edge_error_rate`), the timeout was scheduled at the *source* node. The rejection event targets the *target* node. The source node's timeout may still fire, but `getRequest(event, false)` - called with `false` in `handleRequestRejected` - does not delete from the request map. Wait - actually `handleRequestRejected` *does* delete from `requestById` at line 487. So if the source timeout fires after the edge rejection, the request is already gone and the timeout handler exits early.
 
 For `security_blocked`, no timeout was scheduled because the security check runs before `scheduleNodeTimeout`.
 
@@ -335,7 +335,7 @@ When an async edge fans out (see Request Flow Direction & Topology Rules), each 
 
 **Warmup gating detail:** The per-node warmup gate uses `nodeArrivalTime` (falling back to `requestCreatedAt`). For the `edge_error_rate` pathway, `nodeArrivalTime` is the departure time from the source node, which may be within the warmup window even if the edge transfer would have completed after warmup. This is acceptable because the rejection decision was made at departure time.
 
-**Critical gap — reason discarded:** The `reason` parameter is received but immediately voided:
+**Critical gap - reason discarded:** The `reason` parameter is received but immediately voided:
 ```typescript
 recordRejection(nodeId: string, reason: string, context: FailureMetricsContext = {}): void {
   void reason
@@ -343,7 +343,7 @@ recordRejection(nodeId: string, reason: string, context: FailureMetricsContext =
 }
 ```
 
-This means all rejections — capacity, security, edge error, node error — are collapsed into a single counter. There is no way to answer "how many requests were rejected due to capacity vs. error rate?" from the output.
+This means all rejections - capacity, security, edge error, node error - are collapsed into a single counter. There is no way to answer "how many requests were rejected due to capacity vs. error rate?" from the output.
 
 ### Derived metrics
 
@@ -355,7 +355,7 @@ const postWarmupFailed = postWarmupRejected + postWarmupTimedOut
 const errorRate = postWarmupArrived > 0 ? postWarmupFailed / postWarmupArrived : 0
 ```
 
-Rejections and timeouts are combined into a single failure numerator. This means a node with 50% capacity rejections and 0% timeouts has the same error rate as one with 0% rejections and 50% timeouts. For capacity planning these are very different situations — one means "add more capacity", the other means "reduce latency".
+Rejections and timeouts are combined into a single failure numerator. This means a node with 50% capacity rejections and 0% timeouts has the same error rate as one with 0% rejections and 50% timeouts. For capacity planning these are very different situations - one means "add more capacity", the other means "reduce latency".
 
 **Availability:**
 ```typescript
@@ -372,7 +372,7 @@ Availability is the complement of error rate. An availability of `0.95` means 5%
 postWarmupArrived = postWarmupProcessed + postWarmupRejected + postWarmupTimedOut + inFlight
 ```
 
-`postWarmupRejected` is a critical term. If rejections are under-counted (as happens with bulk `fail()` — see Feature 1), the conservation check will show phantom `inFlight` requests that are actually silently dropped.
+`postWarmupRejected` is a critical term. If rejections are under-counted (as happens with bulk `fail()` - see Feature 1), the conservation check will show phantom `inFlight` requests that are actually silently dropped.
 
 The check considers the system "balanced" if `inFlight / postWarmupArrived < 0.05` (5%). Bulk node failures during the post-warmup window could push `inFlight` above this threshold and trigger a spurious imbalance warning.
 
@@ -406,9 +406,9 @@ interface PerNodeMetrics {
 
 **SLO breach detection:** `detectSLOBreaches` at `output.ts:172-213` checks two SLO dimensions per node:
 
-1. **Latency P99** — `nodeMetrics.latencyP99 > slo.latencyP99`. Rejections do *not* contribute to latency percentiles because rejected requests never complete processing (no `recordRequest` call). This is by design — latency metrics only measure successful requests.
+1. **Latency P99** - `nodeMetrics.latencyP99 > slo.latencyP99`. Rejections do *not* contribute to latency percentiles because rejected requests never complete processing (no `recordRequest` call). This is by design - latency metrics only measure successful requests.
 
-2. **Availability** — `nodeMetrics.availability < slo.availabilityTarget`. This *is* affected by rejections. Every rejection lowers availability via the `errorRate` formula. The severity is computed as:
+2. **Availability** - `nodeMetrics.availability < slo.availabilityTarget`. This *is* affected by rejections. Every rejection lowers availability via the `errorRate` formula. The severity is computed as:
 ```typescript
 severity: severityForRatio(slo.availabilityTarget / Math.max(nodeMetrics.availability, 0.0001))
 ```
@@ -422,7 +422,7 @@ Both rejection and timeout lower availability equally. A request that is rejecte
 
 ### Latency impact of rejections
 
-While rejected requests don't appear in latency percentiles, high rejection rates *indirectly* improve latency metrics. When a node rejects excess load, the remaining requests experience less queueing. This means a node with aggressive capacity limits might show excellent latency P99 but poor availability — a classic latency-vs-throughput tradeoff that the simulator correctly captures.
+While rejected requests don't appear in latency percentiles, high rejection rates *indirectly* improve latency metrics. When a node rejects excess load, the remaining requests experience less queueing. This means a node with aggressive capacity limits might show excellent latency P99 but poor availability - a classic latency-vs-throughput tradeoff that the simulator correctly captures.
 
 ### Proposed SLO extensions
 
@@ -441,7 +441,7 @@ With per-reason metrics (Feature 3), SLO breach detection could distinguish betw
 
 ### Throughput interaction
 
-`throughput = postWarmupProcessed / effectiveDurationSec` (from `metrics.ts:383`). Rejections reduce throughput indirectly: a rejected request is never processed, so it doesn't contribute to `postWarmupProcessed`. However, the *theoretical* throughput of the node (`workers × (1 / avgServiceTime)`) is unaffected by rejections — it measures capacity, not realized output.
+`throughput = postWarmupProcessed / effectiveDurationSec` (from `metrics.ts:383`). Rejections reduce throughput indirectly: a rejected request is never processed, so it doesn't contribute to `postWarmupProcessed`. However, the *theoretical* throughput of the node (`workers × (1 / avgServiceTime)`) is unaffected by rejections - it measures capacity, not realized output.
 
 The gap between theoretical and actual throughput can be caused by rejections (requests that *could* have been processed if capacity were higher) or by low arrival rate (not enough requests to fill capacity). The current output does not separate these causes.
 
@@ -513,11 +513,11 @@ The gap between theoretical and actual throughput can be caused by rejections (r
 
 ### Assumptions
 
-1. **Rejection is terminal.** A rejected request is never retried, re-routed, or re-queued. This is a design choice, not a limitation — retry/backoff semantics would require a separate spec.
+1. **Rejection is terminal.** A rejected request is never retried, re-routed, or re-queued. This is a design choice, not a limitation - retry/backoff semantics would require a separate spec.
 
-2. **Edge rejection is attributed to the target node.** When `edge_error_rate` fires, `event.nodeId` is `targetNodeId`. This means the target node's rejection counter increases even though the target never saw the request. This attribution is debatable — the error occurred on the wire, not at the target.
+2. **Edge rejection is attributed to the target node.** When `edge_error_rate` fires, `event.nodeId` is `targetNodeId`. This means the target node's rejection counter increases even though the target never saw the request. This attribution is debatable - the error occurred on the wire, not at the target.
 
-3. **Post-processing rejection consumes resources.** A `node_error_rate` rejection happens after the worker has fully processed the request. The worker time is "wasted" — the request consumed c × serviceTime resources that produced no successful output. This is the correct model for application-level errors.
+3. **Post-processing rejection consumes resources.** A `node_error_rate` rejection happens after the worker has fully processed the request. The worker time is "wasted" - the request consumed c × serviceTime resources that produced no successful output. This is the correct model for application-level errors.
 
 4. **`droppedPackets` producing timeout is intentional.** The security policy's `droppedPackets` models packet-level loss (like a firewall silently dropping traffic), where the sender waits until timeout. This is semantically different from `blockRate` (which models an immediate rejection like a 403).
 
@@ -526,8 +526,8 @@ The gap between theoretical and actual throughput can be caused by rejections (r
 | # | Question | Why it matters |
 | - | --- | --- |
 | 1 | Should `fail()` emit individual rejection events for queued requests? | Conservation accounting is broken without it; debug tracing loses visibility into bulk failures |
-| 2 | Should rejection reason be stored on the `Request` object for trace output? | Currently tracer knows `status='rejected'` but not why — limits diagnostics |
-| 3 | Should per-reason rejection breakdowns appear in `PerNodeMetrics`? | Without it, users can't distinguish capacity limits from errors — critical for capacity planning |
+| 2 | Should rejection reason be stored on the `Request` object for trace output? | Currently tracer knows `status='rejected'` but not why - limits diagnostics |
+| 3 | Should per-reason rejection breakdowns appear in `PerNodeMetrics`? | Without it, users can't distinguish capacity limits from errors - critical for capacity planning |
 | 4 | Should `edge_error_rate` rejection be attributed to source or target node? | Current target attribution inflates the target's rejection count for an error it didn't cause |
 | 5 | Should `droppedPackets` produce a distinct terminal state (not timeout)? | Currently indistinguishable from genuine timeouts in metrics |
 | 6 | Should there be a priority-based rejection policy (reject low-priority when near capacity)? | Would enable graceful degradation instead of all-or-nothing admission |

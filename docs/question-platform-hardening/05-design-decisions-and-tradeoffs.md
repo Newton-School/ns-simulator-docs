@@ -2,7 +2,7 @@
 
 > A consolidated **decision log** for the question-platform stack (#212 → #213 →
 > #214). Each entry records the **decision**, the **criteria** it was weighed
-> against, the **alternatives** considered, and the **trade-off accepted** — so
+> against, the **alternatives** considered, and the **trade-off accepted** - so
 > the next decision stays consistent with these.
 
 This complements the formal ADRs in
@@ -27,7 +27,7 @@ once makes the individual choices easier to follow:
 
 ---
 
-## D1 — Versioned contracts (literal `version` fields)
+## D1 - Versioned contracts (literal `version` fields)
 
 **Decision.** Every cross-boundary payload carries a `version` literal, asserted
 at parse time (`z.literal`). Applies to the evaluation contract and the Game
@@ -35,7 +35,7 @@ Playground payloads.
 
 **Criteria.** Evolvability, Reviewability.
 
-**Alternatives.** (a) No version — rely on structural duck-typing. (b) A global
+**Alternatives.** (a) No version - rely on structural duck-typing. (b) A global
 API version outside the payload.
 
 **Why this choice.** A version *inside* the payload travels with it through files,
@@ -49,7 +49,7 @@ actually bump the version when the shape changes.
 
 ---
 
-## D2 — Parsers as one-way trust valves, with `superRefine` invariants
+## D2 - Parsers as one-way trust valves, with `superRefine` invariants
 
 **Decision.** The only sanctioned way to accept a `QuestionPackage`, `AttemptState`,
 or any contract from outside is through a parser that validates **field shapes**
@@ -61,7 +61,7 @@ or any contract from outside is through a parser that validates **field shapes**
 runtime); validate shapes only, not relationships.
 
 **Why this choice.** Untrusted JSON arrives from files, hosts, and storage. Shape
-validation alone would still admit an *internally inconsistent* contract — e.g. a
+validation alone would still admit an *internally inconsistent* contract - e.g. a
 `summary` that disagrees with its `tests`. That's worse than rejecting it, because
 a downstream would trust the wrong number. Rejecting inconsistency at the boundary
 lets every consumer trust the summary without re-deriving it.
@@ -73,7 +73,7 @@ lets every consumer trust the summary without re-deriving it.
 
 ---
 
-## D3 — The host-alignment invariant
+## D3 - The host-alignment invariant
 
 **Decision.** `host.tests` must be an exact projection of the full `tests` array
 (length, order, ids, names, and `passed`↔`status`), enforced in the parser.
@@ -85,7 +85,7 @@ only check counts, not element-wise identity.
 
 **Why this choice.** The thin and full views are two windows on one truth; if they
 can disagree, a host UI can show a different verdict than the detail. Because both
-are built from `flattenAttemptCheckRows`, alignment holds by construction — the
+are built from `flattenAttemptCheckRows`, alignment holds by construction - the
 invariant is the **tripwire** that fires if any code path ever builds them
 separately. It did exactly that during the #214 rebase, catching a drifted test
 stub (doc 04, §6).
@@ -97,7 +97,7 @@ than "close enough."
 
 ---
 
-## D4 — Deterministic output (optional `evaluatedAt`, stable ordering, omit-not-null)
+## D4 - Deterministic output (optional `evaluatedAt`, stable ordering, omit-not-null)
 
 **Decision.** Output is a pure function of inputs: stable ordering everywhere,
 `evaluatedAt` optional and caller-supplied, optional fields **omitted** rather than
@@ -120,7 +120,7 @@ must be careful to omit rather than null out.
 
 ---
 
-## D5 — The CLI exit-code taxonomy (0/1/2/3/4)
+## D5 - The CLI exit-code taxonomy (0/1/2/3/4)
 
 **Decision.** Distinct exit codes for success (0), usage error (1), evaluation
 *failed* (2), invalid submission (3), and evaluation *error* (4).
@@ -130,7 +130,7 @@ must be careful to omit rather than null out.
 **Alternatives.** The Unix default of 0/non-zero.
 
 **Why this choice.** A grading service must distinguish *"the student failed"*
-(code 2 — expected; record the grade) from *"we couldn't grade this"* (codes 3/4 —
+(code 2 - expected; record the grade) from *"we couldn't grade this"* (codes 3/4 -
 alert a human). One non-zero code makes a legit failing submission
 indistinguishable from a broken grader. The taxonomy encodes that operational
 decision as a stable interface CI can branch on.
@@ -142,7 +142,7 @@ map.
 
 ---
 
-## D6 — The Game Playground adapter (anti-corruption layer)
+## D6 - The Game Playground adapter (anti-corruption layer)
 
 **Decision.** All host-specific payload knowledge lives in one file
 (`gamePlayground.ts`) with its own version, translating to/from the internal
@@ -172,7 +172,7 @@ and it maps.
 
 ---
 
-## D7 — Frozen golden fixtures
+## D7 - Frozen golden fixtures
 
 **Decision.** Expected contract output is checked in as JSON snapshots and
 asserted with `toEqual` plus a parse round-trip.
@@ -187,14 +187,14 @@ reviewable diff a human must consciously approve. Combined with D4 (determinism)
 it's a mechanical guard against accidental contract drift.
 
 **Trade-off.** When semantics legitimately change, fixtures must be **regenerated
-from the tests' own inputs** (never hand-edited) — a discipline that itself caught
-a real bug (doc 04, §4–5).
+from the tests' own inputs** (never hand-edited) - a discipline that itself caught
+a real bug (doc 04, §4-5).
 
 *See: doc 02, §8; doc 04, §4.*
 
 ---
 
-## D8 — Two grading axes: structural vs rubric
+## D8 - Two grading axes: structural vs rubric
 
 **Decision.** Diagram-shape checks (`structuralRules`) are a separate stage from
 simulation-metric checks (`rubric.checks`).
@@ -213,7 +213,7 @@ expensive stage. The split is also what makes the **check-kind** model (D9) clea
 
 ---
 
-## D9 — Check kinds and the synthetic execution row
+## D9 - Check kinds and the synthetic execution row
 
 **Decision.** Every check result carries a `kind` (`topology`/`simulation`/
 `invariant`/`execution`), and each case gets a synthetic `execution` check
@@ -232,11 +232,11 @@ distinct from "ran but missed targets."
 **Trade-off.** More result surface (kinds, an extra row per case) and a wider
 summary.
 
-*See: doc 03, §2–3.*
+*See: doc 03, §2-3.*
 
 ---
 
-## D10 — Short-circuit *skip* semantics (skip, don't fail)
+## D10 - Short-circuit *skip* semantics (skip, don't fail)
 
 **Decision.** When a gating check fails (structural, or a case that didn't run),
 downstream checks are **`skipped`**, not **`failed`**.
@@ -253,14 +253,14 @@ keeps a crashed run's grade deterministic. Omitting them would lose the count of
 what *would* have been tested.
 
 **Trade-off.** A three-state status (`passed`/`failed`/`skipped`) is more to model
-and reason about than a boolean — and it changed downstream counts, forcing the
+and reason about than a boolean - and it changed downstream counts, forcing the
 CLI-test update in doc 04, §7.
 
 *See: doc 03, §4; doc 04, §7.*
 
 ---
 
-## D11 — Centralized flattening (`flattenAttemptCheckRows`)
+## D11 - Centralized flattening (`flattenAttemptCheckRows`)
 
 **Decision.** One function produces the canonical ordered list of test rows;
 everything else (full `tests`, host `tests`, summary counts, CLI output) derives
@@ -281,7 +281,7 @@ are exactly how views drift apart.
 
 ---
 
-## D12 — Content-hashed, host-safe test IDs
+## D12 - Content-hashed, host-safe test IDs
 
 **Decision.** Test IDs are a normalized slug **plus a deterministic content hash**,
 e.g. `case.baseline-1bps56q.simulation.err-u4ovu4`.
@@ -294,7 +294,7 @@ e.g. `case.baseline-1bps56q.simulation.err-u4ovu4`.
 aren't deterministic. Slug-plus-hash is unique to the source content, safe as DOM
 ids / map keys / URL fragments, and stable across re-grades.
 
-**Trade-off.** IDs are no longer hand-writable — tests must build expected IDs by
+**Trade-off.** IDs are no longer hand-writable - tests must build expected IDs by
 calling the helpers, which is precisely what the reconciliation had to do (doc 04,
 §6).
 
@@ -302,7 +302,7 @@ calling the helpers, which is precisely what the reconciliation had to do (doc 0
 
 ---
 
-## D13 — `postMessage` origin policy (and its accepted sharp edge)
+## D13 - `postMessage` origin policy (and its accepted sharp edge)
 
 **Decision.** Outbound host messages target the referrer's origin when known,
 falling back to `'*'` only when it isn't.
@@ -314,7 +314,7 @@ origin (safer but blocks the current embed flow).
 
 **Why this choice.** Using the real host origin covers the normal case; the `'*'`
 fallback keeps the embed working when the referrer is unavailable. The fallback is
-a **documented sharp edge**, not a hidden one — with a follow-up to require an
+a **documented sharp edge**, not a hidden one - with a follow-up to require an
 explicitly configured, validated origin (and to validate inbound `event.origin`).
 
 **Trade-off.** The `'*'` fallback is a real, acknowledged security gap accepted to
@@ -324,7 +324,7 @@ keep #212 shippable; hardening it is explicit future work.
 
 ---
 
-## D14 — Best-effort persistence now, durable archive later
+## D14 - Best-effort persistence now, durable archive later
 
 **Decision.** Attempt persistence is best-effort `localStorage`, not an immutable
 grading/replay archive.
@@ -343,7 +343,7 @@ separable effort deferred deliberately rather than half-built.
 
 ---
 
-## D15 — Stacked PRs with an explicit merge order
+## D15 - Stacked PRs with an explicit merge order
 
 **Decision.** Ship the platform as three stacked PRs (#212 → #213 → #214) with a
 defined landing order, rebasing #214 onto #213 rather than merging it as-authored.
@@ -363,16 +363,16 @@ and a `--force-with-lease` history rewrite.
 
 ---
 
-## D16 — Seal submissions with a non-cryptographic integrity checksum
+## D16 - Seal submissions with a non-cryptographic integrity checksum
 
-**Decision.** Each evaluation envelope is sealed with `canonicalChecksum` — a wide
+**Decision.** Each evaluation envelope is sealed with `canonicalChecksum` - a wide
 (128-bit, multi-lane) content hash over its canonical serialization.
 
 **Criteria.** Determinism, Honesty.
 
 **Alternatives.** No checksum (trust the store); a cryptographic signature.
 
-**Why this choice.** A checksum makes a persisted submission **tamper-evident** —
+**Why this choice.** A checksum makes a persisted submission **tamper-evident** -
 accidental drift or a hand-edit of `localStorage` is caught on read. It is
 deliberately *not* sold as security: defeating it needs a server-side signature,
 which is out of scope for a client-side artifact. An honest "tamper-evident" beats
@@ -384,7 +384,7 @@ a checksum that only *looks* like tamper-proofing.
 
 ---
 
-## D17 — Digest replay by default; bind the full trace by hash
+## D17 - Digest replay by default; bind the full trace by hash
 
 **Decision.** Every envelope embeds a bounded **replay digest** (counts +
 `eventStreamChecksum`); the full per-request replay is optional and **excluded
@@ -406,7 +406,7 @@ demand.
 
 ---
 
-## D18 — Append-only submission archive
+## D18 - Append-only submission archive
 
 **Decision.** Submissions are stored immutably: a repeat write of the same
 `submissionId` is refused, reads verify the checksum, and corrupt rows are reported
@@ -427,7 +427,7 @@ separate, deliberate decision.
 
 ---
 
-## D19 — Derive envelope identity from the sealed contract
+## D19 - Derive envelope identity from the sealed contract
 
 **Decision.** An envelope's `questionId`/`topologyId` are copied from the contract
 it seals, not accepted as independent inputs, and re-checked on parse/verify.
@@ -438,16 +438,16 @@ it seals, not accepted as independent inputs, and re-checked on parse/verify.
 
 **Why this choice.** The envelope is a claim ("this grade is for question X"). One
 source of truth for that identity (the contract) makes a mislabelled envelope
-impossible by construction — the same reasoning as central flattening (D11) and
+impossible by construction - the same reasoning as central flattening (D11) and
 host-alignment (D3).
 
-**Trade-off.** Callers cannot set identity independently — which is the point.
+**Trade-off.** Callers cannot set identity independently - which is the point.
 
 *See: doc 06, §6.*
 
 ---
 
-## D20 — Hybrid iframe origin trust (configured allowlist, else TOFU)
+## D20 - Hybrid iframe origin trust (configured allowlist, else TOFU)
 
 **Decision.** A framed simulator trusts host origins from a `?hostOrigin=` allowlist
 when present (strict), otherwise trust-on-first-use against the first valid
@@ -469,7 +469,7 @@ first; `?hostOrigin=` removes that risk.
 
 ---
 
-## D21 — Never broadcast sensitive messages
+## D21 - Never broadcast sensitive messages
 
 **Decision.** `submit`/`error` target the trusted host origin only and are dropped
 if none is established; `'*'` survives only for the content-less `ready` bootstrap.
@@ -477,7 +477,7 @@ if none is established; `'*'` survives only for the content-less `ready` bootstr
 **Criteria.** Isolation, Honesty.
 
 **Alternatives.** Fall back to `'*'`/referrer for all messages (the prior
-behaviour — a data leak).
+behaviour - a data leak).
 
 **Why this choice.** `submit` carries a student's grade; broadcasting it to any
 framing page is a leak. Dropping-with-a-warning is safer than leaking.
@@ -489,7 +489,7 @@ dropped (a warning is logged).
 
 ---
 
-## D22 — Lock the trusted origin once
+## D22 - Lock the trusted origin once
 
 **Decision.** The trusted host origin is set on the first valid launch and never
 reassigned for the session.
@@ -507,7 +507,7 @@ trust or receiving replies.
 
 ---
 
-## D23 — EnvironmentProfile is a lens, not a question variant
+## D23 - EnvironmentProfile is a lens, not a question variant
 
 **Decision.** Presentation (visibility + capabilities + graded + chrome) lives in a
 separate `EnvironmentProfile` applied over one `QuestionPackage`, never baked into
@@ -524,11 +524,11 @@ cleanly separated.
 **Trade-off.** Each gated surface must read the profile rather than hardcode a
 mode.
 
-*See: doc 08, §1–2.*
+*See: doc 08, §1-2.*
 
 ---
 
-## D24 — resolveEnvironmentProfile is total and safe
+## D24 - resolveEnvironmentProfile is total and safe
 
 **Decision.** Any input (mode string, partial override, or malformed/unknown)
 resolves to a complete profile; invalid input falls back to the default rather
@@ -548,7 +548,7 @@ needed) instead of surfacing loudly.
 
 ---
 
-## D25 — AUTHOR is graded (deviates from the spec matrix)
+## D25 - AUTHOR is graded (deviates from the spec matrix)
 
 **Decision.** The AUTHOR preset sets `graded: true`, unlike the spec matrix which
 lists AUTHOR as ungraded.
@@ -612,21 +612,21 @@ mindmap
 These were consciously deferred, not overlooked:
 
 - ~~**Explicit, validated iframe origins** (inbound `event.origin` check; remove the
-  `'*'` outbound fallback) — D13.~~ ✅ **Addressed** by the production embed runtime —
-  see [doc 07](07-production-embed-runtime-and-origin-security.md) (D20–D22).
+  `'*'` outbound fallback) - D13.~~ ✅ **Addressed** by the production embed runtime -
+  see [doc 07](07-production-embed-runtime-and-origin-security.md) (D20-D22).
   *Remaining:* host-driven lifecycle commands and frame sandboxing / CSP.
-- ~~**Durable, immutable attempt/replay archive** — D14.~~ ✅ **Addressed** by the
-  evaluation envelope + append-only archive, now **wired into the submit flow** —
+- ~~**Durable, immutable attempt/replay archive** - D14.~~ ✅ **Addressed** by the
+  evaluation envelope + append-only archive, now **wired into the submit flow** -
   see [doc 06](06-grading-safe-persistence-and-the-evaluation-envelope.md)
-  (D16–D19, §11). *Remaining:* move storage server-side and capture full replay
+  (D16-D19, §11). *Remaining:* move storage server-side and capture full replay
   (not just the digest).
-- ~~**`EnvironmentProfile`** (the presentation layer: author / contest / learn) —
-  the fourth layer in the mental model, still to be built.~~ ✅ **Core built** — see
-  [doc 08](08-environment-profile-presentation-layer.md) (D23–D25); palette
+- ~~**`EnvironmentProfile`** (the presentation layer: author / contest / learn) -
+  the fourth layer in the mental model, still to be built.~~ ✅ **Core built** - see
+  [doc 08](08-environment-profile-presentation-layer.md) (D23-D25); palette
   allowlist, chromeDensity, scaffold-lock (node provenance +
   `canEditScaffoldNodes`/`scaffoldSourceNodes`), the host lifecycle commands
   (`reset`/`lock`/`reveal`), and live-metrics + grading-suite-detail gating are all
-  applied now — **every profile field is wired** (doc 08 §6–§7). Deeper polish
+  applied now - **every profile field is wired** (doc 08 §6-§7). Deeper polish
   (richer minimal chrome, scaffold drag-lock) remains optional.
 - **Authoring/distribution model** beyond the local sample question.
 

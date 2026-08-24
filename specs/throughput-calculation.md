@@ -2,7 +2,7 @@
 
 Technical feature specification defining how throughput is measured, computed, and reported across the simulation: per-node throughput, global throughput, the warmup-aware measurement window, and the relationship between arrival rate, service capacity, and effective throughput.
 
-This spec consolidates the `MetricsCollector` throughput accounting, the `SimulationSummary.throughput` global metric, the `PerNodeMetrics.throughput` per-node metric, and the Little's Law verification that validates throughput consistency. It exists because throughput is the primary capacity planning metric — "how many requests per second can this system handle?" — and every other spec depends on understanding exactly how the simulator measures it: what counts as "processed," which time window is used, how warmup affects the denominator, and why the measured throughput may differ from the configured arrival rate.
+This spec consolidates the `MetricsCollector` throughput accounting, the `SimulationSummary.throughput` global metric, the `PerNodeMetrics.throughput` per-node metric, and the Little's Law verification that validates throughput consistency. It exists because throughput is the primary capacity planning metric - "how many requests per second can this system handle?" - and every other spec depends on understanding exactly how the simulator measures it: what counts as "processed," which time window is used, how warmup affects the denominator, and why the measured throughput may differ from the configured arrival rate.
 
 ---
 
@@ -91,7 +91,7 @@ throughput: durationSec > 0 ? pwProcessed / durationSec : 0
 
 Per-node throughput = `postWarmupProcessed / effectiveDurationSeconds`.
 
-- **Numerator**: `postWarmupProcessed` — the count of completed processing spans where `span.arrivalTime >= warmupDurationUs`. This gates on when the request arrived at this specific node, not when it was created globally.
+- **Numerator**: `postWarmupProcessed` - the count of completed processing spans where `span.arrivalTime >= warmupDurationUs`. This gates on when the request arrived at this specific node, not when it was created globally.
 - **Denominator**: Same as global.
 
 **Key difference**: Global throughput counts successful requests (end-to-end). Per-node throughput counts processed spans (per-hop). A request that passes through 3 nodes contributes 1 to global throughput but 1 to each of the 3 nodes' throughputs.
@@ -123,7 +123,7 @@ Little's Law: `L = λW` where:
 - `λ` = arrival rate (post-warmup arrivals / effective duration)
 - `W` = mean sojourn time (post-warmup queue wait + service time)
 
-The dual tolerance guard: `error <= 0.1 || absoluteError <= 0.5` — either 10% relative tolerance OR 0.5 absolute tolerance. The absolute guard handles low-traffic nodes where tiny count differences produce large percentage errors.
+The dual tolerance guard: `error <= 0.1 || absoluteError <= 0.5` - either 10% relative tolerance OR 0.5 absolute tolerance. The absolute guard handles low-traffic nodes where tiny count differences produce large percentage errors.
 
 **Conservation check (`src/engine/analysis/output.ts:308-326`)**
 
@@ -190,7 +190,7 @@ generateSummary(simulationDuration):
 
 **What counts as "successful"**:
 
-A request is successful if and only if `handleRequestComplete` fires — meaning the request reached a node with no outgoing routes (a sink or terminal node) and the engine emitted a `request-complete` event. Requests that are rejected, timed out, or still in flight at simulation end are not counted.
+A request is successful if and only if `handleRequestComplete` fires - meaning the request reached a node with no outgoing routes (a sink or terminal node) and the engine emitted a `request-complete` event. Requests that are rejected, timed out, or still in flight at simulation end are not counted.
 
 **What "post-warmup" means**:
 
@@ -259,7 +259,7 @@ A request is "processed" at a node when `GGcKNode.handleCompletion` fires and pr
 Per-node metrics use `span.arrivalTime >= warmupDurationUs` (not `request.createdAt`). This is documented in `metrics.ts:169-173`:
 
 ```typescript
-// Per-node post-warmup gate uses span.arrivalTime — the moment this request
+// Per-node post-warmup gate uses span.arrivalTime - the moment this request
 // actually reached this node in simulation time. Using request.createdAt
 // instead would miscount: a request created just before warmup ends but
 // processed entirely post-warmup would be excluded, inflating L relative to λW.
@@ -317,7 +317,7 @@ Defines the relationship between a node's configuration (workers, service time d
 
 ### Why it exists
 
-Users configure `workers: 4` and `processing.distribution: { type: 'constant', value: 10 }` (10ms service time) and expect to understand what throughput that produces. The theoretical maximum is `4 / 0.01 = 400 req/s`. Without this calculation, users must run a simulation to discover capacity — and even then, they lack context for whether the measured throughput is near capacity or far below it.
+Users configure `workers: 4` and `processing.distribution: { type: 'constant', value: 10 }` (10ms service time) and expect to understand what throughput that produces. The theoretical maximum is `4 / 0.01 = 400 req/s`. Without this calculation, users must run a simulation to discover capacity - and even then, they lack context for whether the measured throughput is near capacity or far below it.
 
 ### How it works internally
 
@@ -447,7 +447,7 @@ inFlight = postWarmupArrived - postWarmupProcessed - postWarmupRejected - postWa
 balanced = postWarmupArrived == 0 || inFlight / postWarmupArrived < 5%
 ```
 
-A balanced node has accounted for all arrivals. High `inFlight` means requests were still in queue when the simulation ended — either the simulation was too short or the node was severely overloaded.
+A balanced node has accounted for all arrivals. High `inFlight` means requests were still in queue when the simulation ended - either the simulation was too short or the node was severely overloaded.
 
 ### What components it requires
 
@@ -468,11 +468,11 @@ A balanced node has accounted for all arrivals. High `inFlight` means requests w
 | **Environment Definition & Configuration Model** | Throughput as a derived metric from environment config | Node capacity config (workers, service time) | `QueueConfig`, `ProcessingConfig` |
 | **Request Pattern Configuration** | Arrival rate λ from pattern config → throughput comparison | `baseRps` and pattern shape | `WorkloadProfile.baseRps` → λ |
 | **Request Type Model** | Per-type throughput (proposed) | Type-level processing weights | `processingWeight` → adjusted service time |
-| **Edge Properties & Defaults** | Edge-level throughput (proposed) | — | Per-edge counters |
+| **Edge Properties & Defaults** | Edge-level throughput (proposed) | - | Per-edge counters |
 | **Queue Depth Calculation** | Throughput as input to queue depth formulas | Queue depth as indicator of congestion | `PerNodeMetrics.throughput`, queue length |
 | **Arrival, Departure & Request Lifecycle Semantics** | Request completion events that increment throughput counters | Lifecycle state machine | `request-complete` → recordRequest |
 | **Request Rejection Behaviour** | Rejection rate complement to throughput | Rejection metrics | `throughput + rejectionRate ≈ arrivalRate` |
-| **Cost Calculation & Budgeting** | Throughput × cost per request = total cost | — | `throughput`, cost model |
+| **Cost Calculation & Budgeting** | Throughput × cost per request = total cost | - | `throughput`, cost model |
 | **Simulation Validation & Pattern Accuracy** | Little's Law as a validation mechanism | Accuracy thresholds | `LittlesLawResult.withinTolerance` |
 
 ---

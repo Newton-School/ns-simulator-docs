@@ -2,7 +2,7 @@
 
 Technical feature specification defining how requests move through the topology graph: edge directionality, routing strategies, condition-based filtering, async fan-out, and the structural rules that govern valid request paths.
 
-This spec consolidates the `RoutingTable` class, the `EdgeDefinition.mode` discriminant, the condition matching subsystem, the engine's edge transfer mechanics, and the validator's connectivity checks into a single reference for how request flow is directed at each hop. It exists because the routing decision is the branching point of every request's lifecycle — after a node completes processing, the routing table determines whether the request continues forward, fans out to multiple targets, terminates, or is filtered by a condition. Downstream specs (throughput calculation, rejection behaviour, lifecycle semantics) all depend on understanding the routing contract: how many targets a request reaches, in what order, and under what conditions.
+This spec consolidates the `RoutingTable` class, the `EdgeDefinition.mode` discriminant, the condition matching subsystem, the engine's edge transfer mechanics, and the validator's connectivity checks into a single reference for how request flow is directed at each hop. It exists because the routing decision is the branching point of every request's lifecycle - after a node completes processing, the routing table determines whether the request continues forward, fans out to multiple targets, terminates, or is filtered by a condition. Downstream specs (throughput calculation, rejection behaviour, lifecycle semantics) all depend on understanding the routing contract: how many targets a request reaches, in what order, and under what conditions.
 
 ---
 
@@ -44,7 +44,7 @@ It also encompasses the structural topology rules enforced at validation time: s
 
 | Pain | Who is affected | Technical cause | Consequence |
 | ---- | --------------- | --------------- | ----------- |
-| Edges are unidirectional only | Users | `EdgeDefinition` has `source` and `target` — no concept of bidirectional edges | Modeling request-response patterns (e.g., DB read → response) requires a separate return edge or is simply omitted, losing response latency |
+| Edges are unidirectional only | Users | `EdgeDefinition` has `source` and `target` - no concept of bidirectional edges | Modeling request-response patterns (e.g., DB read → response) requires a separate return edge or is simply omitted, losing response latency |
 | Round-robin detection uses ID heuristic | Engine developers | `RoutingTable.isRoundRobinSource()` falls back to substring matching (`id.includes('load-balancer')`) when no explicit `routingStrategy` is set in node config | Renaming a load balancer node can silently change its routing strategy |
 | Condition expressions are limited | Users | `matchesCondition()` only supports `request.type === "X"` and `request.type !== "X"` via regex | Cannot route on request priority, size, metadata, or compound conditions |
 | No support for response flow | Users, engine developers | Requests flow source → sink but there is no return path model | Latency metrics only capture one-way traversal; round-trip time requires manual calculation |
@@ -121,7 +121,7 @@ export interface EdgeDefinition {
 }
 ```
 
-Edges are strictly directional: `source` → `target`. There is no concept of a return path, bidirectional mode, or response edge. The `mode` field is the primary routing discriminant — it determines whether the edge participates in fan-out (async) or competition (sync/streaming/conditional).
+Edges are strictly directional: `source` → `target`. There is no concept of a return path, bidirectional mode, or response edge. The `mode` field is the primary routing discriminant - it determines whether the edge participates in fan-out (async) or competition (sync/streaming/conditional).
 
 **RoutingTable class (`src/engine/routing.ts`)**
 
@@ -216,7 +216,7 @@ Real distributed systems have fundamentally different communication patterns. A 
 
 ### How it works internally
 
-**Data source**: `EdgeDefinition.mode` — a required literal union defined in `src/engine/core/types.ts:314`.
+**Data source**: `EdgeDefinition.mode` - a required literal union defined in `src/engine/core/types.ts:314`.
 
 **Mode semantics**:
 
@@ -286,7 +286,7 @@ A load balancer distributes traffic evenly (round-robin). A weighted router send
 
 **Data source**: The strategy is determined by a priority cascade in `RoutingTable`:
 
-1. **Explicit config**: `node.config?.['routingStrategy'] === 'round-robin'` — checked during construction (`routing.ts:61-65`). Stored in `this.roundRobinSourceIds`.
+1. **Explicit config**: `node.config?.['routingStrategy'] === 'round-robin'` - checked during construction (`routing.ts:61-65`). Stored in `this.roundRobinSourceIds`.
 2. **Edge weights**: If any candidate edge has `weight !== undefined`, use weighted selection (`routing.ts:124`).
 3. **Fallback**: Uniform random.
 
@@ -333,7 +333,7 @@ private isRoundRobinSource(sourceNodeId: string): boolean {
 }
 ```
 
-When node definitions are provided to the constructor (which they always are from the engine: `routing.ts:61`), the explicit config set takes precedence. The substring heuristic only fires when `roundRobinSourceIds` is empty — which happens when no node in the topology has `config.routingStrategy === 'round-robin'`. This means the heuristic is a legacy fallback for older topology JSON that predates the `routingStrategy` config field.
+When node definitions are provided to the constructor (which they always are from the engine: `routing.ts:61`), the explicit config set takes precedence. The substring heuristic only fires when `roundRobinSourceIds` is empty - which happens when no node in the topology has `config.routingStrategy === 'round-robin'`. This means the heuristic is a legacy fallback for older topology JSON that predates the `routingStrategy` config field.
 
 **Weighted selection algorithm (`routing.ts:177-204`)**:
 
@@ -349,7 +349,7 @@ When node definitions are provided to the constructor (which they always are fro
 7. Fallback: return last edge
 ```
 
-Note: `weight` is optional on `EdgeDefinition`. When present on any edge in the set, it triggers weighted selection. Edges without explicit weights default to 1, not 0 — so they participate equally with a weight of 1.
+Note: `weight` is optional on `EdgeDefinition`. When present on any edge in the set, it triggers weighted selection. Edges without explicit weights default to 1, not 0 - so they participate equally with a weight of 1.
 
 ### What components it requires
 
@@ -375,9 +375,9 @@ In a real system, an API gateway routes `/api/users` to the user service and `/a
 
 ### How it works internally
 
-**Data source**: `EdgeDefinition.condition` — an optional string field. `EdgeDefinition.mode` — when `'conditional'`, the condition is required (edges with empty conditions are treated as ineligible).
+**Data source**: `EdgeDefinition.condition` - an optional string field. `EdgeDefinition.mode` - when `'conditional'`, the condition is required (edges with empty conditions are treated as ineligible).
 
-**Evaluation algorithm — `matchesCondition(edge, request)` in `routing.ts:142-172`**:
+**Evaluation algorithm - `matchesCondition(edge, request)` in `routing.ts:142-172`**:
 
 ```
 1. If mode === 'conditional' and condition is empty → return false (ineligible)
@@ -441,7 +441,7 @@ Async fan-out models real patterns: an event bus publishes to multiple subscribe
 
 **Data source**: The count of resolved routes from `RoutingTable.resolveTarget()`. If `routes.length > 1`, branching is needed.
 
-**Branching algorithm — `prepareRequestsForRoutes(request, routeCount)` in `engine.ts:543-554`**:
+**Branching algorithm - `prepareRequestsForRoutes(request, routeCount)` in `engine.ts:543-554`**:
 
 ```typescript
 if (routeCount <= 1) {
@@ -455,7 +455,7 @@ for (let i = 1; i < routeCount; i++) {
 return routedRequests
 ```
 
-**Clone construction — `cloneRequestForBranch(request)` in `engine.ts:556-565`**:
+**Clone construction - `cloneRequestForBranch(request)` in `engine.ts:556-565`**:
 
 ```typescript
 const branchId = `${request.id}::branch-${++this.forkCounter}`
@@ -469,10 +469,10 @@ return {
 ```
 
 Key properties of a clone:
-- **ID**: `{originalId}::branch-{counter}` — globally unique, traceable back to the original.
-- **Path**: Shallow copy — the clone starts with the same path history but diverges from this point.
-- **Spans**: Shallow copy of each span — past spans are shared by value, future spans are independent.
-- **Metadata**: Shallow copy — clone gets its own metadata map.
+- **ID**: `{originalId}::branch-{counter}` - globally unique, traceable back to the original.
+- **Path**: Shallow copy - the clone starts with the same path history but diverges from this point.
+- **Spans**: Shallow copy of each span - past spans are shared by value, future spans are independent.
+- **Metadata**: Shallow copy - clone gets its own metadata map.
 - **Other fields**: `type`, `sizeBytes`, `priority`, `createdAt`, `deadline`, `retryCount` are copied by value via spread.
 
 **Where branching occurs**:
@@ -491,7 +491,7 @@ Each branch is an independent request in the system:
 - Can complete, reject, or timeout independently
 - Counted independently in metrics
 
-This means a single original request entering a topology with fan-out can produce N terminal events (completions, rejections, timeouts) — one per branch. The `forkCounter` on the engine tracks total branches created across all requests.
+This means a single original request entering a topology with fan-out can produce N terminal events (completions, rejections, timeouts) - one per branch. The `forkCounter` on the engine tracks total branches created across all requests.
 
 **Fan-out triggering conditions**:
 
@@ -555,7 +555,7 @@ An invalid topology produces either engine errors (missing node references, no t
 | Processing sanity | `timeout <= 0` | Error | 641-646 |
 | Security filter requirements | WAF/firewall nodes must have blockRate or droppedPackets | Error | 669-690 |
 
-**Reachability algorithm — `collectReachableNodeIds()` in `validator.ts:545-568`**:
+**Reachability algorithm - `collectReachableNodeIds()` in `validator.ts:545-568`**:
 
 ```typescript
 function collectReachableNodeIds(
@@ -579,7 +579,7 @@ function collectReachableNodeIds(
 
 Standard BFS using the adjacency list built from topology edges. The adjacency list is directional (source → target), so reachability follows edge direction.
 
-**Source node detection — `isSourceNode()` in `validator.ts:541-543`**:
+**Source node detection - `isSourceNode()` in `validator.ts:541-543`**:
 
 ```typescript
 function isSourceNode(node, topology): boolean {
@@ -662,5 +662,5 @@ A node is a source if its resolved structural role is `'source'` OR if it is the
 | 3 | Sync cycle detection should be an error, not a warning | Design decision | If warnings are preferred, cycles would need a depth limit or TTL to prevent infinite loops at runtime |
 | 4 | Branch request IDs (`{id}::branch-{n}`) are stable and can be relied upon by external trace analysis tools | Assumption | Changing the format would break downstream consumers |
 | 5 | `least-conn` routing strategy requires node state access during routing, which is not currently available to `RoutingTable` | Design constraint | Implementing `least-conn` requires either passing node state to `resolveTarget` or giving `RoutingTable` a reference to the node map |
-| 6 | Fan-out from a single request does not create a "join" or "gather" pattern — each branch terminates independently | Observation | If scatter-gather semantics are needed, a new mechanism (deferred request completion until all branches complete) would be required |
+| 6 | Fan-out from a single request does not create a "join" or "gather" pattern - each branch terminates independently | Observation | If scatter-gather semantics are needed, a new mechanism (deferred request completion until all branches complete) would be required |
 | 7 | The validator's reachability check uses forward-direction BFS only; reverse reachability (can a node reach a sink?) is not checked | Observation | Nodes reachable from source but with no path to a terminal point would accumulate in-flight requests indefinitely |

@@ -1,37 +1,37 @@
-# Event Debugger — Data Model & Schema Changes
+# Event Debugger - Data Model & Schema Changes
 
-This document specifies the data model, type additions, and schema changes required to implement the event debugger features described in `event-debugger-prototypes.md`. It is organized by layer — engine core, worker protocol, renderer state — and explains what each new type represents, why it exists, where it lives, and how it connects to existing types.
+This document specifies the data model, type additions, and schema changes required to implement the event debugger features described in `event-debugger-prototypes.md`. It is organized by layer - engine core, worker protocol, renderer state - and explains what each new type represents, why it exists, where it lives, and how it connects to existing types.
 
 ---
 
 ## Table of Contents
 
 1. [Current Data Flow](#current-data-flow)
-2. [Engine Core — New Types](#engine-core--new-types)
+2. [Engine Core - New Types](#engine-core--new-types)
    - [DebugEvent](#debugevent)
    - [NodeSnapshot](#nodesnapshot)
    - [RequestLifecycle](#requestlifecycle)
    - [LifecyclePhase](#lifecyclephase)
    - [ExpectedPath](#expectedpath)
    - [AdmissionDecision](#admissiondecision)
-3. [Engine Core — Modified Types](#engine-core--modified-types)
+3. [Engine Core - Modified Types](#engine-core--modified-types)
    - [SimulationEvent changes](#simulationevent-changes)
    - [SimulationEngine changes](#simulationengine-changes)
    - [RequestTracer changes](#requesttracer-changes)
-4. [Worker Protocol — New Messages](#worker-protocol--new-messages)
+4. [Worker Protocol - New Messages](#worker-protocol--new-messages)
    - [Inbound: DebugRequestMessage](#inbound-debugrequestmessage)
    - [Outbound: EventBatchMessage](#outbound-eventbatchmessage)
    - [Outbound: DebugSnapshotMessage](#outbound-debugsnapshotmessage)
-5. [Simulation Output — New Fields](#simulation-output--new-fields)
+5. [Simulation Output - New Fields](#simulation-output--new-fields)
    - [SimulationOutput.eventLog](#simulationoutputeventlog)
-6. [Renderer State — New Types](#renderer-state--new-types)
+6. [Renderer State - New Types](#renderer-state--new-types)
    - [DebugSession](#debugsession)
    - [DebugControls](#debugcontrols)
    - [EventFilter](#eventfilter)
    - [CanvasDebugState](#canvasdebugstate)
-7. [Renderer State — Modified Types](#renderer-state--modified-types)
+7. [Renderer State - Modified Types](#renderer-state--modified-types)
    - [SimulationState changes](#simulationstate-changes)
-8. [Store Shape — New Slices](#store-shape--new-slices)
+8. [Store Shape - New Slices](#store-shape--new-slices)
 9. [Complete Type Inventory](#complete-type-inventory)
 
 ---
@@ -85,7 +85,7 @@ Before detailing the new types, here is how data currently flows from engine to 
 
 ---
 
-## Engine Core — New Types
+## Engine Core - New Types
 
 **File:** `src/engine/core/debugTypes.ts` (new file)
 
@@ -105,7 +105,7 @@ export interface DebugEvent {
   /** Milliseconds since simulation start (converted from SimulationEvent.timestamp via microToMs). */
   timestampMs: number
 
-  /** Event type — same enum as SimulationEvent.type. */
+  /** Event type - same enum as SimulationEvent.type. */
   type: EventType
 
   /** Node where this event was handled. */
@@ -116,7 +116,7 @@ export interface DebugEvent {
 
   /**
    * Derived status for display purposes.
-   * Not stored on SimulationEvent — computed during projection.
+   * Not stored on SimulationEvent - computed during projection.
    */
   status: 'info' | 'success' | 'warn' | 'danger'
 
@@ -157,7 +157,7 @@ export interface DebugEvent {
 
 **Why `index` exists:** Events can share timestamps (the min-heap breaks ties by priority). The monotonic index provides a stable, unique sort key for the event log UI and for the step-through debugger.
 
-**Why `status` is derived, not stored:** The engine's `SimulationEvent` has no status field — status is implicit in the event type. The projection function maps:
+**Why `status` is derived, not stored:** The engine's `SimulationEvent` has no status field - status is implicit in the event type. The projection function maps:
 
 | EventType | Status |
 |---|---|
@@ -197,9 +197,9 @@ export interface NodeSnapshot {
 }
 ```
 
-**Why this duplicates parts of `NodeState`:** `NodeState` (in `types.ts`) is the engine's internal runtime type — it doesn't carry configured limits (`maxWorkers`, `capacity`). The debugger needs both observed and configured values to explain admission decisions. Rather than modify the engine's runtime type (which would couple the simulation core to the debugger), `NodeSnapshot` wraps and extends it.
+**Why this duplicates parts of `NodeState`:** `NodeState` (in `types.ts`) is the engine's internal runtime type - it doesn't carry configured limits (`maxWorkers`, `capacity`). The debugger needs both observed and configured values to explain admission decisions. Rather than modify the engine's runtime type (which would couple the simulation core to the debugger), `NodeSnapshot` wraps and extends it.
 
-**Relationship to `TimeSeriesSnapshot`:** The existing `TimeSeriesSnapshot` (in `analysis/output.ts`) captures node state once per simulated second. `NodeSnapshot` captures it per event — much higher resolution but only during debug mode. They share the same underlying `GGcKNode.getState()` data source.
+**Relationship to `TimeSeriesSnapshot`:** The existing `TimeSeriesSnapshot` (in `analysis/output.ts`) captures node state once per simulated second. `NodeSnapshot` captures it per event - much higher resolution but only during debug mode. They share the same underlying `GGcKNode.getState()` data source.
 
 ---
 
@@ -239,7 +239,7 @@ export interface RequestLifecycle {
 }
 ```
 
-**Why `terminalStatus` has `in-flight`:** If the simulation ends (duration limit reached) while the request is still queued or being processed, it's not success/rejected/timeout — it's in-flight. The conservation check in `output.ts` already tracks this as `inFlight` count per node.
+**Why `terminalStatus` has `in-flight`:** If the simulation ends (duration limit reached) while the request is still queued or being processed, it's not success/rejected/timeout - it's in-flight. The conservation check in `output.ts` already tracks this as `inFlight` count per node.
 
 ---
 
@@ -267,7 +267,7 @@ export interface LifecyclePhase {
   timing: PhaseTiming | null
 
   /**
-   * Phase result — whether the request passed through this node or was stopped.
+   * Phase result - whether the request passed through this node or was stopped.
    * 'passed' = processing-complete or request-forwarded.
    * 'rejected' = request-rejected at this node.
    * 'timeout' = request-timeout at this node.
@@ -339,7 +339,7 @@ export interface ExpectedPath {
 
 **How it's computed:** Walk from the source node's ID through `RoutingTable.getOutgoingEdges()`. At each node, pick the single sync edge (or the highest-weight edge if multiple). Stop when a node has no outgoing edges (leaf / terminal). If any node has multiple sync edges with no clear winner, mark `deterministic: false`.
 
-**Why `deterministic` matters:** The Actual vs Expected Path Diff feature (Feature 11) compares these two paths. If the expected path isn't deterministic (e.g., a load balancer with 50/50 split), showing a "difference" is misleading — the actual path may be correct even though it differs from the expected path.
+**Why `deterministic` matters:** The Actual vs Expected Path Diff feature (Feature 11) compares these two paths. If the expected path isn't deterministic (e.g., a load balancer with 50/50 split), showing a "difference" is misleading - the actual path may be correct even though it differs from the expected path.
 
 ---
 
@@ -391,11 +391,11 @@ export interface AdmissionDecision {
 }
 ```
 
-**Where it's populated:** Inside `GGcKNode.handleArrival()`, after the `currentLoad >= this.maxCapacity` check. The engine already has all three values at this point — the `AdmissionDecision` is just a structured projection.
+**Where it's populated:** Inside `GGcKNode.handleArrival()`, after the `currentLoad >= this.maxCapacity` check. The engine already has all three values at this point - the `AdmissionDecision` is just a structured projection.
 
 ---
 
-## Engine Core — Modified Types
+## Engine Core - Modified Types
 
 ### SimulationEvent changes
 
@@ -470,7 +470,7 @@ if (this.onDebugEvent) {
 }
 ```
 
-`onAdmissionDecision` fires inside `handleRequestArrival()` after the `GGcKNode.handleArrival()` call returns — for both admitted and rejected requests. This captures the exact state at the admission boundary.
+`onAdmissionDecision` fires inside `handleRequestArrival()` after the `GGcKNode.handleArrival()` call returns - for both admitted and rejected requests. This captures the exact state at the admission boundary.
 
 **Performance consideration:** `onDebugEvent` is only wired up by the worker when debug mode is requested. During normal (non-debug) runs, the callback is `undefined` and the `if` check short-circuits with zero overhead. When active, the `postMessage` cost is amortized by batching (see [EventBatchMessage](#outbound-eventbatchmessage)).
 
@@ -522,7 +522,7 @@ shouldTrace(requestId: string): boolean {
 
 ---
 
-## Worker Protocol — New Messages
+## Worker Protocol - New Messages
 
 **File:** `src/engine/worker/protocols.ts`
 
@@ -585,13 +585,13 @@ export interface EventBatchMessage {
 ```
 
 **Batching strategy:** The worker accumulates `DebugEvent` records in a buffer. The buffer is flushed:
-1. Every `CHUNK_SIZE` (20,000) events — alongside the existing `await sleep(0)` yield point in `runChunked`.
-2. When the buffer reaches a size threshold (e.g., 500 events) — to keep latency bounded during slow simulations.
-3. On simulation completion — flush any remaining events before posting `complete`.
+1. Every `CHUNK_SIZE` (20,000) events - alongside the existing `await sleep(0)` yield point in `runChunked`.
+2. When the buffer reaches a size threshold (e.g., 500 events) - to keep latency bounded during slow simulations.
+3. On simulation completion - flush any remaining events before posting `complete`.
 
 **Why batching:** `postMessage` has per-call overhead (structured clone). Sending one message per event at 100k+ events/second would saturate the message channel. Batching amortizes the cost.
 
-**Serialization:** `DebugEvent` uses only `number`, `string`, `null`, and plain objects — no `bigint`, `Map`, or class instances. It survives `postMessage`'s structured clone algorithm without transformation.
+**Serialization:** `DebugEvent` uses only `number`, `string`, `null`, and plain objects - no `bigint`, `Map`, or class instances. It survives `postMessage`'s structured clone algorithm without transformation.
 
 ---
 
@@ -624,7 +624,7 @@ export type WorkerOutboundMessage =
 
 ---
 
-## Simulation Output — New Fields
+## Simulation Output - New Fields
 
 **File:** `src/engine/analysis/output.ts`
 
@@ -667,14 +667,14 @@ export interface SimulationOutput {
 }
 ```
 
-**Memory consideration:** A 60-second simulation at 100 RPS with a 7-node topology generates roughly 4,200 events (100 requests × ~6 events each × ~7 hops). Each `DebugEvent` is ~200 bytes serialized. Total: ~840 KB — well within budget. At higher RPS (10,000), the log could reach 80+ MB. Options:
+**Memory consideration:** A 60-second simulation at 100 RPS with a 7-node topology generates roughly 4,200 events (100 requests × ~6 events each × ~7 hops). Each `DebugEvent` is ~200 bytes serialized. Total: ~840 KB - well within budget. At higher RPS (10,000), the log could reach 80+ MB. Options:
 - Cap the event log at a configurable limit (e.g., 50,000 events) and discard oldest.
 - Only record events for the debugged request when `target` is a specific ID.
 - Let the worker stream events but not store them in the output.
 
 ---
 
-## Renderer State — New Types
+## Renderer State - New Types
 
 **File:** `src/renderer/src/types/debug.ts` (new file)
 
@@ -831,7 +831,7 @@ export interface CanvasDebugState {
 
 ---
 
-## Renderer State — Modified Types
+## Renderer State - Modified Types
 
 ### SimulationState changes
 
@@ -880,7 +880,7 @@ case 'debug-snapshot':
 
 ---
 
-## Store Shape — New Slices
+## Store Shape - New Slices
 
 **File:** `src/renderer/src/store/useStore.ts`
 
@@ -935,7 +935,7 @@ Summary of every new and modified type, organized by file.
 | `src/engine/analysis/output.ts` | Add `eventLog: DebugEvent[] \| null` and `debuggedLifecycle: RequestLifecycle \| null` to `SimulationOutput`. Pass through from engine in `generateSimulationOutput`. |
 | `src/renderer/src/hooks/useSimulation.ts` | Add `debugEvents` and `debugLifecycle` to `SimulationState`. Handle `event-batch` and `debug-snapshot` in worker message handler. Add `debugRequest()` and `debugStop()` to controls. |
 | `src/renderer/src/store/useStore.ts` | Add `debugSession`, `canvasDebugState`, and their setters to `RFState`. |
-| `src/renderer/src/types/ui.ts` | No changes — `CanvasDebugState` lives in the new `debug.ts` file. |
+| `src/renderer/src/types/ui.ts` | No changes - `CanvasDebugState` lives in the new `debug.ts` file. |
 
 ### Unchanged files
 

@@ -2,7 +2,7 @@
 
 Technical feature specification defining the three-tier default system that allows users to run meaningful simulations without configuring every parameter: product-level hard defaults built into the engine and renderer, per-component-type computed defaults from the catalog, and the proposed environment-level global defaults. This spec consolidates the scattered default application points into a single reference and identifies the duplication, inconsistency, and missing abstraction that a unified default layer would resolve.
 
-This spec exists because defaults are the primary simplification mechanism — a user can drop a node on the canvas, connect an edge, and click "simulate" without setting a single parameter. Every parameter that isn't explicitly configured gets a default from one of three sources, and those sources currently don't coordinate.
+This spec exists because defaults are the primary simplification mechanism - a user can drop a node on the canvas, connect an edge, and click "simulate" without setting a single parameter. Every parameter that isn't explicitly configured gets a default from one of three sources, and those sources currently don't coordinate.
 
 ---
 
@@ -79,7 +79,7 @@ Defaults are applied at five independent locations in the codebase, with no coor
 | Edge defaults are renderer-only | Engine never applies edge defaults; a topology created programmatically (not via canvas) gets no edge defaults |
 | No environment-level defaults | Users who want "all nodes in staging have 2 workers" must configure each node individually |
 | No default provenance tracking | Output cannot distinguish user-configured from defaulted parameters |
-| Catalog defaults and engine defaults have different scopes | Catalog uses exponential distribution; engine falls back to constant — contradictory |
+| Catalog defaults and engine defaults have different scopes | Catalog uses exponential distribution; engine falls back to constant - contradictory |
 | `timeResolution` is hardcoded to `'millisecond'` | Not configurable; always defaulted in `buildScenarioGlobal` |
 
 ---
@@ -103,7 +103,7 @@ private withNodeDefaults(node: ComponentNode): ComponentNode {
 }
 ```
 
-Applied to every node during engine construction (line 78). Uses nullish coalescing — the entire `queue` or `processing` block is replaced if absent, but individual fields within a present block are not defaulted.
+Applied to every node during engine construction (line 78). Uses nullish coalescing - the entire `queue` or `processing` block is replaced if absent, but individual fields within a present block are not defaulted.
 
 **Default values:**
 
@@ -123,7 +123,7 @@ Identical values applied during validation. The validator also emits warnings:
 - `"Node '${node.label}' is missing queue config; applying legacy default queue settings."`
 - `"Node '${node.label}' is missing processing config; applying legacy default processing settings."`
 
-The validator *mutates* the node in place (not a copy), so the defaults are baked into the `TopologyJSON` data that the engine receives. This means `withNodeDefaults` in the engine is actually redundant — by the time the engine sees the node, the validator has already applied defaults. The engine defaults serve as a safety net for topologies that bypass validation (e.g., programmatic construction).
+The validator *mutates* the node in place (not a copy), so the defaults are baked into the `TopologyJSON` data that the engine receives. This means `withNodeDefaults` in the engine is actually redundant - by the time the engine sees the node, the validator has already applied defaults. The engine defaults serve as a safety net for topologies that bypass validation (e.g., programmatic construction).
 
 ### Renderer edge defaults
 
@@ -141,7 +141,7 @@ const EDGE_DEFAULTS = {
 }
 ```
 
-Applied during `serializeEdge` (lines 180-223). Unlike node defaults, these are only applied in the renderer serializer — the engine has no edge defaults. A programmatically created `EdgeDefinition` without these values would get `0` for packetLoss and errorRate (from Zod defaults in the schema), but no latency distribution default.
+Applied during `serializeEdge` (lines 180-223). Unlike node defaults, these are only applied in the renderer serializer - the engine has no edge defaults. A programmatically created `EdgeDefinition` without these values would get `0` for packetLoss and errorRate (from Zod defaults in the schema), but no latency distribution default.
 
 **Gap:** `bandwidth`, `maxConcurrentRequests`, and `pathType` have no runtime effect. They're serialized into the `EdgeDefinition` but never consumed by the engine.
 
@@ -163,7 +163,7 @@ export const DEFAULT_SCENARIO_STATE: ScenarioState = {
 }
 ```
 
-Applied when the UI initializes or when saved state is invalid. Note that `defaultTimeout` here is 5,000ms, while the engine's `processing.timeout` default is 30,000ms. These are different parameters — `defaultTimeout` is a global fallback for nodes without per-node timeout, while `processing.timeout` is the per-node timeout. But the naming suggests they serve the same purpose, which is confusing.
+Applied when the UI initializes or when saved state is invalid. Note that `defaultTimeout` here is 5,000ms, while the engine's `processing.timeout` default is 30,000ms. These are different parameters - `defaultTimeout` is a global fallback for nodes without per-node timeout, while `processing.timeout` is the per-node timeout. But the naming suggests they serve the same purpose, which is confusing.
 
 ### Workload generator defaults
 
@@ -231,7 +231,7 @@ Types not in this map fall through to the throughput-based or utilization-based 
 
 ### Inconsistency: constant vs. exponential
 
-The engine's `withNodeDefaults` uses `{ type: 'constant', value: 1 }` — deterministic 1ms service time. The catalog's `buildSeededSimulationConfig` uses `{ type: 'exponential', lambda: 1 / meanServiceMs }` — stochastic service time with the correct distribution for a queuing model.
+The engine's `withNodeDefaults` uses `{ type: 'constant', value: 1 }` - deterministic 1ms service time. The catalog's `buildSeededSimulationConfig` uses `{ type: 'exponential', lambda: 1 / meanServiceMs }` - stochastic service time with the correct distribution for a queuing model.
 
 This means:
 - A node created via the canvas (with catalog defaults) gets an exponential distribution
@@ -280,20 +280,20 @@ When present, `environment.nodeDefaults` override product hard defaults but are 
 ### Resolution order (proposed)
 
 For a node parameter like `queue.workers`:
-1. **Per-node value** — explicitly set on the node → use it
-2. **Environment default** — set on `environment.nodeDefaults.queue.workers` → use it
-3. **Catalog computed default** — from `buildSeededSimulationConfig` → use it
-4. **Product hard default** — from `withNodeDefaults` → use it
+1. **Per-node value** - explicitly set on the node → use it
+2. **Environment default** - set on `environment.nodeDefaults.queue.workers` → use it
+3. **Catalog computed default** - from `buildSeededSimulationConfig` → use it
+4. **Product hard default** - from `withNodeDefaults` → use it
 
 For an edge parameter like `latency.distribution`:
-1. **Per-edge value** — explicitly set on the edge → use it
-2. **Environment default** — set on `environment.edgeDefaults.latency` → use it
-3. **Renderer default** — from `EDGE_DEFAULTS` → use it
+1. **Per-edge value** - explicitly set on the edge → use it
+2. **Environment default** - set on `environment.edgeDefaults.latency` → use it
+3. **Renderer default** - from `EDGE_DEFAULTS` → use it
 
 For a global parameter like `simulationDuration`:
-1. **Per-scenario value** — set in scenario state → use it
-2. **Environment default** — from `environment.globalDefaults` → use it
-3. **Product default** — from `DEFAULT_SCENARIO_STATE` → use it
+1. **Per-scenario value** - set in scenario state → use it
+2. **Environment default** - from `environment.globalDefaults` → use it
+3. **Product default** - from `DEFAULT_SCENARIO_STATE` → use it
 
 ### Environment presets
 
@@ -388,7 +388,7 @@ interface DefaultResolutionTrace {
 }
 ```
 
-This enables the accuracy classification from Simulation Validation & Pattern Accuracy — every parameter in the output can be traced to its source, and `wasDefaulted: true` parameters can be flagged as lower confidence.
+This enables the accuracy classification from Simulation Validation & Pattern Accuracy - every parameter in the output can be traced to its source, and `wasDefaulted: true` parameters can be flagged as lower confidence.
 
 ---
 
@@ -437,18 +437,18 @@ This enables the accuracy classification from Simulation Validation & Pattern Ac
 
 | Source file | Lines | Feature |
 | --- | --- | --- |
-| `src/engine/engine.ts` | 627-636 | F1: `withNodeDefaults` — engine hard defaults |
+| `src/engine/engine.ts` | 627-636 | F1: `withNodeDefaults` - engine hard defaults |
 | `src/engine/validation/validator.ts` | 616-631 | F1: Validator defaults (duplicate of engine) |
-| `src/renderer/src/hooks/useTopologySerializer.ts` | 28-36 | F1: `EDGE_DEFAULTS` — renderer edge defaults |
-| `src/renderer/src/types/ui.ts` | 77-87 | F1: `DEFAULT_SCENARIO_STATE` — global defaults |
+| `src/renderer/src/hooks/useTopologySerializer.ts` | 28-36 | F1: `EDGE_DEFAULTS` - renderer edge defaults |
+| `src/renderer/src/types/ui.ts` | 77-87 | F1: `DEFAULT_SCENARIO_STATE` - global defaults |
 | `src/engine/workload.ts` | 5-9 | F1: Workload pattern fallback constants |
-| `src/renderer/src/hooks/useTopologySerializer.ts` | 114-160 | F1: `mergeWorkload` — pattern sub-object defaults |
-| `src/engine/catalog/componentSpecs.ts` | 17-59 | F2: `TYPE_MEAN_SERVICE_MS` — per-type service times |
-| `src/engine/catalog/componentSpecs.ts` | 95-177 | F2: `buildSeededSimulationConfig` — computed defaults |
-| `src/engine/catalog/componentSpecs.ts` | 10-15 | F2: `CATEGORY_MIN_SERVICE_MS` — per-category minimums |
-| `src/engine/core/types.ts` | 435-442 | F3: `GlobalConfig` — target for environment defaults |
-| `src/engine/core/types.ts` | 291-307 | F3: `ComponentNode` — target for node defaults |
-| `src/engine/core/types.ts` | 309-339 | F3: `EdgeDefinition` — target for edge defaults |
+| `src/renderer/src/hooks/useTopologySerializer.ts` | 114-160 | F1: `mergeWorkload` - pattern sub-object defaults |
+| `src/engine/catalog/componentSpecs.ts` | 17-59 | F2: `TYPE_MEAN_SERVICE_MS` - per-type service times |
+| `src/engine/catalog/componentSpecs.ts` | 95-177 | F2: `buildSeededSimulationConfig` - computed defaults |
+| `src/engine/catalog/componentSpecs.ts` | 10-15 | F2: `CATEGORY_MIN_SERVICE_MS` - per-category minimums |
+| `src/engine/core/types.ts` | 435-442 | F3: `GlobalConfig` - target for environment defaults |
+| `src/engine/core/types.ts` | 291-307 | F3: `ComponentNode` - target for node defaults |
+| `src/engine/core/types.ts` | 309-339 | F3: `EdgeDefinition` - target for edge defaults |
 
 ---
 
@@ -474,7 +474,7 @@ This enables the accuracy classification from Simulation Validation & Pattern Ac
 | 2 | Should `constant(1)` be replaced with `exponential(lambda=1)` as the product default? | Exponential is more realistic for queuing; constant is more predictable for debugging |
 | 3 | Should edge defaults be applied in the engine, not just the renderer? | Programmatic topologies currently get no edge defaults |
 | 4 | Should `TYPE_MEAN_SERVICE_MS` be exposed as user-editable configuration? | Users with domain knowledge could improve accuracy by adjusting per-type defaults |
-| 5 | Should the environment layer support per-component-type overrides? | e.g., "all databases in production get 8 workers" — more expressive but more complex |
+| 5 | Should the environment layer support per-component-type overrides? | e.g., "all databases in production get 8 workers" - more expressive but more complex |
 | 6 | Should default provenance be tracked in the output? | Enables accuracy classification but adds output size |
-| 7 | How should defaults interact with the overload preview mode? | `seed.overloadPreview` reduces workers by 25% and doubles service time — is this a "default" or a "transform"? |
+| 7 | How should defaults interact with the overload preview mode? | `seed.overloadPreview` reduces workers by 25% and doubles service time - is this a "default" or a "transform"? |
 | 8 | Should `defaultTimeout` (global) and `processing.timeout` (per-node) be unified? | Two different timeout concepts with similar names cause confusion |

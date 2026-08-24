@@ -8,7 +8,7 @@
 
 This is a comprehensive, beginner-to-expert teaching curriculum for understanding **system design** and **discrete-event simulation**. It takes you from "What is a node?" to "Run chaos experiments and analyze root causes" through progressive, hands-on learning.
 
-**What you'll build:** A complete discrete-event simulator capable of modeling distributed systems, injecting failures, and analyzing results—all from first principles.
+**What you'll build:** A complete discrete-event simulator capable of modeling distributed systems, injecting failures, and analyzing results-all from first principles.
 
 **Who this is for:**
 - Software engineers wanting to understand system behavior
@@ -651,21 +651,21 @@ Model a system you work with:
 ## 📖 Additional Resources
 
 ### Books
-- **"The Art of Computer Systems Performance Analysis"** by Raj Jain — Comprehensive performance modeling
-- **"Theory of Modeling and Simulation"** by Zeigler, Praehofer, Kim — DEVS formalism
-- **"Designing Data-Intensive Applications"** by Martin Kleppmann — Distributed systems
-- **"Release It!"** by Michael Nygard — Resilience patterns
+- **"The Art of Computer Systems Performance Analysis"** by Raj Jain - Comprehensive performance modeling
+- **"Theory of Modeling and Simulation"** by Zeigler, Praehofer, Kim - DEVS formalism
+- **"Designing Data-Intensive Applications"** by Martin Kleppmann - Distributed systems
+- **"Release It!"** by Michael Nygard - Resilience patterns
 
 ### Papers
-- **Little's Law** (1961) — Original proof of L = λW
-- **DEVS Formalism** (Zeigler, 1976) — Foundation of discrete event specification
-- **Principles of Chaos Engineering** — Netflix's chaos manifesto
+- **Little's Law** (1961) - Original proof of L = λW
+- **DEVS Formalism** (Zeigler, 1976) - Foundation of discrete event specification
+- **Principles of Chaos Engineering** - Netflix's chaos manifesto
 
 ### Tools (for comparison)
-- **SimPy** (Python) — Discrete event simulation library
-- **JMT** (Java) — Queueing network analyzer
-- **Chaos Monkey** — Netflix's failure injection tool
-- **Gremlin** — Chaos engineering platform
+- **SimPy** (Python) - Discrete event simulation library
+- **JMT** (Java) - Queueing network analyzer
+- **Chaos Monkey** - Netflix's failure injection tool
+- **Gremlin** - Chaos engineering platform
 
 ### Online
 - [Queueing Theory Calculator](https://www.supositorio.com/rcalc/rcalclite.htm)

@@ -1,4 +1,4 @@
-# Prompt Template — Feature Specification Document
+# Prompt Template - Feature Specification Document
 
 Use this prompt to generate a technical feature specification document for any feature domain. Replace the bracketed placeholders with your specifics. Feed the source material (PDFs, prototypes, PRDs, screenshots) as attachments alongside this prompt.
 
@@ -7,14 +7,14 @@ Use this prompt to generate a technical feature specification document for any f
 ## The Prompt
 
 ```
-You are writing a technical feature specification document for a software project. The document must be written from a FEATURE perspective — what each capability does, why it exists, how it works internally at the code level, what data it consumes, and what components it requires. It is NOT a UI spec, NOT a PRD, and NOT a user story collection.
+You are writing a technical feature specification document for a software project. The document must be written from a FEATURE perspective - what each capability does, why it exists, how it works internally at the code level, what data it consumes, and what components it requires. It is NOT a UI spec, NOT a PRD, and NOT a user story collection.
 
 ## Context
 
 Project: [PROJECT_NAME]
 Repository: [REPO_URL or local path]
-Feature domain: [FEATURE_DOMAIN — e.g., "In-app Terminal", "Real-time Collaboration", "Plugin System"]
-Source material: [describe what you're attaching — e.g., "4 HTML prototypes", "a PRD PDF", "design mockups", "research notes"]
+Feature domain: [FEATURE_DOMAIN - e.g., "In-app Terminal", "Real-time Collaboration", "Plugin System"]
+Source material: [describe what you're attaching - e.g., "4 HTML prototypes", "a PRD PDF", "design mockups", "research notes"]
 
 ## Before writing, do this
 
@@ -25,7 +25,7 @@ Source material: [describe what you're attaching — e.g., "4 HTML prototypes", 
    - The existing file organization and naming conventions
    - What already exists vs what's new
    - Any other technical docs in the project (match their style and depth)
-3. Identify every distinct FEATURE in the source material. A feature is a capability — not a UI panel, not a button, not a layout option. Group related UI elements into the single feature they serve.
+3. Identify every distinct FEATURE in the source material. A feature is a capability - not a UI panel, not a button, not a layout option. Group related UI elements into the single feature they serve.
 
 ## Document structure
 
@@ -40,7 +40,7 @@ Write the document with this exact structure:
 
 ### Problem Context
 Three subsections:
-- **What exists today**: Walk through the current architecture as it relates to this feature domain. Reference actual files, types, and data flows in the codebase. Be specific — file paths, type names, function signatures.
+- **What exists today**: Walk through the current architecture as it relates to this feature domain. Reference actual files, types, and data flows in the codebase. Be specific - file paths, type names, function signatures.
 - **What's missing**: Enumerate the specific gaps. Each gap should be a concrete technical absence, not a vague wish. Tie each gap to why users or developers can't do something today.
 - **What the source material explores**: One paragraph summarizing the scope of the source material without duplicating the feature sections.
 
@@ -58,7 +58,7 @@ This is the core of each feature section. It must include:
 - **Data source**: What existing types/data this feature reads from. Use actual type names and file paths from the codebase. Show the relevant type definition or interface as a code block.
 - **Processing/logic**: How the feature transforms, filters, derives, or computes from the source data. Include algorithms, state machines, formulas, or decision trees where applicable.
 - **New types**: If the feature introduces new types or interfaces, define them as TypeScript (or the project's language) code blocks with JSDoc comments explaining each field. Explain WHY each field exists and WHERE its value comes from.
-- **Integration points**: How this feature connects to existing code — which hooks it calls, which store slices it reads/writes, which protocols it uses.
+- **Integration points**: How this feature connects to existing code - which hooks it calls, which store slices it reads/writes, which protocols it uses.
 
 If the feature has sub-capabilities, use a table:
 | Sub-capability | Data source | Output |
@@ -97,7 +97,7 @@ A table mapping each feature to which source material items cover it.
 
 1. **Ground everything in code.** Every claim about "how it works" must reference an actual type, file, function, or data flow in the codebase. If a type doesn't exist yet, define it as a code block and say where it would live.
 
-2. **Explain WHY, not just WHAT.** For every new type field, every design choice, every architectural decision — explain why it exists, what alternative was rejected, or what problem it prevents.
+2. **Explain WHY, not just WHAT.** For every new type field, every design choice, every architectural decision - explain why it exists, what alternative was rejected, or what problem it prevents.
 
 3. **Use the project's own vocabulary.** Don't invent new terms when the codebase already has names for things. Use the actual type names, the actual file names, the actual enum values.
 
@@ -120,7 +120,7 @@ A table mapping each feature to which source material items cover it.
 
 ## How to use this prompt
 
-### Step 1 — Prepare your inputs
+### Step 1 - Prepare your inputs
 
 Gather your source material. This can be any combination of:
 - HTML/interactive prototypes
@@ -129,24 +129,24 @@ Gather your source material. This can be any combination of:
 - Research notes or brainstorm outputs
 - Existing issue tickets or feature requests
 
-### Step 2 — Feed it to the LLM
+### Step 2 - Feed it to the LLM
 
 Attach the source material and paste the prompt above with your placeholders filled in. The LLM should have access to the codebase (either via tool access, or paste relevant files inline).
 
-### Step 3 — Iterate on the first draft
+### Step 3 - Iterate on the first draft
 
 The first pass typically gets the structure right but may:
-- Be too UI-focused (if source material is mockup-heavy) — push back with "rewrite from feature perspective, not UI perspective"
-- Miss codebase grounding — push back with "explore the repo first, then rewrite with actual type names and file paths"
-- Over-generalize — push back with "show the actual TypeScript interface, not a prose description"
+- Be too UI-focused (if source material is mockup-heavy) - push back with "rewrite from feature perspective, not UI perspective"
+- Miss codebase grounding - push back with "explore the repo first, then rewrite with actual type names and file paths"
+- Over-generalize - push back with "show the actual TypeScript interface, not a prose description"
 
-### Step 4 — Use the output
+### Step 4 - Use the output
 
 The resulting document serves as:
-- **Implementation spec** for developers — they know exactly what types to create, where files go, what data flows look like
-- **Issue creation source** — each feature section maps to one or more GitHub issues
-- **Schema/data model input** — the type definitions can be extracted into a companion schema document
-- **Dependency graph input** — the "What components it requires" and cross-references reveal the implementation order
+- **Implementation spec** for developers - they know exactly what types to create, where files go, what data flows look like
+- **Issue creation source** - each feature section maps to one or more GitHub issues
+- **Schema/data model input** - the type definitions can be extracted into a companion schema document
+- **Dependency graph input** - the "What components it requires" and cross-references reveal the implementation order
 
 ---
 

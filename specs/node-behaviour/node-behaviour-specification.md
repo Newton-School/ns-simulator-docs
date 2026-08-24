@@ -1,6 +1,6 @@
 # NS-Simulator: Node Behaviour Specification & Architecture Redesign
 
-> **Purpose:** Exhaustive audit of every simulator node — what it does today, what it must do to be teachable, and the architectural changes required to get there.
+> **Purpose:** Exhaustive audit of every simulator node - what it does today, what it must do to be teachable, and the architectural changes required to get there.
 >
 > **Date:** June 2026
 >
@@ -46,7 +46,7 @@
 
 ### 1.1 The Single Code Path
 
-Every node in the simulator (except sources and composites) is instantiated as a `GGcKNode` — a generic G/G/c/K queue. The engine processes events in a loop:
+Every node in the simulator (except sources and composites) is instantiated as a `GGcKNode` - a generic G/G/c/K queue. The engine processes events in a loop:
 
 ```
 for each event in min-heap:
@@ -65,19 +65,19 @@ for each event in min-heap:
     request-rejected   → record rejection
 ```
 
-**This loop is the same for every node type.** The engine (`engine.ts:238–270`) does a `switch` on event type but never on node type, component type, or category.
+**This loop is the same for every node type.** The engine (`engine.ts:238-270`) does a `switch` on event type but never on node type, component type, or category.
 
 ### 1.2 What Actually Differentiates Nodes Today
 
 | Mechanism | Where | What It Does | Scope |
 |---|---|---|---|
-| **Service time mean** | `componentSpecs.ts:18–59` | Different `TYPE_MEAN_SERVICE_MS` per component type. E.g., `load-balancer-l4: 0.15ms`, `relational-db: 8ms`, `in-memory-cache: 0.1ms` | Affects how long `handleCompletion` takes. Does NOT change what the node does. |
+| **Service time mean** | `componentSpecs.ts:18-59` | Different `TYPE_MEAN_SERVICE_MS` per component type. E.g., `load-balancer-l4: 0.15ms`, `relational-db: 8ms`, `in-memory-cache: 0.1ms` | Affects how long `handleCompletion` takes. Does NOT change what the node does. |
 | **Seed-derived defaults** | `paletteTemplates.ts` | Each palette entry has `{ throughput, load, queueDepth }` seeds that derive initial workers/capacity/service time | Initial config only. User can override everything in the UI. |
-| **Routing strategy** | `routing.ts:211–222` | Nodes whose ID contains `"load-balancer"`, `"lb"`, `"ingress"`, or `"reverse-proxy"` use round-robin. Pub/Sub and Message Broker use broadcast. Everything else: uniform random or weighted. | String-match heuristic on node ID, not on component type. |
-| **Security policy** | `engine.ts:668–695` | Nodes with `securityPolicy.blockRate > 0` or `droppedPackets > 0` probabilistically reject requests before queue admission | Only WAF, Firewall Rule, Security Group use this via seeds. But any node could have it. |
-| **Error rate** | `engine.ts:352–367` | Nodes with `nodeErrorRate > 0` probabilistically fail requests after processing | Any node can have this. Not type-specific. |
+| **Routing strategy** | `routing.ts:211-222` | Nodes whose ID contains `"load-balancer"`, `"lb"`, `"ingress"`, or `"reverse-proxy"` use round-robin. Pub/Sub and Message Broker use broadcast. Everything else: uniform random or weighted. | String-match heuristic on node ID, not on component type. |
+| **Security policy** | `engine.ts:668-695` | Nodes with `securityPolicy.blockRate > 0` or `droppedPackets > 0` probabilistically reject requests before queue admission | Only WAF, Firewall Rule, Security Group use this via seeds. But any node could have it. |
+| **Error rate** | `engine.ts:352-367` | Nodes with `nodeErrorRate > 0` probabilistically fail requests after processing | Any node can have this. Not type-specific. |
 | **Structural role** | `nodeSpecTypes.ts:10` | `source`, `processor`, `storage`, `router`, `sink`, `composite` | Used for UI rendering and serialization decisions. **Not used by the engine at all.** |
-| **Profile** | `nodeSpecTypes.ts:12–24` | `source`, `router`, `compute-service`, `worker`, `datastore`, `broker`, `security-filter`, `control-plane`, `observability`, `integration`, `composite` | Used for UI categorization and validation. **Not used by the engine at all.** |
+| **Profile** | `nodeSpecTypes.ts:12-24` | `source`, `router`, `compute-service`, `worker`, `datastore`, `broker`, `security-filter`, `control-plane`, `observability`, `integration`, `composite` | Used for UI categorization and validation. **Not used by the engine at all.** |
 
 ### 1.3 What This Means
 
@@ -103,7 +103,7 @@ For the simulator to teach, each node must have **observable behaviour that matc
 
 Today, every node demonstrates exactly one concept: "a queue that processes requests at a configurable rate." That's a valid queueing theory lesson, but it doesn't teach load balancing, caching, pub/sub, firewalling, or any other distributed systems concept.
 
-**The fix is not to rewrite the engine.** The G/G/c/K queue is a good foundation — real infrastructure components are queues under the hood. The fix is to add **behavioural traits** that overlay type-specific logic on top of the queue. A cache node should still queue requests, but it should also have a hit/miss probability that determines whether the request is completed locally or forwarded downstream.
+**The fix is not to rewrite the engine.** The G/G/c/K queue is a good foundation - real infrastructure components are queues under the hood. The fix is to add **behavioural traits** that overlay type-specific logic on top of the queue. A cache node should still queue requests, but it should also have a hit/miss probability that determines whether the request is completed locally or forwarded downstream.
 
 ---
 
@@ -123,7 +123,7 @@ For each node, I document:
 | Aspect | Detail |
 |---|---|
 | **Palette IDs** | `client-user`, `input-source` |
-| **Today** | Generates requests via `WorkloadGenerator`. Supports 7 patterns (constant, Poisson, bursty, spike, diurnal, sawtooth, replay). Routes requests to first outgoing edge. Not a `GGcKNode` — no queue processing. |
+| **Today** | Generates requests via `WorkloadGenerator`. Supports 7 patterns (constant, Poisson, bursty, spike, diurnal, sawtooth, replay). Routes requests to first outgoing edge. Not a `GGcKNode` - no queue processing. |
 | **Real world** | End users, mobile apps, browsers, or external systems that send requests |
 | **Teaching gap** | None significant. This is the one node type with genuinely distinct behaviour. |
 | **Required behaviour** | Current implementation is adequate. |
@@ -152,8 +152,8 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 0.15ms). Identical logic to L7 and Legacy LBs. |
 | **Real world** | Operates at transport layer (TCP/UDP). Forwards connections without inspecting content. Very fast, very simple. AWS NLB. Cannot route by URL path, HTTP header, or request content. Preserves source IP. |
 | **Teaching gap** | Cannot demonstrate any L4-specific behaviour. Same as L7 in every functional way. An instructor cannot explain "L4 doesn't inspect HTTP headers" because neither L4 nor L7 inspects anything. |
-| **Required behaviour** | (1) Must NOT support conditional routing by `request.type` — this is an L7 feature. L4 can only route by connection, not by content. (2) Should have lower processing overhead than L7 (already true via service time, but should be enforced). (3) Should support: round-robin, weighted, least-connections. Should NOT support: path-based routing, header-based routing, host-based routing. |
-| **Config knobs** | `routingStrategy` (limited to: round-robin, weighted, least-connections, source-ip-hash), `healthCheckEnabled`, `protocol` (TCP or UDP — affects metrics labels, not queue logic) |
+| **Required behaviour** | (1) Must NOT support conditional routing by `request.type` - this is an L7 feature. L4 can only route by connection, not by content. (2) Should have lower processing overhead than L7 (already true via service time, but should be enforced). (3) Should support: round-robin, weighted, least-connections. Should NOT support: path-based routing, header-based routing, host-based routing. |
+| **Config knobs** | `routingStrategy` (limited to: round-robin, weighted, least-connections, source-ip-hash), `healthCheckEnabled`, `protocol` (TCP or UDP - affects metrics labels, not queue logic) |
 
 #### Load Balancer L7 (ALB)
 
@@ -163,7 +163,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 0.4ms). Identical logic to L4. |
 | **Real world** | Operates at application layer (HTTP/HTTPS/gRPC). Inspects request content: URL path, HTTP headers, host, cookies. Routes based on content rules. Can do SSL termination. AWS ALB. Higher latency than L4 because it must parse HTTP. |
 | **Teaching gap** | Cannot demonstrate content-based routing as an L7-exclusive capability. Conditional routing via edge conditions works on any node, so students see no difference between L4 and L7. |
-| **Required behaviour** | (1) Must support conditional routing by `request.type`, path, or headers — this is the core L7 differentiator. (2) Higher processing overhead than L4 (already true). (3) Should support: round-robin, weighted, least-connections, path-based routing, host-based routing. (4) The engine should ENFORCE that L4 nodes cannot use conditional edge routing, while L7 nodes can. This is the teachable moment: "L4 can't do this, L7 can." |
+| **Required behaviour** | (1) Must support conditional routing by `request.type`, path, or headers - this is the core L7 differentiator. (2) Higher processing overhead than L4 (already true). (3) Should support: round-robin, weighted, least-connections, path-based routing, host-based routing. (4) The engine should ENFORCE that L4 nodes cannot use conditional edge routing, while L7 nodes can. This is the teachable moment: "L4 can't do this, L7 can." |
 | **Config knobs** | `routingStrategy` (full set including path-based, host-based), `healthCheckEnabled`, `sslTermination` (adds processing overhead), `routingRules` (list of path → target mappings) |
 
 **Key teaching requirement for L4 vs L7:** The simulator must make it impossible (or visibly wrong) to configure content-based routing on an L4 LB. When a student tries, the UI should explain: "L4 operates at the transport layer and cannot inspect HTTP content. Use an L7 Load Balancer for content-based routing." This constraint IS the lesson.
@@ -176,7 +176,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 1ms). Same as any router. |
 | **Real world** | Entry point for APIs. AWS API Gateway, Kong, Apigee. Does: request validation, authentication, rate limiting, request transformation, routing to backend services, response caching, throttling, API key management. |
 | **Teaching gap** | Cannot demonstrate: rate limiting, authentication overhead, request transformation, API-level throttling. Behaves identically to a load balancer. |
-| **Required behaviour** | (1) Rate limiting — configurable token-bucket rate limiter that rejects requests with `rate_limited` when exhausted. (2) Authentication overhead — configurable probability of auth rejection (simulating invalid API keys). (3) Content-based routing — same as L7 LB (API gateways are L7 devices). (4) Request transformation adds processing overhead. |
+| **Required behaviour** | (1) Rate limiting - configurable token-bucket rate limiter that rejects requests with `rate_limited` when exhausted. (2) Authentication overhead - configurable probability of auth rejection (simulating invalid API keys). (3) Content-based routing - same as L7 LB (API gateways are L7 devices). (4) Request transformation adds processing overhead. |
 | **Config knobs** | `rateLimiter: { maxTokens, refillRatePerSecond }`, `authRejectionRate`, `routingRules`, `transformationOverheadMs` |
 
 #### CDN
@@ -187,8 +187,8 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 2ms). Forwards all requests downstream. No caching behaviour whatsoever. |
 | **Real world** | Content Delivery Network. AWS CloudFront, Cloudflare. Caches content at edge locations. On cache hit: responds immediately from edge cache (very fast, no origin traffic). On cache miss: forwards to origin server, caches response, then responds. The entire point of a CDN is to REDUCE traffic to the origin. |
 | **Teaching gap** | This is one of the most broken nodes for teaching. Adding a CDN to a topology has zero effect on downstream traffic. An instructor cannot demonstrate "CDN reduces database load" because the CDN forwards 100% of requests downstream. Students cannot see the fundamental concept: cache hit = fast + no origin traffic, cache miss = slow + origin traffic. |
-| **Required behaviour** | (1) `cacheHitRate` (0.0–1.0) — probability that a request is served from cache. (2) On cache HIT: complete the request immediately with minimal latency (e.g., 1ms). Do NOT forward downstream. (3) On cache MISS: forward to origin (next node) via normal routing. (4) Cache hit should be visible in metrics: "X% of requests served from cache." (5) Time-to-live (TTL): optional cache expiry that degrades hit rate over time. |
-| **Config knobs** | `cacheHitRate` (0.0–1.0), `cacheHitLatencyMs` (default: 1ms, the edge response time), `ttlSeconds` (optional, affects hit rate over time) |
+| **Required behaviour** | (1) `cacheHitRate` (0.0-1.0) - probability that a request is served from cache. (2) On cache HIT: complete the request immediately with minimal latency (e.g., 1ms). Do NOT forward downstream. (3) On cache MISS: forward to origin (next node) via normal routing. (4) Cache hit should be visible in metrics: "X% of requests served from cache." (5) Time-to-live (TTL): optional cache expiry that degrades hit rate over time. |
+| **Config knobs** | `cacheHitRate` (0.0-1.0), `cacheHitLatencyMs` (default: 1ms, the edge response time), `ttlSeconds` (optional, affects hit rate over time) |
 
 #### Ingress Controller
 
@@ -218,9 +218,9 @@ For each node, I document:
 |---|---|
 | **Palette ID** | `service-mesh` |
 | **Today** | GGcKNode queue (mean service 0.6ms). Round-robin routing. |
-| **Real world** | Istio, Linkerd. Manages service-to-service communication via sidecar proxies injected alongside each service. Provides: mutual TLS, traffic management, observability, retries, circuit breaking, fault injection — all without application code changes. |
+| **Real world** | Istio, Linkerd. Manages service-to-service communication via sidecar proxies injected alongside each service. Provides: mutual TLS, traffic management, observability, retries, circuit breaking, fault injection - all without application code changes. |
 | **Teaching gap** | Cannot demonstrate: sidecar injection pattern, mTLS overhead, retry logic, circuit breaking, traffic splitting (canary deployments). Behaves like a single node, not a mesh of sidecars. |
-| **Required behaviour** | (1) When placed in a topology, should conceptually represent the control plane. (2) Sidecar proxies (already in palette as "Sidecar Proxy") are the data plane — they should be placed adjacent to each service. (3) The service mesh node should be able to configure all its sidecars centrally: retry policy, circuit breaker settings, mTLS overhead. (4) For MVP: treat as an L7 router with built-in retry and circuit breaker config. |
+| **Required behaviour** | (1) When placed in a topology, should conceptually represent the control plane. (2) Sidecar proxies (already in palette as "Sidecar Proxy") are the data plane - they should be placed adjacent to each service. (3) The service mesh node should be able to configure all its sidecars centrally: retry policy, circuit breaker settings, mTLS overhead. (4) For MVP: treat as an L7 router with built-in retry and circuit breaker config. |
 | **Config knobs** | `retryPolicy: { maxAttempts, baseDelayMs }`, `circuitBreaker: { failureThreshold, recoveryTimeoutMs }`, `mtlsOverheadMs`, `trafficSplit: { canaryWeight }` |
 
 #### NAT Gateway
@@ -231,7 +231,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 0.5ms). Generic routing. |
 | **Real world** | AWS NAT Gateway. Allows instances in a private subnet to connect to the internet while preventing the internet from initiating connections. Translates private IP addresses to a public IP. |
 | **Teaching gap** | Cannot demonstrate: directionality (outbound only), IP address translation, bandwidth limits. Behaves like a generic pass-through node. |
-| **Required behaviour** | (1) Bandwidth cap — NAT gateways have throughput limits (e.g., 45 Gbps for AWS). Should reject/queue requests when throughput exceeds limit. (2) One-directional — should only be used on edges going from private subnet to internet. The UI could warn if used for inbound traffic. (3) For simulation: primarily a bandwidth-limited passthrough. The teaching value is in topology placement (private subnet → NAT → internet), not in complex node behaviour. |
+| **Required behaviour** | (1) Bandwidth cap - NAT gateways have throughput limits (e.g., 45 Gbps for AWS). Should reject/queue requests when throughput exceeds limit. (2) One-directional - should only be used on edges going from private subnet to internet. The UI could warn if used for inbound traffic. (3) For simulation: primarily a bandwidth-limited passthrough. The teaching value is in topology placement (private subnet → NAT → internet), not in complex node behaviour. |
 | **Config knobs** | `bandwidthLimitMbps`, `direction: 'outbound-only'` (validation hint) |
 
 #### VPN Gateway
@@ -242,7 +242,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 2ms). Generic routing. |
 | **Real world** | AWS VPN Gateway, IPSec tunnel endpoint. Encrypts traffic between VPCs or between VPC and on-premises. Adds significant latency due to encryption/decryption. |
 | **Teaching gap** | Cannot demonstrate: encryption overhead scaling with traffic, bandwidth limits, tunnel redundancy. |
-| **Required behaviour** | (1) Higher base latency (already has 2ms service time). (2) Encryption overhead that scales with request size — larger requests take longer. (3) Bandwidth limit. |
+| **Required behaviour** | (1) Higher base latency (already has 2ms service time). (2) Encryption overhead that scales with request size - larger requests take longer. (3) Bandwidth limit. |
 | **Config knobs** | `encryptionOverheadFactor` (multiplier on service time based on request size), `bandwidthLimitMbps`, `tunnelRedundancy` (number of active tunnels) |
 
 #### Routing Rule / Routing Policy
@@ -251,7 +251,7 @@ For each node, I document:
 |---|---|
 | **Palette IDs** | `routing-rule`, `routing-policy` |
 | **Today** | GGcKNode queue (mean service 0.1ms). Generic passthrough routing. |
-| **Real world** | Configuration objects that define how traffic is routed. Not physical components — they're rules attached to load balancers or API gateways. Routing rules match on path/host/header. Routing policies define traffic distribution (weighted, latency-based, failover). |
+| **Real world** | Configuration objects that define how traffic is routed. Not physical components - they're rules attached to load balancers or API gateways. Routing rules match on path/host/header. Routing policies define traffic distribution (weighted, latency-based, failover). |
 | **Teaching gap** | These are conceptual duplicates of L7 LB routing capabilities. |
 | **Required behaviour** | These should be treated as configuration artifacts, not standalone nodes. They make more sense as properties of router nodes (LB, API Gateway) rather than separate palette entries. If kept as separate nodes, they should enforce: (1) Routing Rule = content-based matching (path, host, header). (2) Routing Policy = distribution strategy (weighted, failover, latency-based). |
 | **Config knobs** | For Routing Rule: `matchType` (path, host, header), `matchPattern`, `targetNodeId`. For Routing Policy: `distributionStrategy` (weighted, failover, latency-based), `weights`. |
@@ -290,7 +290,7 @@ For each node, I document:
 | **Today** | GGcKNode queue. Workers, capacity, service time distribution, timeout. |
 | **Real world** | Application servers that process business logic. The most generic node type. |
 | **Teaching gap** | Minimal. This is the node type that most naturally maps to the GGcKNode model. A server IS a queue that processes requests with configurable concurrency and service time. |
-| **Required behaviour** | Current implementation is largely adequate. Enhancements: (1) CPU-bound vs I/O-bound processing mode — CPU-bound work scales with workers but has a hard cap at vCPU count; I/O-bound work can have more workers than vCPUs. (2) Memory pressure — when queue is deep, service time degrades (simulating GC pressure, swap). |
+| **Required behaviour** | Current implementation is largely adequate. Enhancements: (1) CPU-bound vs I/O-bound processing mode - CPU-bound work scales with workers but has a hard cap at vCPU count; I/O-bound work can have more workers than vCPUs. (2) Memory pressure - when queue is deep, service time degrades (simulating GC pressure, swap). |
 | **Config knobs** | Current knobs (workers, capacity, distribution, timeout) are good. Add: `processingMode: 'cpu-bound' | 'io-bound'`, `memoryPressureThreshold` (queue depth at which service time degrades). |
 
 #### Serverless Function (Lambda)
@@ -299,9 +299,9 @@ For each node, I document:
 |---|---|
 | **Palette ID** | `lambda-function` |
 | **Today** | GGcKNode queue (mean service varies). Same as API Server. |
-| **Real world** | AWS Lambda, Google Cloud Functions. Key differences from servers: (1) Cold start penalty — first invocation is slow. (2) Concurrency limit — hard cap on concurrent executions. (3) No persistent state. (4) Auto-scales to zero. (5) Billed per invocation, not per uptime. |
+| **Real world** | AWS Lambda, Google Cloud Functions. Key differences from servers: (1) Cold start penalty - first invocation is slow. (2) Concurrency limit - hard cap on concurrent executions. (3) No persistent state. (4) Auto-scales to zero. (5) Billed per invocation, not per uptime. |
 | **Teaching gap** | Cannot demonstrate: cold start latency, auto-scaling to zero, concurrency limits as a hard cap (vs. server's configurable workers), invocation-based billing model. Identical to a regular server. |
-| **Required behaviour** | (1) Cold start — first N requests (or requests after idle period) incur additional latency sampled from `coldStartDistribution`. (2) Concurrency limit — hard cap (not soft queue) at `maxConcurrency`. Requests beyond this are throttled (429), not queued. (3) Timeout — Lambda has a hard 15-minute max timeout, but typical is 3–30 seconds. |
+| **Required behaviour** | (1) Cold start - first N requests (or requests after idle period) incur additional latency sampled from `coldStartDistribution`. (2) Concurrency limit - hard cap (not soft queue) at `maxConcurrency`. Requests beyond this are throttled (429), not queued. (3) Timeout - Lambda has a hard 15-minute max timeout, but typical is 3-30 seconds. |
 | **Config knobs** | `coldStartLatencyMs` (distribution), `maxConcurrency` (hard cap, rejects beyond this), `idleTimeoutMs` (time after last request before functions scale to zero, triggering cold start again), `timeoutMs` (hard cap at 900,000ms) |
 
 #### Job Worker / Cron Job
@@ -312,7 +312,7 @@ For each node, I document:
 | **Today** | GGcKNode queue. `asyncBoundary: true` on the palette template, but the engine does not use this flag. |
 | **Real world** | Background processors. Job Workers pull from queues and process asynchronously. Cron Jobs run on a schedule independently of incoming traffic. |
 | **Teaching gap** | Cannot demonstrate: pull-based processing (worker pulls from queue vs. queue pushes to worker), scheduled execution (cron), or the async nature (results not returned to caller). The `asyncBoundary` flag is purely cosmetic. |
-| **Required behaviour** | (1) Job Worker: should always be downstream of async edges. The engine should enforce/encourage this. Processing is fire-and-forget — no response flows back to the caller. (2) Cron Job: should self-trigger on a schedule, independent of incoming traffic. Not request-driven. (3) Both: high queue tolerance (large capacity, slow processing OK). |
+| **Required behaviour** | (1) Job Worker: should always be downstream of async edges. The engine should enforce/encourage this. Processing is fire-and-forget - no response flows back to the caller. (2) Cron Job: should self-trigger on a schedule, independent of incoming traffic. Not request-driven. (3) Both: high queue tolerance (large capacity, slow processing OK). |
 | **Config knobs** | Job Worker: current config adequate, but incoming edges should default to async. Cron Job: `scheduleIntervalMs`, `triggerSource: 'scheduled'` (generates own events on timer). |
 
 #### Auth Service
@@ -323,7 +323,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service varies). Same as any compute node. |
 | **Real world** | Handles authentication (verify identity) and authorization (check permissions). Issues/validates tokens (JWT, OAuth). On the critical path for every authenticated request. |
 | **Teaching gap** | Cannot demonstrate: token validation (fast) vs. token issuance (slow), auth failure (401/403) rates, the critical-path nature (if auth is down, everything is down). |
-| **Required behaviour** | (1) Two processing modes with different latencies: token validation (fast, ~1ms) and token issuance/login (slow, ~50ms). Request type could determine which mode. (2) Auth rejection rate — configurable percentage of requests that fail authentication. Distinct from node error rate: these return 401/403, not 500. (3) Critical dependency — if this node fails, all downstream nodes should see increased errors (models the cascading effect of auth outage). |
+| **Required behaviour** | (1) Two processing modes with different latencies: token validation (fast, ~1ms) and token issuance/login (slow, ~50ms). Request type could determine which mode. (2) Auth rejection rate - configurable percentage of requests that fail authentication. Distinct from node error rate: these return 401/403, not 500. (3) Critical dependency - if this node fails, all downstream nodes should see increased errors (models the cascading effect of auth outage). |
 | **Config knobs** | `validationLatencyMs`, `issuanceLatencyMs`, `authRejectionRate`, `isCriticalPath: true` |
 
 #### Search Service
@@ -334,7 +334,7 @@ For each node, I document:
 | **Today** | GGcKNode queue. Same as any compute node. |
 | **Real world** | Query processing service backed by a search index (Elasticsearch, Solr). Latency depends heavily on query complexity. |
 | **Teaching gap** | Cannot demonstrate: variable latency based on query complexity, the distinction between simple lookups (fast) and complex aggregations (slow). |
-| **Required behaviour** | (1) Variable service time based on request type — simple queries (fast distribution) vs. complex queries (slow distribution). (2) Connection to a search index storage node. |
+| **Required behaviour** | (1) Variable service time based on request type - simple queries (fast distribution) vs. complex queries (slow distribution). (2) Connection to a search index storage node. |
 | **Config knobs** | `simpleQueryLatencyMs`, `complexQueryLatencyMs`, `queryTypeDistribution` |
 
 #### Sidecar Proxy
@@ -345,7 +345,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 0.18ms). Same as any compute node. |
 | **Real world** | Envoy sidecar in a service mesh. Sits alongside every service, handling: TLS termination, retries, circuit breaking, observability, traffic management. Adds latency to every request (both inbound and outbound). |
 | **Teaching gap** | Cannot demonstrate: per-request overhead (should be on both ingress and egress of a service), retry logic, circuit breaking, the fact that EVERY service gets one. |
-| **Required behaviour** | (1) Small fixed latency addition on both inbound and outbound traffic for the associated service. (2) Retry on failure (configurable). (3) Circuit breaker (configurable). (4) Conceptually paired with a service — the UI should encourage placing one next to each service. |
+| **Required behaviour** | (1) Small fixed latency addition on both inbound and outbound traffic for the associated service. (2) Retry on failure (configurable). (3) Circuit breaker (configurable). (4) Conceptually paired with a service - the UI should encourage placing one next to each service. |
 | **Config knobs** | `perRequestOverheadMs`, `retryPolicy: { maxAttempts, baseDelayMs }`, `circuitBreaker: { failureThreshold, recoveryTimeoutMs }` |
 
 ---
@@ -360,7 +360,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 8ms). Same as any node. |
 | **Real world** | PostgreSQL, MySQL, Aurora. Handles reads and writes. Writes go to a write-ahead log. Connections are limited and pooled. Complex queries are slow, simple lookups are fast. Supports transactions (ACID). |
 | **Teaching gap** | Cannot demonstrate: read vs. write latency difference, connection pool exhaustion, the difference between OLTP queries (fast) and analytical queries (slow), replication lag to replicas. |
-| **Required behaviour** | (1) Differentiate read vs. write processing time — writes are slower than reads (due to WAL, locking, replication). Request type (`read` vs `write`) determines which distribution is sampled. (2) Connection pool — workers represent connection pool size. When exhausted, requests queue (this is already modeled by GGcKNode). (3) Replication — when a write completes, optionally emit an async event to connected read replicas (simulating replication). |
+| **Required behaviour** | (1) Differentiate read vs. write processing time - writes are slower than reads (due to WAL, locking, replication). Request type (`read` vs `write`) determines which distribution is sampled. (2) Connection pool - workers represent connection pool size. When exhausted, requests queue (this is already modeled by GGcKNode). (3) Replication - when a write completes, optionally emit an async event to connected read replicas (simulating replication). |
 | **Config knobs** | `readLatencyMs` (distribution), `writeLatencyMs` (distribution), `connectionPoolSize` (maps to workers), `replicationEnabled`, `replicationLagMs` |
 
 #### Read Replica
@@ -371,7 +371,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service similar to primary DB). Same as primary DB. |
 | **Real world** | Read-only copy of a primary database. Receives replication stream from primary. Can serve read queries. Cannot serve writes. Has replication lag (data may be slightly stale). |
 | **Teaching gap** | Cannot demonstrate: read-only enforcement (should reject writes), replication lag (data staleness), the scaling pattern of adding replicas for read-heavy workloads. |
-| **Required behaviour** | (1) Read-only — should reject or redirect requests with type `write`. (2) Replication lag — metrics should show a configurable delay from primary (how stale the data is). (3) Same read performance as primary DB. |
+| **Required behaviour** | (1) Read-only - should reject or redirect requests with type `write`. (2) Replication lag - metrics should show a configurable delay from primary (how stale the data is). (3) Same read performance as primary DB. |
 | **Config knobs** | `readOnly: true` (rejects `write` request types), `replicationLagMs` |
 
 #### Redis Cache (In-Memory)
@@ -382,7 +382,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 0.1ms). Forwards all requests downstream. No caching. |
 | **Real world** | In-memory key-value store. Sub-millisecond latency. Used as a cache layer: hit = return value (no downstream call), miss = pass through to database, store result, return. The entire point is to ABSORB traffic that would otherwise hit the database. |
 | **Teaching gap** | Critical failure. Same as CDN: adding a Redis cache has zero effect on downstream traffic. Cannot demonstrate the fundamental cache concept. An instructor shows "add a cache to reduce DB load" but the DB sees the same traffic regardless. |
-| **Required behaviour** | Same cache hit/miss model as CDN: (1) `cacheHitRate` (0.0–1.0). (2) On HIT: complete immediately with sub-millisecond latency, do NOT forward downstream. (3) On MISS: forward to downstream node (database), cache the result. (4) Cache eviction: when capacity is reached, LRU eviction (can model as decreasing hit rate under high load). |
+| **Required behaviour** | Same cache hit/miss model as CDN: (1) `cacheHitRate` (0.0-1.0). (2) On HIT: complete immediately with sub-millisecond latency, do NOT forward downstream. (3) On MISS: forward to downstream node (database), cache the result. (4) Cache eviction: when capacity is reached, LRU eviction (can model as decreasing hit rate under high load). |
 | **Config knobs** | `cacheHitRate`, `cacheHitLatencyMs` (default: 0.1ms), `maxMemoryMb` (capacity limit, affects eviction), `evictionPolicy: 'lru' | 'lfu' | 'ttl'`, `ttlSeconds` |
 
 #### NoSQL DB
@@ -393,7 +393,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 3ms). Same as relational DB. |
 | **Real world** | DynamoDB, MongoDB, Cassandra. Key-value or document model. Designed for horizontal scaling. Consistent read latency at any scale (DynamoDB's promise). Different consistency models (eventual vs. strong). |
 | **Teaching gap** | Cannot demonstrate: consistent latency at scale (vs. relational DB's degradation under load), the read/write capacity unit model (DynamoDB), eventual consistency effects. |
-| **Required behaviour** | (1) Consistent latency — service time should NOT degrade with load (unlike relational DB). Model as constant or narrow-distribution service time. (2) Provisioned throughput — configurable RCU/WCU (read/write capacity units) that act as a hard throughput cap. Requests beyond capacity get throttled. (3) Eventual consistency mode — reads may return stale data (for simulation: lower latency for eventual reads, higher for strongly consistent). |
+| **Required behaviour** | (1) Consistent latency - service time should NOT degrade with load (unlike relational DB). Model as constant or narrow-distribution service time. (2) Provisioned throughput - configurable RCU/WCU (read/write capacity units) that act as a hard throughput cap. Requests beyond capacity get throttled. (3) Eventual consistency mode - reads may return stale data (for simulation: lower latency for eventual reads, higher for strongly consistent). |
 | **Config knobs** | `readCapacityUnits`, `writeCapacityUnits`, `consistencyModel: 'eventual' | 'strong'`, `eventualConsistencyLatencyMs`, `strongConsistencyLatencyMs` |
 
 #### Object Storage (S3)
@@ -403,8 +403,8 @@ For each node, I document:
 | **Palette ID** | `object-storage` |
 | **Today** | GGcKNode queue (mean service 20ms). Same as any storage. |
 | **Real world** | AWS S3, GCS. High latency but unlimited scale. Stores blobs. 99.999999999% durability. Eventual consistency on overwrites (historically). Latency depends on object size. |
-| **Teaching gap** | Cannot demonstrate: latency scaling with object size, the difference from a database (high latency, unlimited capacity, no queries — just GET/PUT by key), eventual consistency on overwrites. |
-| **Required behaviour** | (1) Latency proportional to request size (sizeBytes on request). (2) Unlimited capacity (very high or infinite queue capacity). (3) No complex queries — simple GET/PUT semantics. |
+| **Teaching gap** | Cannot demonstrate: latency scaling with object size, the difference from a database (high latency, unlimited capacity, no queries - just GET/PUT by key), eventual consistency on overwrites. |
+| **Required behaviour** | (1) Latency proportional to request size (sizeBytes on request). (2) Unlimited capacity (very high or infinite queue capacity). (3) No complex queries - simple GET/PUT semantics. |
 | **Config knobs** | `latencyPerMbMs` (latency scales with object size), `maxObjectSizeMb`, `storageClass: 'standard' | 'infrequent' | 'glacier'` (different latency profiles) |
 
 #### Search Index (Elasticsearch)
@@ -415,7 +415,7 @@ For each node, I document:
 | **Today** | GGcKNode queue (mean service 10ms). Same as any storage. |
 | **Real world** | Elasticsearch, OpenSearch. Full-text search and analytics. Write = index (slow, must update inverted index). Read = search (fast for simple, slow for complex aggregations). |
 | **Teaching gap** | Cannot demonstrate: indexing overhead on writes, variable read latency based on query complexity. |
-| **Required behaviour** | (1) Write (index) operations are significantly slower than reads. (2) Read latency varies by query type. (3) Index refresh interval — newly written data isn't immediately searchable. |
+| **Required behaviour** | (1) Write (index) operations are significantly slower than reads. (2) Read latency varies by query type. (3) Index refresh interval - newly written data isn't immediately searchable. |
 | **Config knobs** | `indexLatencyMs` (write distribution), `searchLatencyMs` (read distribution), `refreshIntervalMs` |
 
 #### Time-Series DB
@@ -440,7 +440,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Required behaviour (per type):** | |
 | **Graph DB** | Traversal queries scale with depth/hops. Single-hop lookups are fast, multi-hop traversals are slow. Config: `hopLatencyMs`, `maxTraversalDepth`. |
 | **Vector DB** | ANN search latency scales with index size and dimensions. Config: `dimensions`, `indexSizeMultiplier`. |
-| **Data Warehouse** | OLAP queries are slow (seconds to minutes). Not for OLTP. Very high latency but can process massive data volumes. Config: `queryLatencyMs` (wide distribution, 100ms–30s). |
+| **Data Warehouse** | OLAP queries are slow (seconds to minutes). Not for OLTP. Very high latency but can process massive data volumes. Config: `queryLatencyMs` (wide distribution, 100ms-30s). |
 | **Data Lake** | Raw storage + query. Even higher latency than data warehouse. Schema-on-read. Config: `scanLatencyPerGbMs`. |
 | **KV Store** | Ultra-fast lookups by key. Sub-millisecond. Similar to Redis but without cache semantics. Config: `lookupLatencyMs` (very low, narrow distribution). |
 
@@ -456,7 +456,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Today** | GGcKNode queue. `asyncBoundary: true` on palette (not used by engine). Same as any other node. |
 | **Real world** | Point-to-point message delivery. Producer sends message to queue. One consumer receives and processes each message. Messages are buffered until consumed. Decouples producer from consumer. Dead letter queue for failed messages. Visibility timeout. |
 | **Teaching gap** | Cannot demonstrate: decoupling (producer doesn't wait for consumer), message buffering (queue depth growing when consumers are slow), dead letter queue (failed messages go to a separate queue), exactly-once vs at-least-once delivery, visibility timeout. |
-| **Required behaviour** | (1) Producer-side: accept the message and complete the producer's request immediately (acknowledge receipt). The producer should NOT wait for the consumer to process. (2) Consumer-side: messages are pulled by consumers at their own pace. If consumer is slow, queue depth grows visibly. (3) Dead letter queue — after N failed processing attempts, move message to a configured DLQ node. (4) Deduplication — optionally reject duplicate message IDs. |
+| **Required behaviour** | (1) Producer-side: accept the message and complete the producer's request immediately (acknowledge receipt). The producer should NOT wait for the consumer to process. (2) Consumer-side: messages are pulled by consumers at their own pace. If consumer is slow, queue depth grows visibly. (3) Dead letter queue - after N failed processing attempts, move message to a configured DLQ node. (4) Deduplication - optionally reject duplicate message IDs. |
 | **Config knobs** | `deliverySemantics: 'at-least-once' | 'at-most-once' | 'exactly-once'`, `visibilityTimeoutMs`, `maxReceiveCount` (before DLQ), `dlqNodeId`, `maxRetentionMs` |
 
 #### Event Broker (Kafka)
@@ -464,10 +464,10 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | Aspect | Detail |
 |---|---|
 | **Palette ID** | `message-broker` |
-| **Today** | GGcKNode queue. `routingStrategy: 'broadcast'` — sends to all outgoing edges. |
-| **Real world** | Apache Kafka. Distributed log. Key differences from a queue: (1) Messages are NOT removed after consumption — they persist on the log. (2) Multiple consumer groups can each read the full stream independently. (3) Messages are partitioned by key — ordering guaranteed within a partition. (4) Very high throughput. (5) Consumer lag is a key metric (how far behind the consumer is). |
+| **Today** | GGcKNode queue. `routingStrategy: 'broadcast'` - sends to all outgoing edges. |
+| **Real world** | Apache Kafka. Distributed log. Key differences from a queue: (1) Messages are NOT removed after consumption - they persist on the log. (2) Multiple consumer groups can each read the full stream independently. (3) Messages are partitioned by key - ordering guaranteed within a partition. (4) Very high throughput. (5) Consumer lag is a key metric (how far behind the consumer is). |
 | **Teaching gap** | Broadcast routing approximates fan-out to multiple consumers, which is partially correct. But cannot demonstrate: consumer group independence, partition-level ordering, consumer lag, the difference from a queue (messages persist vs. messages are consumed). |
-| **Required behaviour** | (1) Fan-out to all downstream consumer groups (broadcast is correct for this). (2) Consumer lag metric — track how many messages each consumer group hasn't processed yet. (3) Ordering within partitions — if request has a partition key, requests with the same key go to the same downstream partition/consumer. (4) Retention — messages don't disappear after consumption (for Kafka this is implicit; simulate by not counting consumption as "removing" from the broker). |
+| **Required behaviour** | (1) Fan-out to all downstream consumer groups (broadcast is correct for this). (2) Consumer lag metric - track how many messages each consumer group hasn't processed yet. (3) Ordering within partitions - if request has a partition key, requests with the same key go to the same downstream partition/consumer. (4) Retention - messages don't disappear after consumption (for Kafka this is implicit; simulate by not counting consumption as "removing" from the broker). |
 | **Config knobs** | `partitionCount`, `replicationFactor`, `retentionMs`, `consumerGroups` (list of downstream node groups) |
 
 #### Pub/Sub
@@ -478,7 +478,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Today** | GGcKNode queue. `routingStrategy: 'broadcast'`. Same as Kafka. |
 | **Real world** | Google Cloud Pub/Sub, AWS SNS + SQS. Topic-based publish/subscribe. Publisher sends to a topic. All subscribers to that topic receive a copy. Unlike Kafka: messages are typically deleted after delivery. Push-based (system pushes to subscribers) vs. pull-based. |
 | **Teaching gap** | Broadcast routing is correct for fan-out. Cannot demonstrate: topic filtering (subscribers filter by message attributes), push vs. pull delivery, message acknowledgment. |
-| **Required behaviour** | (1) Broadcast to all subscribers (already works). (2) Topic/attribute filtering — subscribers can filter which messages they receive based on `request.type` or attributes. (3) Acknowledgment — unacknowledged messages are redelivered. |
+| **Required behaviour** | (1) Broadcast to all subscribers (already works). (2) Topic/attribute filtering - subscribers can filter which messages they receive based on `request.type` or attributes. (3) Acknowledgment - unacknowledged messages are redelivered. |
 | **Config knobs** | `deliveryMode: 'push' | 'pull'`, `filterExpression` (per-subscriber edge), `ackDeadlineMs` |
 
 #### Event Stream
@@ -489,7 +489,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Today** | GGcKNode queue. Same as any storage node. |
 | **Real world** | AWS Kinesis Data Streams. Ordered sequence of records. Similar to Kafka but managed. Shard-based throughput model. |
 | **Teaching gap** | Cannot demonstrate: shard-based throughput limits, ordered processing, the difference from a queue or topic. |
-| **Required behaviour** | (1) Shard-based capacity — each shard handles X reads/sec and Y writes/sec. Total throughput = shards × per-shard capacity. (2) Ordering within shard. |
+| **Required behaviour** | (1) Shard-based capacity - each shard handles X reads/sec and Y writes/sec. Total throughput = shards × per-shard capacity. (2) Ordering within shard. |
 | **Config knobs** | `shardCount`, `readCapacityPerShard`, `writeCapacityPerShard`, `retentionHours` |
 
 ---
@@ -503,8 +503,8 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Palette ID** | `waf` |
 | **Today** | GGcKNode queue. Has `blockRate` in security policy. Probabilistically blocks a percentage of requests with `security_blocked` status. |
 | **Real world** | AWS WAF, Cloudflare WAF. Inspects HTTP requests against rules. Blocks malicious requests (SQL injection, XSS, bot traffic). Rules match on IP, headers, body, URI, query string. Rate-based rules throttle by IP. |
-| **Teaching gap** | The block rate is realistic for a simple model — a WAF does block a percentage of traffic. However: cannot demonstrate rule-based blocking (block by request type or attribute, not just probability), cannot distinguish between different attack types, cannot show rate-based blocking (block IPs that exceed a rate). |
-| **Required behaviour** | (1) Probability-based blocking is a reasonable simplification (already exists). (2) Rule-based blocking — block requests matching a condition (e.g., `request.type === 'attack'`). This would let instructors create attack traffic and show the WAF filtering it. (3) Rate-based blocking — block requests exceeding a per-source rate. |
+| **Teaching gap** | The block rate is realistic for a simple model - a WAF does block a percentage of traffic. However: cannot demonstrate rule-based blocking (block by request type or attribute, not just probability), cannot distinguish between different attack types, cannot show rate-based blocking (block IPs that exceed a rate). |
+| **Required behaviour** | (1) Probability-based blocking is a reasonable simplification (already exists). (2) Rule-based blocking - block requests matching a condition (e.g., `request.type === 'attack'`). This would let instructors create attack traffic and show the WAF filtering it. (3) Rate-based blocking - block requests exceeding a per-source rate. |
 | **Config knobs** | Current `blockRate` is adequate for basic teaching. Add: `blockRules` (list of conditions that trigger blocking), `rateLimitPerSourceRps` |
 
 #### Firewall Rule
@@ -514,7 +514,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Palette ID** | `firewall-rule` |
 | **Today** | GGcKNode queue. Has `droppedPackets` in security policy. |
 | **Real world** | Network-level packet filter. Operates at L3/L4. Drops packets based on IP, port, protocol. Stateless (each packet evaluated independently) or stateful (tracks connections). |
-| **Teaching gap** | The dropped packets rate is a reasonable L3/L4 simplification. Cannot demonstrate: the difference from WAF (L3/L4 vs L7 — firewall drops packets, WAF blocks HTTP requests), stateful vs stateless filtering. |
+| **Teaching gap** | The dropped packets rate is a reasonable L3/L4 simplification. Cannot demonstrate: the difference from WAF (L3/L4 vs L7 - firewall drops packets, WAF blocks HTTP requests), stateful vs stateless filtering. |
 | **Required behaviour** | (1) Drops packets (already exists via `droppedPackets`). (2) The key teaching difference from WAF: firewall operates at L3/L4 (drops by packet, no HTTP awareness), WAF operates at L7 (inspects HTTP content). In simulation: firewall should use `droppedPackets`, WAF should use `blockRate`. Firewall should NOT support content-based rules (that's L7). |
 | **Config knobs** | `droppedPacketRate`, `allowedProtocols` (only pass traffic matching specified protocols) |
 
@@ -541,7 +541,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Today** | All GGcKNode queues with `asyncBoundary: true` on palette (unused by engine). Same as any compute node. |
 | **Real world** | Prometheus/Grafana (metrics), Fluentd/Loki (logs), Jaeger/OpenTelemetry (traces). Key property: they receive telemetry data asynchronously and must NOT be on the critical path. If the metrics collector goes down, application traffic should be unaffected. |
 | **Teaching gap** | Cannot demonstrate: the async/non-blocking nature (these nodes should receive traffic on async edges and never affect the producer's latency), the difference between metrics/logs/traces, sampling (not every request generates a trace). |
-| **Required behaviour** | (1) Must be connected via async edges — the engine should enforce or strongly warn if sync edges are used. (2) If these nodes fail or become saturated, it should NOT affect upstream application nodes. This is the core teaching point: "observability is a separate plane." (3) For tracing: should support sampling (only trace 1% of requests). The engine already has `traceSampleRate` but it's global, not per-node. |
+| **Required behaviour** | (1) Must be connected via async edges - the engine should enforce or strongly warn if sync edges are used. (2) If these nodes fail or become saturated, it should NOT affect upstream application nodes. This is the core teaching point: "observability is a separate plane." (3) For tracing: should support sampling (only trace 1% of requests). The engine already has `traceSampleRate` but it's global, not per-node. |
 | **Config knobs** | Current config is adequate. Key teaching is enforced via async edges. Add: `samplingRate` for tracing collector. |
 
 #### Alerting Engine
@@ -562,7 +562,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Palette ID** | `health-check-monitor` |
 | **Today** | GGcKNode queue. Same as any node. |
 | **Real world** | Synthetic monitoring that periodically probes nodes to check if they're healthy. ALB health checks, Kubernetes liveness/readiness probes. |
-| **Teaching gap** | Critical gap: this node should be the mechanism that informs load balancers about failed targets. Currently it does nothing — it's just a queue that processes requests. The LB routes to dead servers because nothing tells it they're dead. |
+| **Teaching gap** | Critical gap: this node should be the mechanism that informs load balancers about failed targets. Currently it does nothing - it's just a queue that processes requests. The LB routes to dead servers because nothing tells it they're dead. |
 | **Required behaviour** | (1) Periodically sends health check probes to monitored nodes (on a configurable interval). (2) Reports node health status to registered load balancers. (3) When a monitored node fails the health check, the health check manager marks it unhealthy, and LBs stop routing to it. (4) When the node recovers, marks it healthy again after N consecutive successes. |
 | **Config knobs** | `checkIntervalMs`, `unhealthyThreshold` (consecutive failures before marking unhealthy), `healthyThreshold` (consecutive successes before marking healthy), `monitoredNodes` (list of node IDs to check), `registeredBalancers` (list of LB node IDs to notify) |
 
@@ -604,8 +604,8 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Today** | GGcKNode queue. Sink role (no outgoing edges typically). |
 | **Real world** | Third-party APIs (Stripe, Twilio, SendGrid). Uncontrolled by the system designer. Variable latency. May rate-limit the caller. |
 | **Teaching gap** | Cannot demonstrate: rate limiting from the external service side, variable latency (third-party APIs are unpredictable), the risk of depending on external services (no control over availability). |
-| **Required behaviour** | (1) High and variable latency (wide distribution, e.g., log-normal with high sigma). (2) Rate limiting — returns 429 when caller exceeds the external service's rate limit. (3) Higher error rate than internal services. |
-| **Config knobs** | `rateLimitRps` (caller is throttled beyond this), `errorRate` (higher default than internal services, e.g., 1–5%), `latencyDistribution` (wide/unpredictable) |
+| **Required behaviour** | (1) High and variable latency (wide distribution, e.g., log-normal with high sigma). (2) Rate limiting - returns 429 when caller exceeds the external service's rate limit. (3) Higher error rate than internal services. |
+| **Config knobs** | `rateLimitRps` (caller is throttled beyond this), `errorRate` (higher default than internal services, e.g., 1-5%), `latencyDistribution` (wide/unpredictable) |
 
 #### LLM Gateway
 
@@ -613,8 +613,8 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 |---|---|
 | **Palette ID** | `llm-gateway` |
 | **Today** | GGcKNode queue (mean service 6ms). Same as any compute node. |
-| **Real world** | Proxy for LLM API calls (Claude, GPT). Very high latency (1–60 seconds per request). Token-based rate limiting. Streaming responses. Request size (prompt tokens) and response size (completion tokens) dramatically affect latency. |
-| **Teaching gap** | Cannot demonstrate: extremely high and variable latency, token-based rate limiting, the unique cost/latency profile of LLM calls. 6ms default service time is wildly unrealistic (real LLM calls are 1000–60000ms). |
+| **Real world** | Proxy for LLM API calls (Claude, GPT). Very high latency (1-60 seconds per request). Token-based rate limiting. Streaming responses. Request size (prompt tokens) and response size (completion tokens) dramatically affect latency. |
+| **Teaching gap** | Cannot demonstrate: extremely high and variable latency, token-based rate limiting, the unique cost/latency profile of LLM calls. 6ms default service time is wildly unrealistic (real LLM calls are 1000-60000ms). |
 | **Required behaviour** | (1) Very high latency (log-normal distribution, mean 2000ms, high variance). (2) Token-based rate limiting (tokens per minute, not just requests per second). (3) Latency proportional to prompt + completion tokens. |
 | **Config knobs** | `meanLatencyMs` (default: 2000ms), `tokensPerMinuteLimit`, `promptTokensPerRequest`, `completionTokensPerRequest` |
 
@@ -630,7 +630,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Today** | GGcKNode queue. Router role with passthrough routing. |
 | **Real world** | Sharding distributes data across multiple storage nodes based on a shard key. Hashing (consistent hashing) determines which shard a key maps to. Ensures even distribution and minimal re-mapping when shards are added/removed. |
 | **Teaching gap** | Cannot demonstrate: key-based routing to specific shards (requests with the same key always go to the same shard), even distribution across shards, hot shard problems (one shard gets disproportionate traffic), the effect of adding/removing a shard. |
-| **Required behaviour** | (1) Key-based deterministic routing — requests with the same partition key always route to the same downstream shard node. (2) Consistent hashing — adding a shard re-routes only 1/N of keys, not all keys. (3) Hot shard detection — if one shard gets disproportionate traffic, it should be visible in per-node metrics. |
+| **Required behaviour** | (1) Key-based deterministic routing - requests with the same partition key always route to the same downstream shard node. (2) Consistent hashing - adding a shard re-routes only 1/N of keys, not all keys. (3) Hot shard detection - if one shard gets disproportionate traffic, it should be visible in per-node metrics. |
 | **Config knobs** | `hashAlgorithm: 'consistent' | 'modulo'`, `virtualNodes` (for consistent hashing ring), `shardKeyField` (which request attribute to hash on) |
 
 #### Shard Node / Partition Node
@@ -641,7 +641,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Today** | GGcKNode queue. Storage role. |
 | **Real world** | Individual shard/partition of a distributed database. Contains a subset of the data. Independent failure domain. |
 | **Teaching gap** | Cannot demonstrate: that each shard has independent capacity and failure (already partially modeled via GGcKNode), the hot shard problem. |
-| **Required behaviour** | Current GGcKNode model is adequate — each shard IS an independent queue with its own capacity. The teaching value comes from the Sharding/Hashing node routing to them correctly. |
+| **Required behaviour** | Current GGcKNode model is adequate - each shard IS an independent queue with its own capacity. The teaching value comes from the Sharding/Hashing node routing to them correctly. |
 | **Config knobs** | Current config adequate. Each shard is a standard queue. |
 
 ---
@@ -656,7 +656,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Today** | GGcKNode queue. Router role with passthrough routing. |
 | **Real world** | DNS resolves domain names to IP addresses. DNS Resolver (client-side, recursive) queries DNS Server (authoritative). Responses are cacheable (TTL). Route 53 supports routing policies: simple, weighted, latency-based, failover, geolocation. |
 | **Teaching gap** | Cannot demonstrate: DNS caching (resolved names are cached, subsequent requests don't hit DNS again), DNS routing policies (weighted, failover, latency-based), TTL-based cache expiry. |
-| **Required behaviour** | (1) DNS caching — first request for a name incurs DNS latency, subsequent requests within TTL are resolved instantly (cache hit). Same `cacheHitRate` pattern as CDN/Redis but with TTL as the driver. (2) Routing policies — weighted, failover (route to secondary when primary is unhealthy), latency-based (route to lowest-latency target). |
+| **Required behaviour** | (1) DNS caching - first request for a name incurs DNS latency, subsequent requests within TTL are resolved instantly (cache hit). Same `cacheHitRate` pattern as CDN/Redis but with TTL as the driver. (2) Routing policies - weighted, failover (route to secondary when primary is unhealthy), latency-based (route to lowest-latency target). |
 | **Config knobs** | `cacheTtlSeconds`, `routingPolicy: 'simple' | 'weighted' | 'failover' | 'latency-based' | 'geolocation'` |
 
 ---
@@ -668,10 +668,10 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | Aspect | Detail |
 |---|---|
 | **Palette IDs** | `vpc-region`, `availability-zone`, `subnet` |
-| **Today** | Visual container nodes. `serializable: false` — not included in simulation. Pure UI grouping. |
+| **Today** | Visual container nodes. `serializable: false` - not included in simulation. Pure UI grouping. |
 | **Real world** | Network isolation boundaries. VPC = Virtual Private Cloud (isolated network). AZ = independent failure domain within a region. Subnet = IP address range within an AZ (public or private). |
 | **Teaching gap** | Cannot demonstrate: network isolation (nodes in different VPCs can't communicate without peering), AZ-level failure (bringing down an AZ should fail all nodes inside it), public vs. private subnet (private subnet has no direct internet access). |
-| **Required behaviour** | These are visual-only and that's acceptable for MVP. The teaching value is in understanding the topology hierarchy. Advanced: (1) AZ failure — failing an AZ composite should fail all child nodes. (2) Subnet isolation — edges between different subnets should automatically get higher latency. (3) Private subnet enforcement — nodes in a private subnet can't have edges directly from the internet; they need a NAT Gateway. |
+| **Required behaviour** | These are visual-only and that's acceptable for MVP. The teaching value is in understanding the topology hierarchy. Advanced: (1) AZ failure - failing an AZ composite should fail all child nodes. (2) Subnet isolation - edges between different subnets should automatically get higher latency. (3) Private subnet enforcement - nodes in a private subnet can't have edges directly from the internet; they need a NAT Gateway. |
 | **Config knobs** | `isPublic: true | false` (for subnets), `failureMode: 'independent'` (for AZs). These are validation/enforcement knobs, not simulation knobs. |
 
 ---
@@ -700,13 +700,13 @@ This means the simulator cannot teach **any** protocol-level concept:
 
 ### 4.2 OSI Layer Mapping of Simulator Nodes
 
-The OSI model is Week 1–2 material in the Computer Networks course. The simulator has nodes that operate at different layers, but this layer identity has zero effect on behaviour.
+The OSI model is Week 1-2 material in the Computer Networks course. The simulator has nodes that operate at different layers, but this layer identity has zero effect on behaviour.
 
 | OSI Layer | Layer Name | Simulator Nodes That Should Operate Here | What They Should Do at This Layer | What They Actually Do |
 |---|---|---|---|---|
 | **L7** | Application | L7 Load Balancer, API Gateway, WAF, CDN, Reverse Proxy, Ingress Controller | Inspect HTTP/gRPC content: URL path, headers, cookies, request body. Route by content. Modify requests (rewrite, transform). Terminate SSL. | Same as L4. No content inspection. |
-| **L6** | Presentation | *(No dedicated nodes — see note below)* | Data encoding (JSON/protobuf), encryption (TLS), compression (gzip). | N/A |
-| **L5** | Session | *(No dedicated nodes — see note below)* | Session establishment, maintenance, teardown. | N/A |
+| **L6** | Presentation | *(No dedicated nodes - see note below)* | Data encoding (JSON/protobuf), encryption (TLS), compression (gzip). | N/A |
+| **L5** | Session | *(No dedicated nodes - see note below)* | Session establishment, maintenance, teardown. | N/A |
 | **L4** | Transport | L4 Load Balancer, NAT Gateway, Firewall Rule, Security Group | Forward TCP/UDP connections without inspecting payload. Route by IP:port tuple. Track connections (stateful) or not (stateless). Cannot see HTTP headers or URL paths. | Same as L7. No transport-layer constraints. |
 | **L3** | Network | Edge Router, VPN Gateway, NAT Gateway | Route by IP address. Apply routing tables. Perform NAT (address translation). | Same as L4/L7. No IP-level logic. |
 | **L2/L1** | Data Link / Physical | Network Interface | Frame-level operations, bandwidth limits. | Same as everything else. |
@@ -714,11 +714,11 @@ The OSI model is Week 1–2 material in the Computer Networks course. The simula
 
 **Why L5 (Session) and L6 (Presentation) have no simulator nodes:**
 
-The OSI model defines 7 layers, but L5 and L6 have no distinct representation in modern infrastructure — and therefore no dedicated node in the simulator:
+The OSI model defines 7 layers, but L5 and L6 have no distinct representation in modern infrastructure - and therefore no dedicated node in the simulator:
 
-- **L5 — Session Layer:** Manages connection sessions (open, close, resume). In theory, this is a separate concern. In practice, TCP (L4) already handles connection lifecycle (3-way handshake, keepalive, teardown), and application-level session management (cookies, JWT tokens, OAuth flows) is handled by L7 services. No real-world infrastructure component operates purely as a "session layer device." In the simulator, session-like behaviour appears as a property of L7 nodes (e.g., `stickySessionEnabled` on load balancers) and edge properties (e.g., persistent connections / keepalive), not as a separate node.
+- **L5 - Session Layer:** Manages connection sessions (open, close, resume). In theory, this is a separate concern. In practice, TCP (L4) already handles connection lifecycle (3-way handshake, keepalive, teardown), and application-level session management (cookies, JWT tokens, OAuth flows) is handled by L7 services. No real-world infrastructure component operates purely as a "session layer device." In the simulator, session-like behaviour appears as a property of L7 nodes (e.g., `stickySessionEnabled` on load balancers) and edge properties (e.g., persistent connections / keepalive), not as a separate node.
 
-- **L6 — Presentation Layer:** Handles data format translation, encryption, and compression. In practice, TLS encryption runs between L4 and L7 and is modeled as an edge property in the simulator (`protocol: https` implies TLS termination at the receiving node). Serialization format (JSON vs protobuf vs Avro) is an application concern inside L7 nodes. Compression (gzip, brotli) is a feature of L7 proxies like Nginx or CDNs. None of these justify a standalone node — they're properties of existing nodes and edges.
+- **L6 - Presentation Layer:** Handles data format translation, encryption, and compression. In practice, TLS encryption runs between L4 and L7 and is modeled as an edge property in the simulator (`protocol: https` implies TLS termination at the receiving node). Serialization format (JSON vs protobuf vs Avro) is an application concern inside L7 nodes. Compression (gzip, brotli) is a feature of L7 proxies like Nginx or CDNs. None of these justify a standalone node - they're properties of existing nodes and edges.
 
 This matches how the TCP/IP model (which the real world actually uses) collapses L5, L6, and L7 into a single "Application" layer. The simulator follows the same practical reality: L5/L6 concerns exist but are absorbed into L4 edge properties (TCP connections), L7 node configurations (session stickiness, TLS termination), and edge protocol settings.
 
@@ -743,7 +743,7 @@ The reason layers matter for teaching is that each layer **constrains what the c
 
 | Aspect | Today | Required for Teaching |
 |---|---|---|
-| **Reliability** | Same as UDP — no packet loss model | Reliable delivery. Packet loss on the edge triggers retransmission (adds latency) rather than data loss. |
+| **Reliability** | Same as UDP - no packet loss model | Reliable delivery. Packet loss on the edge triggers retransmission (adds latency) rather than data loss. |
 | **Connection setup** | None | First request between two nodes incurs a 3-way handshake overhead (~1.5× round-trip latency). Subsequent requests reuse the connection (if within keepalive window). |
 | **Flow control** | None | Optional: when receiver queue is nearly full, sender backs off (reduces throughput). This models TCP flow control. Not critical for basic teaching. |
 | **Congestion control** | None | Optional: when edge latency increases (congestion signal), sender reduces rate. Models TCP congestion avoidance. Advanced topic. |
@@ -755,20 +755,20 @@ The reason layers matter for teaching is that each layer **constrains what the c
 
 | Aspect | Today | Required for Teaching |
 |---|---|---|
-| **Reliability** | Same as TCP | Unreliable. Packets can be lost based on edge `packetLossRate`. Lost packets are NOT retransmitted — they're gone. |
-| **Connection setup** | Same as TCP (none) | None — UDP is connectionless. No handshake. First request has the same latency as subsequent requests. |
+| **Reliability** | Same as TCP | Unreliable. Packets can be lost based on edge `packetLossRate`. Lost packets are NOT retransmitted - they're gone. |
+| **Connection setup** | Same as TCP (none) | None - UDP is connectionless. No handshake. First request has the same latency as subsequent requests. |
 | **Ordering** | Same as TCP | No ordering guarantee. Packets can arrive out of order (for simulation: not critical to model, but could be noted in metrics). |
 | **Overhead** | Same as TCP | Lower per-packet overhead than TCP (no ACKs, no sequence numbers). Slightly lower edge latency. |
 
 **Teaching value:** "UDP is faster and simpler than TCP, but packets can be lost. Used for real-time applications (gaming, video, DNS) where retransmission would be worse than loss."
 
-**The key teaching experiment:** A student connects two nodes — once with TCP and once with UDP. They set the edge `packetLossRate` to 5%. With TCP: 0% data loss (retransmissions handle it) but higher latency under loss. With UDP: 5% data loss but consistently low latency. THIS is the L4 transport layer lesson.
+**The key teaching experiment:** A student connects two nodes - once with TCP and once with UDP. They set the edge `packetLossRate` to 5%. With TCP: 0% data loss (retransmissions handle it) but higher latency under loss. With UDP: 5% data loss but consistently low latency. THIS is the L4 transport layer lesson.
 
 #### HTTPS (`protocol: 'https'`)
 
 | Aspect | Today | Required for Teaching |
 |---|---|---|
-| **TLS overhead** | None — same as TCP | TLS handshake on first request (adds ~2× round-trip latency for full handshake, ~1× for session resumption). Per-request encryption/decryption overhead (small but measurable, ~0.1ms). |
+| **TLS overhead** | None - same as TCP | TLS handshake on first request (adds ~2× round-trip latency for full handshake, ~1× for session resumption). Per-request encryption/decryption overhead (small but measurable, ~0.1ms). |
 | **Content visibility** | None | Enables L7 features: content-based routing, WAF inspection, request transformation. Nodes connected via HTTPS can see the request content. Nodes connected via TCP cannot. |
 | **Certificate validation** | None | Optional: configurable probability of certificate error (simulating expired/invalid certs). |
 
@@ -816,10 +816,10 @@ The reason layers matter for teaching is that each layer **constrains what the c
 
 ### 4.5 How Layer-Awareness Fits Into the Trait Architecture
 
-The protocol/layer behaviour is best modeled as **edge traits** (complementing the **node traits** proposed in Section 7). Edges already carry the `protocol` field — we just need the engine to read it. See Section 5 for the full edge specification.
+The protocol/layer behaviour is best modeled as **edge traits** (complementing the **node traits** proposed in Section 7). Edges already carry the `protocol` field - we just need the engine to read it. See Section 5 for the full edge specification.
 
 ```
-Edge Traits (NEW — applied to EdgeDefinition)
+Edge Traits (NEW - applied to EdgeDefinition)
   │
   ├── ReliableDeliveryTrait (TCP, HTTPS, gRPC, WebSocket, AMQP)
   │     └── On packet loss: retransmit (add latency), do NOT drop the request
@@ -857,8 +857,8 @@ interface EdgeBehaviourTrait {
     isFirstRequestOnConnection: boolean
   ):
     | { action: 'deliver'; additionalLatencyUs: bigint }  // normal delivery with optional extra latency
-    | { action: 'drop'; reason: string }                   // UDP packet loss — request is gone
-    | { action: 'retransmit'; retransmitLatencyUs: bigint } // TCP packet loss — retry adds latency
+    | { action: 'drop'; reason: string }                   // UDP packet loss - request is gone
+    | { action: 'retransmit'; retransmitLatencyUs: bigint } // TCP packet loss - retry adds latency
 }
 ```
 
@@ -889,19 +889,19 @@ This matrix defines which protocols are valid on edges connected to each node ty
 
 | Node | Valid Inbound Protocols | Valid Outbound Protocols | Can Use Content Routing? | Can Inspect HTTP? | OSI Layer |
 |---|---|---|---|---|---|
-| **L4 Load Balancer** | tcp, udp | tcp, udp | **No** — this is the key L4 constraint | **No** | L4 |
-| **L7 Load Balancer** | https, grpc, websocket | https, grpc, websocket, tcp | **Yes** — path, host, header routing | **Yes** | L7 |
+| **L4 Load Balancer** | tcp, udp | tcp, udp | **No** - this is the key L4 constraint | **No** | L4 |
+| **L7 Load Balancer** | https, grpc, websocket | https, grpc, websocket, tcp | **Yes** - path, host, header routing | **Yes** | L7 |
 | **API Gateway** | https, grpc | https, grpc, tcp | **Yes** | **Yes** | L7 |
-| **WAF** | https, grpc | https, grpc | N/A (filter, not route) | **Yes** — inspects request to block | L7 |
-| **Firewall Rule** | tcp, udp | tcp, udp | **No** | **No** — drops by connection, not content | L3/L4 |
+| **WAF** | https, grpc | https, grpc | N/A (filter, not route) | **Yes** - inspects request to block | L7 |
+| **Firewall Rule** | tcp, udp | tcp, udp | **No** | **No** - drops by connection, not content | L3/L4 |
 | **Security Group** | tcp, udp | tcp, udp | **No** | **No** | L3/L4 |
-| **CDN** | https | https, tcp | **Limited** — by URL path for cache key | **Yes** — needs URL to determine cache key | L7 |
-| **Ingress Controller** | https, grpc | https, grpc, tcp | **Yes** — path and host routing | **Yes** | L7 |
+| **CDN** | https | https, tcp | **Limited** - by URL path for cache key | **Yes** - needs URL to determine cache key | L7 |
+| **Ingress Controller** | https, grpc | https, grpc, tcp | **Yes** - path and host routing | **Yes** | L7 |
 | **Reverse Proxy** | https, grpc | https, grpc, tcp | **Yes** | **Yes** | L7 |
-| **NAT Gateway** | tcp, udp | tcp, udp | **No** | **No** — translates IP, doesn't inspect | L3 |
-| **Edge Router** | tcp, udp | tcp, udp | **No** | **No** — routes by IP | L3 |
-| **VPN Gateway** | tcp, udp (encrypted tunnel) | tcp, udp | **No** | **No** — encrypted, opaque | L3 |
-| **Service Mesh (data plane)** | https, grpc | https, grpc | **Yes** — sidecar inspects at L7 | **Yes** | L7 |
+| **NAT Gateway** | tcp, udp | tcp, udp | **No** | **No** - translates IP, doesn't inspect | L3 |
+| **Edge Router** | tcp, udp | tcp, udp | **No** | **No** - routes by IP | L3 |
+| **VPN Gateway** | tcp, udp (encrypted tunnel) | tcp, udp | **No** | **No** - encrypted, opaque | L3 |
+| **Service Mesh (data plane)** | https, grpc | https, grpc | **Yes** - sidecar inspects at L7 | **Yes** | L7 |
 | **API Server** | https, grpc | https, grpc, tcp, amqp, kafka | N/A (processes, doesn't route) | N/A | L7 (receives) |
 | **Primary DB** | tcp | tcp | N/A | N/A | L4 (receives raw connections) |
 | **Redis Cache** | tcp | tcp | N/A | N/A | L4 (custom protocol over TCP) |
@@ -920,7 +920,7 @@ Similarly: "Why do we need both a Firewall AND a WAF?" Answer: the firewall oper
 
 **Concept:** Reliable vs unreliable transport.
 
-**Setup:** Client → Server, two edges — one TCP, one UDP. Edge `packetLossRate: 0.05` on both.
+**Setup:** Client → Server, two edges - one TCP, one UDP. Edge `packetLossRate: 0.05` on both.
 
 **Observable difference:**
 - TCP edge: 0% data loss, but ~5% of requests have higher latency (retransmission delay). Total throughput slightly lower.
@@ -935,7 +935,7 @@ Similarly: "Why do we need both a Firewall AND a WAF?" Answer: the firewall oper
 **Setup:** Client → [L4 LB, L7 LB] → [Server A, Server B]. Same backend servers, same workload.
 
 **Observable difference:**
-- L4 path: Lower per-request latency (no HTTP parsing). But L4 LB can only do round-robin/weighted — cannot route `/api` to Server A and `/static` to Server B.
+- L4 path: Lower per-request latency (no HTTP parsing). But L4 LB can only do round-robin/weighted - cannot route `/api` to Server A and `/static` to Server B.
 - L7 path: Higher per-request latency (HTTP header parsing). But L7 LB can route by URL path, enabling content-aware distribution.
 
 **Discussion:** L4 is faster but blind. L7 is smarter but slower. Use L4 for raw TCP/UDP services (databases, game servers). Use L7 for HTTP APIs where content-based routing matters.
@@ -944,13 +944,13 @@ Similarly: "Why do we need both a Firewall AND a WAF?" Answer: the firewall oper
 
 **Concept:** The cost of encryption.
 
-**Setup:** Client → Server. Two edges — one with `protocol: tcp` (no TLS) and one with `protocol: https` (TLS).
+**Setup:** Client → Server. Two edges - one with `protocol: tcp` (no TLS) and one with `protocol: https` (TLS).
 
 **Observable difference:**
 - TCP edge: Lower first-request latency (no handshake beyond TCP 3-way).
 - HTTPS edge: Higher first-request latency (TCP handshake + TLS handshake). Subsequent requests similar (session resumption). Slightly higher per-request latency (encryption/decryption).
 
-**Discussion:** TLS adds security but costs latency. Modern TLS 1.3 reduced the handshake to 1 round trip (from 2 in TLS 1.2). This is why CDNs terminate TLS at the edge — to avoid the handshake latency crossing the internet.
+**Discussion:** TLS adds security but costs latency. Modern TLS 1.3 reduced the handshake to 1 round trip (from 2 in TLS 1.2). This is why CDNs terminate TLS at the edge - to avoid the handshake latency crossing the internet.
 
 #### Scenario 4: Firewall (L3/L4) vs WAF (L7)
 
@@ -959,10 +959,10 @@ Similarly: "Why do we need both a Firewall AND a WAF?" Answer: the firewall oper
 **Setup:** Internet → Firewall → WAF → API Server.
 
 **Observable difference:**
-- Firewall drops packets by connection criteria (e.g., drop 2% of traffic from untrusted sources). Cannot distinguish between a legitimate API call and an SQL injection attack — they look the same at L4.
+- Firewall drops packets by connection criteria (e.g., drop 2% of traffic from untrusted sources). Cannot distinguish between a legitimate API call and an SQL injection attack - they look the same at L4.
 - WAF inspects HTTP content and blocks by request pattern (e.g., block requests with `request.type === 'attack'`). Can distinguish legitimate from malicious HTTP requests, but can't see non-HTTP traffic.
 
-**Discussion:** Defense in depth — L3/L4 filtering (firewall) reduces volume, L7 filtering (WAF) catches application-level attacks. Neither alone is sufficient.
+**Discussion:** Defense in depth - L3/L4 filtering (firewall) reduces volume, L7 filtering (WAF) catches application-level attacks. Neither alone is sufficient.
 
 #### Scenario 5: Database Protocol Is Not HTTP
 
@@ -972,7 +972,7 @@ Similarly: "Why do we need both a Firewall AND a WAF?" Answer: the firewall oper
 
 **Expected behaviour:** The simulator should warn or error: "Databases communicate over TCP using database-specific wire protocols (PostgreSQL wire protocol, MySQL protocol), not HTTP. A WAF cannot inspect this traffic. Use a Firewall for L4 protection of database connections."
 
-**Discussion:** This is a common misconception — that security = WAF. WAFs protect HTTP endpoints. Databases need network-level security (Security Groups, Firewalls, VPC isolation).
+**Discussion:** This is a common misconception - that security = WAF. WAFs protect HTTP endpoints. Databases need network-level security (Security Groups, Firewalls, VPC isolation).
 
 ### 4.8 Implementation Approach for Layer-Awareness
 
@@ -1012,7 +1012,7 @@ private enqueueEdgeTransfer(request: Request, edge: EdgeDefinition, targetNodeId
   // UDP packet loss: request is dropped, not retransmitted
   if (edge.protocol === 'udp' && edge.packetLossRate > 0) {
     if (this.distributions.random() < edge.packetLossRate) {
-      // Packet lost — no retransmission. Request times out eventually.
+      // Packet lost - no retransmission. Request times out eventually.
       return
     }
   }
@@ -1042,16 +1042,16 @@ This is ~15 lines of code that makes TCP vs UDP a real, observable, teachable di
 
 ## 5. Edge Specification: Properties, Constraints, and Node Compatibility
 
-> **Key finding:** Edges in the simulator carry 12+ configurable properties, but the engine only reads 3 of them (`latency.distribution`, `packetLossRate`, `errorRate`), plus 3 routing properties (`mode`, `weight`, `condition`) via `RoutingTable`. The `protocol`, `bandwidth`, `maxConcurrentRequests`, and `pathType` fields are defined, validated by schema, configurable in the UI, serialized into topology JSON — and then completely ignored by the engine. Every edge behaves identically regardless of protocol, bandwidth, or connected node types.
+> **Key finding:** Edges in the simulator carry 12+ configurable properties, but the engine only reads 3 of them (`latency.distribution`, `packetLossRate`, `errorRate`), plus 3 routing properties (`mode`, `weight`, `condition`) via `RoutingTable`. The `protocol`, `bandwidth`, `maxConcurrentRequests`, and `pathType` fields are defined, validated by schema, configurable in the UI, serialized into topology JSON - and then completely ignored by the engine. Every edge behaves identically regardless of protocol, bandwidth, or connected node types.
 
 ### 5.1 Edge Properties Audit: What Exists vs. What Works
 
 | Property | Type | Default | Engine Reads It? | Where | What It Does Today | What It Should Do |
 |---|---|---|---|---|---|---|
 | `id` | `string` | auto-generated | Yes | Serialization | Identifies the edge | No change needed |
-| `source` | `string` | — | Yes | Routing | Source node of the edge | No change needed |
-| `target` | `string` | — | Yes | Routing | Target node of the edge | No change needed |
-| `label` | `string?` | `undefined` | No (UI only) | — | Display label on canvas | No change needed |
+| `source` | `string` | - | Yes | Routing | Source node of the edge | No change needed |
+| `target` | `string` | - | Yes | Routing | Target node of the edge | No change needed |
+| `label` | `string?` | `undefined` | No (UI only) | - | Display label on canvas | No change needed |
 | `mode` | `'synchronous' \| 'asynchronous' \| 'streaming' \| 'conditional'` | `'synchronous'` (or `'asynchronous'` for asyncBoundary targets) | **Yes** | `routing.ts:97-98` | Async edges fan-out to all targets. Sync edges pick one (round-robin/weighted/random). Conditional edges require a matching `condition`. Streaming is treated as sync. | Streaming should have distinct behaviour (persistent connection, multiplexed messages). See 5.6. |
 | `protocol` | `'https' \| 'grpc' \| 'tcp' \| 'udp' \| 'websocket' \| 'amqp' \| 'kafka'` | Auto-inferred: `amqp` for queues/brokers/pub-sub, `kafka` for streams, `https` for everything else | **No** | Never read by `engine.ts`, `routing.ts`, or `GGcKNode.ts` | Purely cosmetic. Set during serialization by `inferProtocol()`, shown in UI dropdown. | Protocol must affect edge behaviour. TCP retransmits on loss; UDP drops. HTTPS adds TLS handshake latency. gRPC multiplexes. See Section 4 and 5.6. |
 | `latency.distribution` | `DistributionConfig` | `{ type: 'log-normal', mu: 2.3, sigma: 0.5 }` | **Yes** | `engine.ts:490` (`sampleEdgeLatencyUs`) | Sampled to determine transit time between nodes | Should additionally vary by `pathType`. See 5.2. |
@@ -1060,7 +1060,7 @@ This is ~15 lines of code that makes TCP vs UDP a real, observable, teachable di
 | `maxConcurrentRequests` | `number` | `100` | **No** | Never read | Configurable in UI, serialized, ignored. | Should act as a connection pool limit. Excess requests queue at the source node or are rejected (connection refused). See 5.6. |
 | `packetLossRate` | `number` [0, 1] | `0` (UI shows as %) | **Yes** | `engine.ts:729` | If `random() < packetLossRate`, the request is dropped (times out at deadline). Same behaviour for ALL protocols. | TCP/HTTPS: retransmit (add latency, no data loss). UDP: drop (data lost). AMQP/Kafka: protocol-level ack prevents loss. See Section 4 and 5.6. |
 | `errorRate` | `number` [0, 1] | `0.001` (0.1%, UI shows as %) | **Yes** | `engine.ts:743` | If `random() < errorRate`, the request gets a `request-rejected` event with reason `edge_error_rate`. Same for all protocols. | Should differentiate: HTTP → 500/502/503 error. TCP → connection reset. gRPC → status code. This affects retry behaviour when retries are implemented. |
-| `weight` | `number?` | `undefined` | **Yes** | `routing.ts:124` | Used by `pickByWeight()` for weighted routing when defined. | No change needed for base behaviour. But see 5.4 — only valid when source is a routing node. |
+| `weight` | `number?` | `undefined` | **Yes** | `routing.ts:124` | Used by `pickByWeight()` for weighted routing when defined. | No change needed for base behaviour. But see 5.4 - only valid when source is a routing node. |
 | `condition` | `string?` | `undefined` | **Yes** | `routing.ts:142-171` | Evaluates `request.type === "X"` / `request.type !== "X"` expressions. Only used when `mode === 'conditional'` or when condition string is present. | Should be extended to support header-based conditions for L7 nodes. L4 nodes should NOT support conditions (enforce at validation time). |
 
 #### Summary: 5 of 12 Properties Are Ignored
@@ -1081,13 +1081,13 @@ The `pathType` field exists but the engine ignores it. When implemented, it shou
 
 | Path Type | Real-World RTT | Proposed Default Latency (mu, sigma) | Proposed Default Packet Loss | Teaching Concept |
 |---|---|---|---|---|
-| `same-rack` | 0.1–0.5ms | `{ mu: -1.2, sigma: 0.3 }` (~0.3ms median) | 0% | Nodes on same physical rack. Near-zero latency. |
-| `same-dc` | 0.5–2ms | `{ mu: 0.0, sigma: 0.5 }` (~1ms median) | 0% | Within same data center but different racks. Current default. |
-| `cross-zone` | 1–5ms | `{ mu: 1.1, sigma: 0.4 }` (~3ms median) | 0.001% | Across availability zones within same region. |
-| `cross-region` | 30–100ms | `{ mu: 4.0, sigma: 0.3 }` (~55ms median) | 0.01% | Between AWS regions (e.g., us-east-1 → eu-west-1). |
-| `internet` | 50–300ms | `{ mu: 4.6, sigma: 0.6 }` (~100ms median) | 0.1–1% | Over the public internet. High variance. |
+| `same-rack` | 0.1-0.5ms | `{ mu: -1.2, sigma: 0.3 }` (~0.3ms median) | 0% | Nodes on same physical rack. Near-zero latency. |
+| `same-dc` | 0.5-2ms | `{ mu: 0.0, sigma: 0.5 }` (~1ms median) | 0% | Within same data center but different racks. Current default. |
+| `cross-zone` | 1-5ms | `{ mu: 1.1, sigma: 0.4 }` (~3ms median) | 0.001% | Across availability zones within same region. |
+| `cross-region` | 30-100ms | `{ mu: 4.0, sigma: 0.3 }` (~55ms median) | 0.01% | Between AWS regions (e.g., us-east-1 → eu-west-1). |
+| `internet` | 50-300ms | `{ mu: 4.6, sigma: 0.6 }` (~100ms median) | 0.1-1% | Over the public internet. High variance. |
 
-**Teaching value:** An instructor can show why CDNs matter by comparing `internet` vs `same-dc` path types. A request going Client → CDN (internet, ~100ms) → Origin Server (same-dc, ~1ms) demonstrates that the CDN's proximity to the user is the key optimization — not the CDN's processing speed.
+**Teaching value:** An instructor can show why CDNs matter by comparing `internet` vs `same-dc` path types. A request going Client → CDN (internet, ~100ms) → Origin Server (same-dc, ~1ms) demonstrates that the CDN's proximity to the user is the key optimization - not the CDN's processing speed.
 
 **Implementation:** `sampleEdgeLatencyUs()` in `engine.ts` should use `pathType` to select the latency distribution when no explicit distribution is configured by the user:
 
@@ -1105,18 +1105,18 @@ private sampleEdgeLatencyUs(edge: EdgeDefinition): bigint {
 
 ### 5.3 Protocol-to-Node Compatibility Matrix
 
-Not every protocol makes sense on every edge. The simulator should enforce (or at minimum warn about) protocol constraints based on the **source and target node types**. This is critical for teaching — students should understand WHY certain protocols are used with certain components.
+Not every protocol makes sense on every edge. The simulator should enforce (or at minimum warn about) protocol constraints based on the **source and target node types**. This is critical for teaching - students should understand WHY certain protocols are used with certain components.
 
 #### Valid Inbound Protocols (edges arriving at a node)
 
 | Target Node Category | Valid Inbound Protocols | Invalid/Warning | Rationale |
 |---|---|---|---|
-| **L4 Load Balancer** | `tcp`, `udp` | `https`, `grpc` (warning: L4 doesn't terminate these) | L4 operates at transport layer — forwards raw TCP/UDP, doesn't parse application protocols |
+| **L4 Load Balancer** | `tcp`, `udp` | `https`, `grpc` (warning: L4 doesn't terminate these) | L4 operates at transport layer - forwards raw TCP/UDP, doesn't parse application protocols |
 | **L7 Load Balancer** | `https`, `grpc`, `websocket` | `tcp`, `udp` (warning: L7 needs application protocol) | L7 needs to parse HTTP headers for content routing |
 | **API Gateway** | `https`, `grpc` | `tcp`, `udp`, `amqp`, `kafka` | API Gateways expose HTTP/gRPC APIs |
 | **CDN** | `https` | `tcp`, `udp`, `grpc`, `amqp`, `kafka` | CDNs serve HTTP content (static assets, API responses) |
 | **WAF** | `https`, `grpc` | `tcp`, `udp` | WAFs inspect HTTP request content |
-| **Firewall Rule** | `tcp`, `udp` | (all valid — firewall can filter any L4 traffic) | Firewalls operate at L3/L4, protocol-agnostic |
+| **Firewall Rule** | `tcp`, `udp` | (all valid - firewall can filter any L4 traffic) | Firewalls operate at L3/L4, protocol-agnostic |
 | **API Endpoint / Microservice** | `https`, `grpc`, `websocket` | `amqp`, `kafka` (use via broker) | Services receive HTTP requests |
 | **Relational DB / NoSQL DB** | `tcp` | `https`, `grpc`, `udp` | Databases use TCP with custom wire protocols (PostgreSQL, MySQL, MongoDB) |
 | **In-Memory Cache (Redis)** | `tcp` | `https`, `grpc`, `udp` | Redis uses custom protocol over TCP (RESP) |
@@ -1129,13 +1129,13 @@ Not every protocol makes sense on every edge. The simulator should enforce (or a
 | **Reverse Proxy** | `https`, `grpc`, `websocket` | `udp`, `amqp`, `kafka` | Reverse proxies operate at L7 |
 | **Service Mesh (data plane)** | `https`, `grpc` | `tcp`, `udp` | Sidecar proxies operate at L7 |
 | **Serverless Function** | `https`, `grpc` | `tcp`, `udp`, `amqp`, `kafka` | Functions are triggered by HTTP events |
-| **Observability nodes** | `https`, `grpc`, `tcp` | (all valid — observability is protocol-flexible) | Accept telemetry via various protocols |
+| **Observability nodes** | `https`, `grpc`, `tcp` | (all valid - observability is protocol-flexible) | Accept telemetry via various protocols |
 
 #### Valid Outbound Protocols (edges leaving a node)
 
 | Source Node Category | Valid Outbound Protocols | Rationale |
 |---|---|---|
-| **L4 Load Balancer** | `tcp`, `udp` | L4 forwards raw transport — the outbound protocol matches inbound |
+| **L4 Load Balancer** | `tcp`, `udp` | L4 forwards raw transport - the outbound protocol matches inbound |
 | **L7 Load Balancer** | `https`, `grpc`, `websocket`, `tcp` | L7 can terminate TLS and proxy to backends in same or different protocol |
 | **API Gateway** | `https`, `grpc`, `tcp`, `amqp`, `kafka` | API Gateway may fan out to services, databases, queues |
 | **Microservice** | `https`, `grpc`, `tcp`, `amqp`, `kafka`, `websocket` | Services communicate with various backends |
@@ -1148,7 +1148,7 @@ The `mode` field determines how routing works (fan-out vs pick-one). Not every m
 
 | Mode | Meaning | Valid Source Nodes | Invalid Source Nodes | Current Behaviour | Needed Change |
 |---|---|---|---|---|---|
-| `synchronous` | Pick one target. Request-response. Caller waits. | Any node that calls another and waits for response | — | RoutingTable picks one sync edge via round-robin/weighted/random | None for base behaviour |
+| `synchronous` | Pick one target. Request-response. Caller waits. | Any node that calls another and waits for response | - | RoutingTable picks one sync edge via round-robin/weighted/random | None for base behaviour |
 | `asynchronous` | Fan-out to ALL targets. Fire-and-forget. | Message brokers, pub/sub, event bus, Kafka | Load balancers (should not fan-out), databases (respond to caller) | All async edges are routed in parallel | Validate: warn if LB has async edges (likely a misconfiguration) |
 | `streaming` | Persistent connection, bidirectional data flow | WebSocket Gateway, gRPC (bidirectional), Kafka consumer | Most request-response nodes | Treated identically to synchronous (bug) | Implement streaming semantics: connection stays open, multiple messages flow without re-routing |
 | `conditional` | Pick target based on `condition` expression | L7 LB, API Gateway, Service Mesh (content routing) | L4 LB (cannot inspect content), databases, queues | Evaluates `request.type === "X"` | L4 nodes should be prevented from having conditional edges (enforced at validation, not engine) |
@@ -1275,7 +1275,7 @@ class TcpEdgeTrait implements EdgeBehaviourTrait {
 }
 ```
 
-**Teaching value:** Students see that TCP guarantees delivery but at a latency cost. Packet loss on a TCP connection doesn't cause data loss — it causes slowdowns.
+**Teaching value:** Students see that TCP guarantees delivery but at a latency cost. Packet loss on a TCP connection doesn't cause data loss - it causes slowdowns.
 
 #### Trait: UdpEdgeTrait
 
@@ -1310,7 +1310,7 @@ class UdpEdgeTrait implements EdgeBehaviourTrait {
 - **Encryption overhead:** Small per-request latency increase for encryption/decryption (~0.1ms).
 - **Session resumption:** After the first TLS handshake, subsequent connections within a time window skip the full handshake (abbreviated handshake, ~0.5× overhead).
 
-**Teaching value:** Students see why CDNs terminate TLS at the edge — to avoid TLS handshake latency crossing the full internet RTT. Also shows why HTTP/2 and connection reuse matter.
+**Teaching value:** Students see why CDNs terminate TLS at the edge - to avoid TLS handshake latency crossing the full internet RTT. Also shows why HTTP/2 and connection reuse matter.
 
 #### Trait: GrpcEdgeTrait (extends HttpsEdgeTrait)
 
@@ -1321,18 +1321,18 @@ class UdpEdgeTrait implements EdgeBehaviourTrait {
 - **Binary framing:** Slightly lower per-request overhead than HTTPS/JSON (~10% faster serialization).
 - **Streaming support:** When edge `mode: 'streaming'`, maintains a persistent connection that allows multiple messages without connection re-establishment.
 
-**Teaching value:** Students see why gRPC is preferred for inter-service communication — multiplexing and binary framing reduce latency under high concurrency.
+**Teaching value:** Students see why gRPC is preferred for inter-service communication - multiplexing and binary framing reduce latency under high concurrency.
 
 #### Trait: AmqpEdgeTrait
 
 **Applies to:** Edges with `protocol: 'amqp'`
 
 **Behaviour:**
-- **Acknowledgement-based delivery:** Messages are not lost on packet loss — the broker re-delivers unacknowledged messages.
+- **Acknowledgement-based delivery:** Messages are not lost on packet loss - the broker re-delivers unacknowledged messages.
 - **Connection overhead:** AMQP connections involve a multi-step handshake (protocol header → connection tune → open channel), higher overhead than TCP alone.
 - **Persistent connections:** AMQP uses long-lived connections with channels multiplexed over them.
 
-**Teaching value:** Students understand why message brokers provide reliable delivery guarantees — the protocol itself handles acknowledgement and re-delivery, unlike raw TCP where the application must handle retries.
+**Teaching value:** Students understand why message brokers provide reliable delivery guarantees - the protocol itself handles acknowledgement and re-delivery, unlike raw TCP where the application must handle retries.
 
 #### Trait: KafkaEdgeTrait
 
@@ -1352,10 +1352,10 @@ class UdpEdgeTrait implements EdgeBehaviourTrait {
 **Behaviour:**
 - **Upgrade handshake:** First request incurs HTTP upgrade handshake overhead (~1.5× base latency).
 - **Persistent bidirectional connection:** After upgrade, messages flow in both directions without new connection setup.
-- **No request-response pairing:** Unlike HTTP, WebSocket messages are independent — they don't pair as request-response.
+- **No request-response pairing:** Unlike HTTP, WebSocket messages are independent - they don't pair as request-response.
 - **Keep-alive:** Connection stays open until explicitly closed.
 
-**Teaching value:** Students understand why WebSocket is used for real-time applications (chat, live updates, gaming) — the upgrade handshake costs more upfront, but subsequent messages are faster because there's no per-message HTTP overhead.
+**Teaching value:** Students understand why WebSocket is used for real-time applications (chat, live updates, gaming) - the upgrade handshake costs more upfront, but subsequent messages are faster because there's no per-message HTTP overhead.
 
 #### Trait: BandwidthLimitTrait
 
@@ -1376,7 +1376,7 @@ class BandwidthLimitTrait implements EdgeBehaviourTrait {
     const bandwidthBytesPerMs = (edge.bandwidth * 1000000) / 8 / 1000  // Mbps → bytes/ms
     
     if (currentBytes + requestBytes > bandwidthBytesPerMs * windowMs) {
-      // Bandwidth saturated — delay this request
+      // Bandwidth saturated - delay this request
       const delayMs = (requestBytes / bandwidthBytesPerMs)
       return { action: 'deliver', additionalLatencyUs: BigInt(delayMs * 1000) }
     }
@@ -1387,7 +1387,7 @@ class BandwidthLimitTrait implements EdgeBehaviourTrait {
 }
 ```
 
-**Teaching value:** Students see bandwidth saturation in action — a 100 Mbps internet link serving high-traffic requests will bottleneck at the edge, not at the node. Shows why CDNs and edge caching reduce bandwidth pressure on origin servers.
+**Teaching value:** Students see bandwidth saturation in action - a 100 Mbps internet link serving high-traffic requests will bottleneck at the edge, not at the node. Shows why CDNs and edge caching reduce bandwidth pressure on origin servers.
 
 ### 5.7 EdgePropertiesPanel Adaptation
 
@@ -1400,7 +1400,7 @@ A student can configure:
 - A `kafka` edge from a Load Balancer to a Microservice (LBs don't produce Kafka messages)
 - A `udp` edge to a Redis Cache (Redis uses TCP exclusively)
 
-None of these are flagged as warnings or errors. The protocol field is cosmetic, so it doesn't matter — but for teaching, it should matter.
+None of these are flagged as warnings or errors. The protocol field is cosmetic, so it doesn't matter - but for teaching, it should matter.
 
 #### Proposed Panel Behaviour
 
@@ -1414,11 +1414,11 @@ When a user clicks an edge between an L7 LB and a Microservice, the protocol dro
 - `https` (default, recommended)
 - `grpc` (valid alternative)
 - `websocket` (valid for WebSocket traffic)
-- `tcp` greyed out with tooltip: "L7 LB operates at application layer — use https or grpc"
+- `tcp` greyed out with tooltip: "L7 LB operates at application layer - use https or grpc"
 
 **2. Mode dropdown should be filtered by source node:**
 
-- If source is an L4 LB → `conditional` mode disabled (tooltip: "L4 operates at transport layer — cannot route by content")
+- If source is an L4 LB → `conditional` mode disabled (tooltip: "L4 operates at transport layer - cannot route by content")
 - If source is a message broker → `asynchronous` default and `synchronous` warned (tooltip: "Message brokers typically use fire-and-forget delivery")
 
 **3. Bandwidth and maxConcurrentRequests should show contextual defaults:**
@@ -1479,8 +1479,8 @@ The serializer (`useTopologySerializer.ts`) currently does no edge-level validat
 #### Implementation
 
 Validation should happen in two places:
-1. **Serialization time** (in `useTopologySerializer.ts`) — validate edges during `serialize()` and return warnings alongside the topology.
-2. **Real-time on canvas** — when user connects two nodes, immediately check edge constraints and show a toast or edge annotation for warnings.
+1. **Serialization time** (in `useTopologySerializer.ts`) - validate edges during `serialize()` and return warnings alongside the topology.
+2. **Real-time on canvas** - when user connects two nodes, immediately check edge constraints and show a toast or edge annotation for warnings.
 
 ```typescript
 interface EdgeValidationResult {
@@ -1673,7 +1673,7 @@ interface NodeBehaviourTrait {
 | **DNS** | `CacheTrait`, `DnsRoutingPolicyTrait` | P2 |
 | **External Service** | `RateLimiterTrait`, `HighVarianceLatencyTrait` | P2 |
 | **Observability nodes** | `AsyncOnlyTrait` (enforces async edges) | P1 |
-| All other nodes | No traits (base GGcKNode behaviour) | — |
+| All other nodes | No traits (base GGcKNode behaviour) | - |
 
 ---
 
@@ -1686,7 +1686,7 @@ interface NodeBehaviourTrait {
 **Config:**
 ```typescript
 interface CacheTraitConfig {
-  cacheHitRate: number        // 0.0–1.0, probability of cache hit
+  cacheHitRate: number        // 0.0-1.0, probability of cache hit
   cacheHitLatencyMs: number   // latency when served from cache (default: 1ms for CDN, 0.1ms for Redis)
   ttlSeconds?: number         // optional: hit rate degrades over time
 }
@@ -1827,7 +1827,7 @@ interface HealthProberConfig {
 | # | Task | Description |
 |---|---|---|
 | 0.1 | **Create the trait interface** | Define `NodeBehaviourTrait` in `src/engine/traits/types.ts`. |
-| 0.2 | **Create the trait resolver** | `resolveTraits(node: ComponentNode): NodeBehaviourTrait[]` — maps component type to trait list. |
+| 0.2 | **Create the trait resolver** | `resolveTraits(node: ComponentNode): NodeBehaviourTrait[]` - maps component type to trait list. |
 | 0.3 | **Add trait hooks to the engine event loop** | Modify `handleRequestArrival` and `handleProcessingComplete` to call `beforeArrival` and `beforeRouting` on the node's traits. |
 | 0.4 | **Add trait-based route filtering to RoutingTable** | Modify `resolveTarget` to call `filterRoutes` on the source node's traits. |
 
@@ -1838,7 +1838,7 @@ This is a medium-effort refactor that touches `engine.ts` and `routing.ts` but d
 | # | Trait | Nodes | Teaching Impact |
 |---|---|---|---|
 | 1.1 | `HealthAwareRoutingTrait` | All LBs, Ingress | Fixes the #1 blocker: LB routing to dead servers |
-| 1.2 | `CacheTrait` | CDN, Redis Cache | Makes caching teachable — the #1 missing teaching feature |
+| 1.2 | `CacheTrait` | CDN, Redis Cache | Makes caching teachable - the #1 missing teaching feature |
 | 1.3 | `ContentRoutingTrait` + L4 enforcement | L7 LB, API Gateway | Makes L4 vs L7 distinction real and observable |
 | 1.4 | `HealthProberTrait` | Health Check Manager | Enables health-aware routing to work with the health check concept |
 
@@ -1875,7 +1875,7 @@ This is a medium-effort refactor that touches `engine.ts` and `routing.ts` but d
 | UI Properties panel | **Yes (medium)** | Expose trait-specific config knobs |
 | Engine tests | **Yes (medium)** | Test each trait in isolation and in integration |
 
-The total blast radius is moderate. The engine's core event loop gets 4–6 additional hook calls. The GGcKNode class is untouched. Each trait is a small, independently testable module. No existing behaviour is broken — traits only ADD behaviour on top of the existing queue model.
+The total blast radius is moderate. The engine's core event loop gets 4-6 additional hook calls. The GGcKNode class is untouched. Each trait is a small, independently testable module. No existing behaviour is broken - traits only ADD behaviour on top of the existing queue model.
 
 ---
 

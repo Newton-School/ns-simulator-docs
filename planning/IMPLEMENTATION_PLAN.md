@@ -1,31 +1,31 @@
-# HLD Simulator — Implementation Plan
+# HLD Simulator - Implementation Plan
 
-> **Premise**: The UI layer (React Flow canvas for placing/connecting nodes and edges) is already built. This plan covers everything _after_ the canvas — from the topology JSON format the UI produces, through the simulation engine, to the output analysis layer.
+> **Premise**: The UI layer (React Flow canvas for placing/connecting nodes and edges) is already built. This plan covers everything _after_ the canvas - from the topology JSON format the UI produces, through the simulation engine, to the output analysis layer.
 
 ---
 
 ## Table of Contents
 
-1. [Phase 0 — Topology JSON Format](#phase-0--topology-json-format)
-2. [Phase 1 — Core Primitives](#phase-1--core-primitives)
-3. [Phase 2 — Simulation Engine](#phase-2--simulation-engine)
-4. [Phase 3 — Network & Edge Modeling](#phase-3--network--edge-modeling)
-5. [Phase 4 — Failure Injection & Propagation](#phase-4--failure-injection--propagation)
-6. [Phase 5 — Resilience Patterns](#phase-5--resilience-patterns)
-7. [Phase 6 — Metrics, Tracing & Output](#phase-6--metrics-tracing--output)
-8. [Phase 7 — Scenario Presets & Chaos Engineering](#phase-7--scenario-presets--chaos-engineering)
-9. [Phase 8 — UI ↔ Engine Integration](#phase-8--ui--engine-integration)
-10. [Phase 9 — Advanced Features](#phase-9--advanced-features)
+1. [Phase 0 - Topology JSON Format](#phase-0--topology-json-format)
+2. [Phase 1 - Core Primitives](#phase-1--core-primitives)
+3. [Phase 2 - Simulation Engine](#phase-2--simulation-engine)
+4. [Phase 3 - Network & Edge Modeling](#phase-3--network--edge-modeling)
+5. [Phase 4 - Failure Injection & Propagation](#phase-4--failure-injection--propagation)
+6. [Phase 5 - Resilience Patterns](#phase-5--resilience-patterns)
+7. [Phase 6 - Metrics, Tracing & Output](#phase-6--metrics-tracing--output)
+8. [Phase 7 - Scenario Presets & Chaos Engineering](#phase-7--scenario-presets--chaos-engineering)
+9. [Phase 8 - UI ↔ Engine Integration](#phase-8--ui--engine-integration)
+10. [Phase 9 - Advanced Features](#phase-9--advanced-features)
 11. [Dependency Graph](#dependency-graph)
 12. [Suggested File Structure](#suggested-file-structure)
 
 ---
 
-## Phase 0 — Topology JSON Format
+## Phase 0 - Topology JSON Format
 
 **Goal**: Define the canonical JSON shape that the React Flow UI serializes to and that the simulation engine consumes. This is the contract between frontend and backend.
 
-### 0.1 — Top-Level Structure
+### 0.1 - Top-Level Structure
 
 ```jsonc
 {
@@ -36,9 +36,9 @@
   "global": {
     "simulationDuration": 60000,       // ms
     "seed": "my-seed-string",
-    "warmupDuration": 5000,            // ms — metrics collected only after warmup
+    "warmupDuration": 5000,            // ms - metrics collected only after warmup
     "timeResolution": "microsecond",   // "microsecond" | "millisecond"
-    "defaultTimeout": 30000            // ms — fallback if a node doesn't specify one
+    "defaultTimeout": 30000            // ms - fallback if a node doesn't specify one
   },
 
   "nodes": [ /* ComponentNode[] */ ],
@@ -47,11 +47,11 @@
   "workload": { /* WorkloadProfile */ },
   "faults":   [ /* FaultSpec[] */ ],
   "invariants": [ /* InvariantCheck[] */ ],
-  "scenarios": [ /* ScenarioRef[] — optional preset references */ ]
+  "scenarios": [ /* ScenarioRef[] - optional preset references */ ]
 }
 ```
 
-### 0.2 — Node Shape (`ComponentNode`)
+### 0.2 - Node Shape (`ComponentNode`)
 
 Each React Flow node serializes to:
 
@@ -75,8 +75,8 @@ Each React Flow node serializes to:
 
   // --- Queue model (G/G/c/K) ---
   "queue": {
-    "workers": 100,                   // c — concurrent processing slots
-    "capacity": 500,                  // K — max queue size (0 = unlimited)
+    "workers": 100,                   // c - concurrent processing slots
+    "capacity": 500,                  // K - max queue size (0 = unlimited)
     "discipline": "fifo"              // "fifo" | "lifo" | "priority" | "wfq"
   },
 
@@ -87,7 +87,7 @@ Each React Flow node serializes to:
       "mu": 2.3,                      // log-space mean
       "sigma": 0.8                    // log-space std dev
     },
-    "timeout": 5000                   // ms — per-request timeout
+    "timeout": 5000                   // ms - per-request timeout
   },
 
   // --- Dependencies ---
@@ -132,8 +132,8 @@ Each React Flow node serializes to:
     {
       "mode": "crash",
       "severity": "critical",
-      "mtbf": 86400000,              // ms — mean time between failures
-      "mttr": 30000                   // ms — mean time to repair
+      "mtbf": 86400000,              // ms - mean time between failures
+      "mttr": 30000                   // ms - mean time to repair
     },
     {
       "mode": "latency-spike",
@@ -156,7 +156,7 @@ Each React Flow node serializes to:
 
   // --- Component-specific config (optional) ---
   "config": {
-    // shape depends on `type` — examples:
+    // shape depends on `type` - examples:
     // database: { "engine": "postgres", "replicationMode": "async", ... }
     // cache: { "evictionPolicy": "lru", "maxMemory": 1024, ... }
     // load-balancer: { "algorithm": "round-robin", ... }
@@ -164,7 +164,7 @@ Each React Flow node serializes to:
 }
 ```
 
-### 0.3 — Edge Shape (`EdgeDefinition`)
+### 0.3 - Edge Shape (`EdgeDefinition`)
 
 Each React Flow edge serializes to:
 
@@ -208,7 +208,7 @@ Each React Flow edge serializes to:
 }
 ```
 
-### 0.4 — Workload Profile
+### 0.4 - Workload Profile
 
 ```jsonc
 {
@@ -235,7 +235,7 @@ Each React Flow edge serializes to:
 }
 ```
 
-### 0.5 — Serialization Notes
+### 0.5 - Serialization Notes
 
 - React Flow's internal `nodes[]` and `edges[]` arrays map 1:1 to the topology JSON. The UI layer adds `position`, handle metadata, and visual styles; the engine ignores those fields.
 - The UI should validate the JSON against the schema before sending it to the engine (use a lightweight JSON Schema or Zod validator).
@@ -243,11 +243,11 @@ Each React Flow edge serializes to:
 
 ---
 
-## Phase 1 — Core Primitives
+## Phase 1 - Core Primitives
 
 **Goal**: Build the foundational building blocks that every other module depends on.
 
-### 1.1 — BigInt Time Utilities
+### 1.1 - BigInt Time Utilities
 
 | What | Why |
 |------|-----|
@@ -260,7 +260,7 @@ Each React Flow edge serializes to:
 
 **Estimated size**: ~30 lines.
 
-### 1.2 — Deterministic PRNG (SFC32)
+### 1.2 - Deterministic PRNG (SFC32)
 
 | What | Why |
 |------|-----|
@@ -272,7 +272,7 @@ Each React Flow edge serializes to:
 
 **Estimated size**: ~60 lines.
 
-### 1.3 — Distribution Sampler
+### 1.3 - Distribution Sampler
 
 Implement a `Distributions` class that takes a PRNG and exposes:
 
@@ -292,16 +292,16 @@ Implement a `Distributions` class that takes a PRNG and exposes:
 
 **Estimated size**: ~120 lines.
 
-### 1.4 — Min-Heap (Priority Queue)
+### 1.4 - Min-Heap (Priority Queue)
 
 - Array-backed binary min-heap.
-- Keyed on `timestamp` (BigInt), with tie-breaking on `priority` (number — lower = higher priority).
+- Keyed on `timestamp` (BigInt), with tie-breaking on `priority` (number - lower = higher priority).
 - Priority classes: `SYSTEM = 0`, `ARRIVAL = 1`, `PROCESSING = 2`, `DEPARTURE = 3`, `TIMEOUT = 4`.
 - Methods: `insert(event)`, `extractMin()`, `peek()`, `size`, `isEmpty`.
 
 **Estimated size**: ~80 lines.
 
-### 1.5 — Event Types
+### 1.5 - Event Types
 
 Define a discriminated union or enum for all event types:
 
@@ -319,11 +319,11 @@ Each event carries: `{ timestamp: bigint, type: EventType, nodeId: string, reque
 
 ---
 
-## Phase 2 — Simulation Engine
+## Phase 2 - Simulation Engine
 
 **Goal**: The core event loop that drives the entire simulation.
 
-### 2.1 — G/G/c/K Node Model
+### 2.1 - G/G/c/K Node Model
 
 Each node in the topology becomes a `GGcKNode` instance:
 
@@ -335,7 +335,7 @@ Each node in the topology becomes a `GGcKNode` instance:
 
 **Estimated size**: ~150 lines.
 
-### 2.2 — Workload Generator
+### 2.2 - Workload Generator
 
 - Reads the `workload` section of the topology JSON.
 - On `initialize()`, schedules the first `REQUEST_GENERATED` event.
@@ -344,20 +344,20 @@ Each node in the topology becomes a `GGcKNode` instance:
 
 **Estimated size**: ~100 lines.
 
-### 2.3 — Routing Table
+### 2.3 - Routing Table
 
 - Built from the `edges[]` array at initialization.
 - `getTargets(sourceNodeId)` → returns list of `{ targetNodeId, edge }`.
 - Supports routing strategies:
   - **Single**: one target (most edges).
-  - **Weighted**: multiple targets with `weight` — select via weighted random.
+  - **Weighted**: multiple targets with `weight` - select via weighted random.
   - **Conditional**: evaluate `edge.condition` against request context.
   - **Round-robin**: cycle through targets.
   - **Consistent hashing**: hash request key to target.
 
 **Estimated size**: ~80 lines.
 
-### 2.4 — Main Event Loop (`SimulationEngine`)
+### 2.4 - Main Event Loop (`SimulationEngine`)
 
 ```
 initialize(topologyJSON):
@@ -393,7 +393,7 @@ schedule(timestamp, type, nodeId, data):
 
 **Estimated size**: ~300 lines.
 
-### 2.5 — Little's Law Verification
+### 2.5 - Little's Law Verification
 
 After the simulation completes, verify correctness per node:
 
@@ -414,11 +414,11 @@ This acts as a built-in sanity check that the engine is behaving correctly.
 
 ---
 
-## Phase 3 — Network & Edge Modeling
+## Phase 3 - Network & Edge Modeling
 
 **Goal**: Realistic latency, bandwidth, congestion, and packet loss on every edge.
 
-### 3.1 — Latency Decomposition
+### 3.1 - Latency Decomposition
 
 Each edge calculates total latency as:
 
@@ -434,27 +434,27 @@ L = propagation + transmission + processing + queuing + jitter
 | Queuing | Based on edge utilization: `base / (1 - utilization)` (M/M/1 model) |
 | Jitter | `uniform(-jitterRange, +jitterRange)` |
 
-### 3.2 — Path-Type Defaults
+### 3.2 - Path-Type Defaults
 
 If the user doesn't specify a distribution, infer defaults from `edge.latency.pathType`:
 
 | Path Type | Default Distribution |
 |-----------|---------------------|
-| `same-rack` | `logNormal(mu=-1.2, sigma=0.3)` → ~0.1–0.5ms |
-| `same-dc` | `logNormal(mu=0.0, sigma=0.4)` → ~0.5–2ms |
-| `cross-zone` | `logNormal(mu=0.7, sigma=0.4)` → ~1–3ms |
-| `cross-region` | `logNormal(mu=4.1, sigma=0.3)` → ~60–80ms |
+| `same-rack` | `logNormal(mu=-1.2, sigma=0.3)` → ~0.1-0.5ms |
+| `same-dc` | `logNormal(mu=0.0, sigma=0.4)` → ~0.5-2ms |
+| `cross-zone` | `logNormal(mu=0.7, sigma=0.4)` → ~1-3ms |
+| `cross-region` | `logNormal(mu=4.1, sigma=0.3)` → ~60-80ms |
 | `internet` | `mixture([logNormal(3.0, 0.5), logNormal(5.0, 0.8)], [0.8, 0.2])` |
 
-### 3.3 — Congestion Modeling
+### 3.3 - Congestion Modeling
 
 Track `edge.currentLoad` (active concurrent requests). When load approaches capacity:
 
 - **Linear**: `delayMultiplier = 1 + (load / capacity)`
-- **Exponential (M/M/1)**: `delayMultiplier = 1 / (1 - utilization)` — latency explodes near saturation
-- **Step**: normal until 80% → 2x at 80–95% → 5x above 95%
+- **Exponential (M/M/1)**: `delayMultiplier = 1 / (1 - utilization)` - latency explodes near saturation
+- **Step**: normal until 80% → 2x at 80-95% → 5x above 95%
 
-### 3.4 — Packet Loss
+### 3.4 - Packet Loss
 
 ```
 effectiveLossRate = baseLossRate + congestionBonus
@@ -462,7 +462,7 @@ if random() < effectiveLossRate:
   drop packet (emit REQUEST_TIMEOUT after source's timeout)
 ```
 
-### 3.5 — `NetworkEdge` Class
+### 3.5 - `NetworkEdge` Class
 
 ```
 class NetworkEdge:
@@ -477,11 +477,11 @@ class NetworkEdge:
 
 ---
 
-## Phase 4 — Failure Injection & Propagation
+## Phase 4 - Failure Injection & Propagation
 
-**Goal**: Make things break — on schedule, randomly, or conditionally — and watch the effects cascade.
+**Goal**: Make things break - on schedule, randomly, or conditionally - and watch the effects cascade.
 
-### 4.1 — Failure Injector
+### 4.1 - Failure Injector
 
 Reads the `faults[]` array from the topology JSON. Each fault spec has:
 
@@ -497,7 +497,7 @@ On each engine tick, `FailureInjector.check(currentTime, nodeStates)`:
 
 **Estimated size**: ~150 lines.
 
-### 4.2 — Failure Propagation Engine
+### 4.2 - Failure Propagation Engine
 
 Builds a dependency graph from `node.dependencies.critical` and `node.dependencies.optional`.
 
@@ -515,7 +515,7 @@ On each failure event, `PropagationEngine.propagate(failedNodeId)`:
 
 **Estimated size**: ~150 lines.
 
-### 4.3 — Cascade Patterns to Handle
+### 4.3 - Cascade Patterns to Handle
 
 The engine must correctly model these five patterns:
 
@@ -529,11 +529,11 @@ The engine must correctly model these five patterns:
 
 ---
 
-## Phase 5 — Resilience Patterns
+## Phase 5 - Resilience Patterns
 
 **Goal**: Implement the defense mechanisms that nodes can use against failures.
 
-### 5.1 — Circuit Breaker
+### 5.1 - Circuit Breaker
 
 State machine per dependency edge:
 
@@ -550,11 +550,11 @@ HALF_OPEN → (test requests fail) → OPEN
 
 **Estimated size**: ~80 lines.
 
-### 5.2 — Retry with Exponential Backoff + Jitter
+### 5.2 - Retry with Exponential Backoff + Jitter
 
 ```
 delay = min(baseDelay * multiplier^attempt, maxDelay)
-if jitter: delay = uniform(0, delay)    // "full jitter" — best for thundering herd
+if jitter: delay = uniform(0, delay)    // "full jitter" - best for thundering herd
 ```
 
 - Track retries per request to prevent infinite loops.
@@ -562,7 +562,7 @@ if jitter: delay = uniform(0, delay)    // "full jitter" — best for thundering
 
 **Estimated size**: ~40 lines.
 
-### 5.3 — Rate Limiter (Token Bucket)
+### 5.3 - Rate Limiter (Token Bucket)
 
 ```
 tokens = min(tokens + refillRate * elapsed, maxTokens)
@@ -572,24 +572,24 @@ else: reject with retryAfter = (1 - tokens) / refillRate
 
 **Estimated size**: ~30 lines.
 
-### 5.4 — Bulkhead
+### 5.4 - Bulkhead
 
 Per-dependency concurrency limit. If `activeCalls[depId] >= maxConcurrent`: reject immediately instead of queuing.
 
 **Estimated size**: ~25 lines.
 
-### 5.5 — Load Shedder
+### 5.5 - Load Shedder
 
 When a node is overwhelmed, selectively drop requests:
 - **Priority-based**: drop low-priority first.
-- **LIFO**: drop newest (they've waited least — least wasted work).
+- **LIFO**: drop newest (they've waited least - least wasted work).
 - **Random**: fair but unpredictable.
 
 Trigger: `queueLength > threshold` OR `estimatedWaitTime > timeout`.
 
 **Estimated size**: ~40 lines.
 
-### 5.6 — Timeout & Deadline Propagation
+### 5.6 - Timeout & Deadline Propagation
 
 Each request carries a `deadline` (absolute timestamp). When forwarding downstream:
 
@@ -597,17 +597,17 @@ Each request carries a `deadline` (absolute timestamp). When forwarding downstre
 childDeadline = min(parentDeadline, now + childTimeout)
 ```
 
-If `now > deadline` at any point, the request is immediately timed out — no further processing.
+If `now > deadline` at any point, the request is immediately timed out - no further processing.
 
 **Estimated size**: ~20 lines.
 
 ---
 
-## Phase 6 — Metrics, Tracing & Output
+## Phase 6 - Metrics, Tracing & Output
 
 **Goal**: Collect, aggregate, and present the simulation results.
 
-### 6.1 — Metrics Collector
+### 6.1 - Metrics Collector
 
 During the simulation, for every completed or failed request, record:
 
@@ -628,9 +628,9 @@ After the simulation, compute:
 
 **Estimated size**: ~120 lines.
 
-### 6.2 — Request Tracing (Waterfall View)
+### 6.2 - Request Tracing (Waterfall View)
 
-Build a trace for each sampled request (sample rate configurable — e.g., 1% of requests):
+Build a trace for each sampled request (sample rate configurable - e.g., 1% of requests):
 
 ```jsonc
 {
@@ -647,7 +647,7 @@ Build a trace for each sampled request (sample rate configurable — e.g., 1% of
 
 The UI can render this as a horizontal waterfall chart (like Chrome DevTools network tab).
 
-### 6.3 — Time-Series Data
+### 6.3 - Time-Series Data
 
 Emit periodic snapshots (every 1 second of sim-time) of:
 
@@ -667,7 +667,7 @@ Emit periodic snapshots (every 1 second of sim-time) of:
 
 The UI can use this for live-updating line charts, heatmaps, and node coloring (green/yellow/red based on utilization).
 
-### 6.4 — Causal Failure Graph
+### 6.4 - Causal Failure Graph
 
 When failures cascade, build a directed graph:
 
@@ -682,7 +682,7 @@ When failures cascade, build a directed graph:
 }
 ```
 
-### 6.5 — Simulation Output Shape
+### 6.5 - Simulation Output Shape
 
 The full output returned to the UI:
 
@@ -711,11 +711,11 @@ The full output returned to the UI:
 
 ---
 
-## Phase 7 — Scenario Presets & Chaos Engineering
+## Phase 7 - Scenario Presets & Chaos Engineering
 
 **Goal**: Ship pre-built experiments so users can test their architectures immediately.
 
-### 7.1 — Built-In Scenarios
+### 7.1 - Built-In Scenarios
 
 Implement the 7 scenarios from the catalogue:
 
@@ -731,7 +731,7 @@ Implement the 7 scenarios from the catalogue:
 
 Each scenario is a JSON preset that injects specific faults at specific times and defines steady-state assertions.
 
-### 7.2 — Chaos Experiment Runner
+### 7.2 - Chaos Experiment Runner
 
 ```
 class ChaosExperiment:
@@ -744,7 +744,7 @@ class ChaosExperiment:
     4. Return { passed: boolean, timeline, violations[] }
 ```
 
-### 7.3 — Scenario Composer
+### 7.3 - Scenario Composer
 
 Allow users to combine scenarios:
 
@@ -755,11 +755,11 @@ compose([cacheStampede, trafficSpike], { offset: 5000 })
 
 ---
 
-## Phase 8 — UI ↔ Engine Integration
+## Phase 8 - UI ↔ Engine Integration
 
 **Goal**: Connect the React Flow frontend to the simulation engine.
 
-### 8.1 — Engine Execution Strategy
+### 8.1 - Engine Execution Strategy
 
 | Option | Pros | Cons | Recommendation |
 |--------|------|------|----------------|
@@ -780,7 +780,7 @@ serialize topology JSON ──────►   receive JSON
              ◄────── final result  (complete output JSON)
 ```
 
-### 8.2 — Message Protocol (UI ↔ Worker)
+### 8.2 - Message Protocol (UI ↔ Worker)
 
 ```typescript
 // UI → Worker
@@ -799,17 +799,17 @@ type WorkerMessage =
   | { type: "ERROR",       error: string }
 ```
 
-### 8.3 — Live Visualization Hooks
+### 8.3 - Live Visualization Hooks
 
 While the simulation runs, the UI can:
 
-- **Color nodes**: green (utilization < 60%), yellow (60–85%), orange (85–95%), red (> 95% or FAILED).
+- **Color nodes**: green (utilization < 60%), yellow (60-85%), orange (85-95%), red (> 95% or FAILED).
 - **Animate edges**: thickness proportional to throughput, color by latency (green → red gradient).
 - **Show queue bars**: small bar chart inside each node showing queue fullness.
 - **Failure indicators**: skull icon or red flash on failed nodes.
 - **Live counters**: overlay RPS, P99, error rate on each node.
 
-### 8.4 — Topology Validation
+### 8.4 - Topology Validation
 
 Before running the simulation, validate the topology:
 
@@ -824,11 +824,11 @@ Before running the simulation, validate the topology:
 
 ---
 
-## Phase 9 — Advanced Features
+## Phase 9 - Advanced Features
 
 **Goal**: Polish and extend for power users. These are optional and can be prioritized based on user demand.
 
-### 9.1 — Autoscaling Simulation
+### 9.1 - Autoscaling Simulation
 
 When enabled on a node:
 - Monitor the scaling metric (queue depth, CPU, custom).
@@ -836,7 +836,7 @@ When enabled on a node:
 - If `metric < scaleDownThreshold` for `cooldown` period → remove replica.
 - Track scaling events in the time series.
 
-### 9.2 — Invariant Checking
+### 9.2 - Invariant Checking
 
 Run after the simulation to detect logical bugs in the architecture:
 
@@ -845,7 +845,7 @@ Run after the simulation to detect logical bugs in the architecture:
 - **Consistency**: After a write to the primary, how long before all replicas converge?
 - **SLO compliance**: What percentage of time windows met the SLO targets?
 
-### 9.3 — Design Comparator
+### 9.3 - Design Comparator
 
 Run two simulations with different topologies (e.g., 3 replicas vs. 5 replicas) and produce a diff:
 
@@ -859,7 +859,7 @@ Run two simulations with different topologies (e.g., 3 replicas vs. 5 replicas) 
 }
 ```
 
-### 9.4 — Cost Calculator
+### 9.4 - Cost Calculator
 
 Map each node to its cloud provider equivalent and estimate hourly cost:
 
@@ -870,7 +870,7 @@ costPerHour = sum(node.resources.cpu * cpuPricePerHour + node.resources.memory *
 
 Use provider mapping from the catalogue (AWS/GCP/Azure pricing tiers).
 
-### 9.5 — Anti-Pattern Detection
+### 9.5 - Anti-Pattern Detection
 
 Scan the topology for known anti-patterns:
 
@@ -882,7 +882,7 @@ Scan the topology for known anti-patterns:
 | Infinite TTL cache | Cache node with no TTL configured |
 | Over-sharding | More shard nodes than the throughput justifies |
 
-### 9.6 — Replay Engine
+### 9.6 - Replay Engine
 
 Given a seed string, replay the exact same simulation:
 - Same PRNG sequence → same arrivals, same service times, same failures.
@@ -920,7 +920,7 @@ Phase 7 (Scenarios & Chaos)
 Phase 8 (UI Integration)
     │
     ▼
-Phase 9 (Advanced — optional, parallel tracks)
+Phase 9 (Advanced - optional, parallel tracks)
 ```
 
 **Critical path**: Phase 0 → 1 → 2 → 6 → 8 (minimum viable simulation).
@@ -977,7 +977,7 @@ src/
 │   ├── simulation.worker.ts       # Web Worker entry point
 │   └── protocol.ts                # UI ↔ Worker message types
 │
-└── ui/                            # (already exists — React Flow canvas)
+└── ui/                            # (already exists - React Flow canvas)
     ├── hooks/
     │   ├── useSimulation.ts       # Hook: serialize topology, send to worker, receive results
     │   └── useLiveVisualization.ts # Hook: color nodes/edges from time-series snapshots
@@ -995,8 +995,8 @@ src/
 
 | Phase | Deliverable | Depends On | Est. Complexity |
 |-------|-------------|------------|-----------------|
-| 0 | Topology JSON format (schema + validator) | — | Low |
-| 1 | Time, PRNG, Distributions, MinHeap, Event types | — | Low |
+| 0 | Topology JSON format (schema + validator) | - | Low |
+| 1 | Time, PRNG, Distributions, MinHeap, Event types | - | Low |
 | 2 | GGcKNode, WorkloadGen, Routing, Event Loop | Phase 1 | High |
 | 3 | NetworkEdge, latency model, congestion, packet loss | Phase 2 | Medium |
 | 4 | FailureInjector, FailurePropagation, cascade patterns | Phase 2, 3 | High |

@@ -1,4 +1,4 @@
-# PART 2: INTRODUCTION TO SIMULATION — Making Diagrams Come Alive
+# PART 2: INTRODUCTION TO SIMULATION - Making Diagrams Come Alive
 
 ---
 
@@ -204,7 +204,7 @@ The observer **watches** the simulation and collects data:
 
 ---
 
-## Chapter 8: Events and States — The Language of Simulation
+## Chapter 8: Events and States - The Language of Simulation
 
 ### 8.1 What Is an Event?
 
@@ -341,7 +341,7 @@ The relationship between events and state:
 
 ---
 
-## Chapter 9: The Event Loop — The Heart of Simulation
+## Chapter 9: The Event Loop - The Heart of Simulation
 
 ### 9.1 The Central Question
 
@@ -561,7 +561,7 @@ Let's trace through a simple simulation:
 
 ---
 
-## Chapter 10: Parameters — The Knobs That Control Behavior
+## Chapter 10: Parameters - The Knobs That Control Behavior
 
 ### 10.1 What Are Parameters?
 
@@ -638,7 +638,7 @@ Parameters are the **adjustable values** that determine how your system behaves.
 
 ---
 
-## Chapter 11: Introducing Queues — Where Things Wait
+## Chapter 11: Introducing Queues - Where Things Wait
 
 ### 11.1 Why Do Queues Exist?
 
@@ -731,7 +731,7 @@ Real traffic is BURSTY and UNPREDICTABLE. To simulate reality, we need randomnes
 
 ---
 
-## Chapter 13: Summary — What You've Learned
+## Chapter 13: Summary - What You've Learned
 
 ```
     PART 2 KEY TAKEAWAYS

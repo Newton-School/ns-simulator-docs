@@ -1,6 +1,6 @@
 # System Design & Discrete-Event Simulation: A First Principles Approach
 
-# PART 1: FOUNDATIONS — Understanding System Diagrams
+# PART 1: FOUNDATIONS - Understanding System Diagrams
 
 ---
 
@@ -28,7 +28,7 @@ Examples across domains:
 - Limited resources?
 - Things that can break?
 
-**The Answer:** We draw pictures. But not just any pictures—structured diagrams that capture the ESSENCE of how things flow through a system.
+**The Answer:** We draw pictures. But not just any pictures-structured diagrams that capture the ESSENCE of how things flow through a system.
 
 ---
 
@@ -62,7 +62,7 @@ We call these **NODES** and **EDGES**.
 
 ---
 
-## Chapter 2: NODES — The Places Where Things Happen
+## Chapter 2: NODES - The Places Where Things Happen
 
 ### 2.1 What IS a Node?
 
@@ -339,7 +339,7 @@ Look at this scenario and identify the nodes:
 
 ---
 
-## Chapter 3: EDGES — The Paths Between Places
+## Chapter 3: EDGES - The Paths Between Places
 
 ### 3.1 What IS an Edge?
 
@@ -656,7 +656,7 @@ Different arrow styles convey different meanings:
 
 ---
 
-## Chapter 4: COMBINING NODES AND EDGES — Building Systems
+## Chapter 4: COMBINING NODES AND EDGES - Building Systems
 
 ### 4.1 The Emergence of Structure
 

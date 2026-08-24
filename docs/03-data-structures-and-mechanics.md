@@ -4,7 +4,7 @@
 
 ---
 
-## Chapter 14: The Min-Heap — The Heart of Event Scheduling
+## Chapter 14: The Min-Heap - The Heart of Event Scheduling
 
 ### 14.1 The Problem We're Solving
 
@@ -107,7 +107,7 @@ A **heap** is a special kind of binary tree with two properties:
     
     
     To go from root to any leaf: only 20 steps!
-    This is O(log n) — the secret sauce of efficient data structures.
+    This is O(log n) - the secret sauce of efficient data structures.
 ```
 
 ### 14.4 Heap as an Array (The Clever Trick)
@@ -499,7 +499,7 @@ while (!eventQueue.isEmpty()) {
 
 ---
 
-## Chapter 15: Precision and Determinism — BigInt and Seeded PRNGs
+## Chapter 15: Precision and Determinism - BigInt and Seeded PRNGs
 
 ### 15.1 The Floating-Point Problem
 
@@ -902,7 +902,7 @@ const value = dist.fromConfig(config);
 
 ---
 
-## Chapter 16: The G/G/c/K Queueing Model — Formalizing Node Behavior
+## Chapter 16: The G/G/c/K Queueing Model - Formalizing Node Behavior
 
 ### 16.1 Kendall's Notation Explained
 
@@ -924,7 +924,7 @@ const value = dist.fromConfig(config);
     ─────────────────────
     
     M = Markovian (exponential distribution)
-        "Memoryless" — past doesn't affect future
+        "Memoryless" - past doesn't affect future
         
     D = Deterministic (constant)
         Always exactly the same value
@@ -1301,7 +1301,7 @@ class GGcKNode {
 
 ---
 
-## Chapter 17: Workload Generation — Creating Realistic Traffic
+## Chapter 17: Workload Generation - Creating Realistic Traffic
 
 ### 17.1 The Workload Generator Node
 
@@ -1606,7 +1606,7 @@ class WorkloadGenerator {
 
 ---
 
-## Chapter 18: Putting It All Together — The Simulation Engine
+## Chapter 18: Putting It All Together - The Simulation Engine
 
 ### 18.1 Engine Architecture
 
@@ -2248,7 +2248,7 @@ console.log("\n═════════════════════�
 
 ---
 
-## Chapter 19: Summary — Part 3 Key Takeaways
+## Chapter 19: Summary - Part 3 Key Takeaways
 
 ```
     PART 3 KEY TAKEAWAYS

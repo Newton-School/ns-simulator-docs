@@ -1,4 +1,4 @@
-# Question Creation & Simulator-Based Grading — Feature Specification
+# Question Creation & Simulator-Based Grading - Feature Specification
 
 This document describes the features required to turn System Design assignments into deterministic, simulator-graded questions. It is written from a feature perspective: what each capability does, why it exists, how it works internally, what data it consumes, and what components it requires to be built.
 
@@ -9,16 +9,16 @@ The Question Creation system was designed through a reference document (`Simulat
 ## Table of Contents
 
 1. [Problem Context](#problem-context)
-2. [Feature 1 — Simulation Verdict Contract](#feature-1--simulation-verdict-contract)
-3. [Feature 2 — Headless Batch Runner](#feature-2--headless-batch-runner)
-4. [Feature 3 — Scenario Specification Model](#feature-3--scenario-specification-model)
-5. [Feature 4 — Rubric & Scoring Engine](#feature-4--rubric--scoring-engine)
-6. [Feature 5 — Structural Validation Rules](#feature-5--structural-validation-rules)
-7. [Feature 6 — Question Type Framework](#feature-6--question-type-framework)
-8. [Feature 7 — Topology Diffing for Fix/Debug Questions](#feature-7--topology-diffing-for-fixdebug-questions)
-9. [Feature 8 — Constraint Enforcement](#feature-8--constraint-enforcement)
-10. [Feature 9 — Incremental Evolution Support](#feature-9--incremental-evolution-support)
-11. [Feature 10 — Feedback Generation](#feature-10--feedback-generation)
+2. [Feature 1 - Simulation Verdict Contract](#feature-1--simulation-verdict-contract)
+3. [Feature 2 - Headless Batch Runner](#feature-2--headless-batch-runner)
+4. [Feature 3 - Scenario Specification Model](#feature-3--scenario-specification-model)
+5. [Feature 4 - Rubric & Scoring Engine](#feature-4--rubric--scoring-engine)
+6. [Feature 5 - Structural Validation Rules](#feature-5--structural-validation-rules)
+7. [Feature 6 - Question Type Framework](#feature-6--question-type-framework)
+8. [Feature 7 - Topology Diffing for Fix/Debug Questions](#feature-7--topology-diffing-for-fixdebug-questions)
+9. [Feature 8 - Constraint Enforcement](#feature-8--constraint-enforcement)
+10. [Feature 9 - Incremental Evolution Support](#feature-9--incremental-evolution-support)
+11. [Feature 10 - Feedback Generation](#feature-10--feedback-generation)
 12. [Architecture Boundary](#architecture-boundary)
 13. [Relationship to Event Debugger & Terminal](#relationship-to-event-debugger--terminal)
 14. [NS Simulator Integration Requirements](#ns-simulator-integration-requirements)
@@ -33,9 +33,9 @@ The Question Creation system was designed through a reference document (`Simulat
 System Design assignments currently work as follows:
 
 1. Students submit answers through the existing `AssignmentQuestionType.SYSTEM_DESIGN` flow, which routes through the `Subjective` / `SubjectiveSubmission` model chain in Django.
-2. Grading relies on AI-based subjective evaluation — an LLM scores the submission against a reference answer and rubric text.
+2. Grading relies on AI-based subjective evaluation - an LLM scores the submission against a reference answer and rubric text.
 3. Marks roll up through the current assignment and integrated assessment pipelines.
-4. The ns-simulator exists as a separate tool — students can build topologies on the canvas and run simulations, but there is no connection between the simulator and the grading system.
+4. The ns-simulator exists as a separate tool - students can build topologies on the canvas and run simulations, but there is no connection between the simulator and the grading system.
 
 ### What's missing
 
@@ -61,15 +61,15 @@ This document specifies both sides of the boundary: what the backend needs from 
 
 ---
 
-## Feature 1 — Simulation Verdict Contract
+## Feature 1 - Simulation Verdict Contract
 
 ### What it does
 
-Defines a stable, versioned subset of `SimulationOutput` that the Django grading backend can depend on as a public API. The backend parses this contract to evaluate rubric rules — it never touches internal engine types directly.
+Defines a stable, versioned subset of `SimulationOutput` that the Django grading backend can depend on as a public API. The backend parses this contract to evaluate rubric rules - it never touches internal engine types directly.
 
 ### Why it exists
 
-`SimulationOutput` (in `src/engine/analysis/output.ts`) is an internal type. Its fields evolve with the engine — new checks get added (`warmupAdequacy` was added recently), field names may change, and the structure reflects engine internals rather than grading needs. If the backend grading system parses `SimulationOutput` directly, any engine refactor could silently break grading.
+`SimulationOutput` (in `src/engine/analysis/output.ts`) is an internal type. Its fields evolve with the engine - new checks get added (`warmupAdequacy` was added recently), field names may change, and the structure reflects engine internals rather than grading needs. If the backend grading system parses `SimulationOutput` directly, any engine refactor could silently break grading.
 
 The verdict contract creates an explicit API boundary: "these fields exist, they mean exactly this, and they will not change without a version bump."
 
@@ -149,7 +149,7 @@ export interface SimulationVerdict {
     details: string;
   }>;
 
-  /** Conservation check — request accounting per node. */
+  /** Conservation check - request accounting per node. */
   conservation: Array<{
     nodeId: string;
     arrived: number;
@@ -177,7 +177,7 @@ export interface SimulationVerdict {
 export function projectToVerdict(output: SimulationOutput): SimulationVerdict
 ```
 
-This function maps from the internal `SimulationOutput` (which may evolve) to the stable `SimulationVerdict` (which is versioned). The mapping is straightforward — mostly field selection and renaming — but the indirection ensures the backend never depends on internal field names.
+This function maps from the internal `SimulationOutput` (which may evolve) to the stable `SimulationVerdict` (which is versioned). The mapping is straightforward - mostly field selection and renaming - but the indirection ensures the backend never depends on internal field names.
 
 **Why `version` exists:** When the grading contract needs to add new fields (e.g., adding `causalGraph` data for resilience scoring), the backend can check `verdict.version` and handle both old and new formats. Without versioning, adding a field the backend expects would break all older simulation results.
 
@@ -197,17 +197,17 @@ This function maps from the internal `SimulationOutput` (which may evolve) to th
 
 ### What components it requires
 
-- **NS Simulator side:** `src/engine/analysis/verdict.ts` — the `SimulationVerdict` type and `projectToVerdict()` function. Exported from the engine package.
+- **NS Simulator side:** `src/engine/analysis/verdict.ts` - the `SimulationVerdict` type and `projectToVerdict()` function. Exported from the engine package.
 - **CLI side:** The headless runner ([Feature 2](#feature-2--headless-batch-runner)) outputs `SimulationVerdict` JSON instead of raw `SimulationOutput` when invoked by the grading pipeline.
 - **Backend side:** Django models that parse `SimulationVerdict` JSON. These live in the backend, not in ns-simulator.
 
 ### Explored in
 
-Reference doc (Evaluation layer — "metrics/verdict response contract", "Simulator team owns: topology validation, deterministic scenario execution, metrics/verdict response contract").
+Reference doc (Evaluation layer - "metrics/verdict response contract", "Simulator team owns: topology validation, deterministic scenario execution, metrics/verdict response contract").
 
 ---
 
-## Feature 2 — Headless Batch Runner
+## Feature 2 - Headless Batch Runner
 
 ### What it does
 
@@ -262,7 +262,7 @@ nssim evaluate topology.json --scenarios scenarios.json --output verdicts.json
 }
 ```
 
-Each scenario takes the base `TopologyJSON` (the student's submission) and applies `overrides` to produce a modified topology. The overrides use a shallow merge at each level — `overrides.global` merges with `topology.global`, `overrides.workload` replaces `topology.workload`, `overrides.faults` replaces `topology.faults`.
+Each scenario takes the base `TopologyJSON` (the student's submission) and applies `overrides` to produce a modified topology. The overrides use a shallow merge at each level - `overrides.global` merges with `topology.global`, `overrides.workload` replaces `topology.workload`, `overrides.faults` replaces `topology.faults`.
 
 **Batch output format:**
 
@@ -315,19 +315,19 @@ Scenarios run **sequentially** in the same process (the engine is deterministic 
 
 - **NS Simulator side:** A new `evaluate` command in `src/cli/` that accepts `--scenarios` and orchestrates batch execution. Reuses the existing `SimulationEngine` and `validateTopology`.
 - **Shared layer:** A `ScenarioOverride` type and a `mergeTopologyWithOverrides(base, overrides)` utility.
-- **Backend side (later version — not V1):** A Celery task that invokes `nssim evaluate` as a subprocess, reads the JSON output, and stores results. Lives in Django, not in ns-simulator. **In the current version the backend does NOT do this** — grading runs entirely in the browser (the iframe), and newton-api stores the client-reported result verbatim via the Game Playground rails. Server-side re-grading with this Celery task is the deferred anti-gaming lever. See `newton-api-backend-integration.md` (§0, §6).
+- **Backend side (later version - not V1):** A Celery task that invokes `nssim evaluate` as a subprocess, reads the JSON output, and stores results. Lives in Django, not in ns-simulator. **In the current version the backend does NOT do this** - grading runs entirely in the browser (the iframe), and newton-api stores the client-reported result verbatim via the Game Playground rails. Server-side re-grading with this Celery task is the deferred anti-gaming lever. See `newton-api-backend-integration.md` (§0, §6).
 
 ### Explored in
 
-Reference doc (Evaluation layer — "backend runs simulator scenarios", "Simulator team owns: deterministic scenario execution", "May need a batch runner or scenario-list support in the CLI").
+Reference doc (Evaluation layer - "backend runs simulator scenarios", "Simulator team owns: deterministic scenario execution", "May need a batch runner or scenario-list support in the CLI").
 
 ---
 
-## Feature 3 — Scenario Specification Model
+## Feature 3 - Scenario Specification Model
 
 ### What it does
 
-A structured data model for defining test scenarios that an instructor attaches to a System Design question. Each scenario specifies traffic conditions, fault injections, timing, and what success looks like — everything the simulator needs to produce a meaningful verdict.
+A structured data model for defining test scenarios that an instructor attaches to a System Design question. Each scenario specifies traffic conditions, fault injections, timing, and what success looks like - everything the simulator needs to produce a meaningful verdict.
 
 ### Why it exists
 
@@ -451,23 +451,23 @@ def build_scenario_topology(base_topology, scenario):
 ### What components it requires
 
 - **Backend side:** `SimulatorScenario` Django model, `ScenarioPassCriteria` schema, evaluation logic. All in Django.
-- **NS Simulator side:** Nothing new — the simulator already accepts `TopologyJSON` with `workload`, `faults`, and `global` sections. The scenario model is a backend concern that maps to existing simulator inputs.
+- **NS Simulator side:** Nothing new - the simulator already accepts `TopologyJSON` with `workload`, `faults`, and `global` sections. The scenario model is a backend concern that maps to existing simulator inputs.
 
 ### Explored in
 
-Reference doc (Authoring layer — "instructors create: what the system design question expects, what scenarios should be tested, how scoring works").
+Reference doc (Authoring layer - "instructors create: what the system design question expects, what scenarios should be tested, how scoring works").
 
 ---
 
-## Feature 4 — Rubric & Scoring Engine
+## Feature 4 - Rubric & Scoring Engine
 
 ### What it does
 
-A configurable scoring system that converts scenario verdicts into a numeric score across four buckets: **Structure**, **Behavior**, **Resilience**, and **Efficiency**. Each bucket aggregates pass/fail results from its assigned scenarios, applies weights, and produces a 0–100 score.
+A configurable scoring system that converts scenario verdicts into a numeric score across four buckets: **Structure**, **Behavior**, **Resilience**, and **Efficiency**. Each bucket aggregates pass/fail results from its assigned scenarios, applies weights, and produces a 0-100 score.
 
 ### Why it exists
 
-Individual scenario verdicts are boolean (pass/fail per condition). The rubric engine converts these into a meaningful grade. Without it, the system can only say "passed 3 of 5 scenarios" — it can't produce a nuanced score like "structure: 90/100, behavior: 75/100, resilience: 40/100, efficiency: 85/100."
+Individual scenario verdicts are boolean (pass/fail per condition). The rubric engine converts these into a meaningful grade. Without it, the system can only say "passed 3 of 5 scenarios" - it can't produce a nuanced score like "structure: 90/100, behavior: 75/100, resilience: 40/100, efficiency: 85/100."
 
 ### How it works internally
 
@@ -516,7 +516,7 @@ def compute_score(question, verdicts):
         bucket_scores[rule.bucket] += earned
         bucket_maxes[rule.bucket] += rule.max_points * rule.weight
     
-    # Normalize each bucket to 0–100
+    # Normalize each bucket to 0-100
     for bucket in bucket_scores:
         if bucket_maxes[bucket] > 0:
             bucket_scores[bucket] = (bucket_scores[bucket] / bucket_maxes[bucket]) * 100
@@ -540,15 +540,15 @@ Two modes, configurable per question:
 ### What components it requires
 
 - **Backend side:** `RubricRule` Django model, `compute_score()` function, bucket weight configuration on `SystemDesignSpec`. All in Django.
-- **NS Simulator side:** Nothing — scoring operates entirely on `SimulationVerdict` data that the simulator already produces.
+- **NS Simulator side:** Nothing - scoring operates entirely on `SimulationVerdict` data that the simulator already produces.
 
 ### Explored in
 
-Reference doc (Scoring, simplified — "four buckets: structure, behavior, resilience, efficiency").
+Reference doc (Scoring, simplified - "four buckets: structure, behavior, resilience, efficiency").
 
 ---
 
-## Feature 5 — Structural Validation Rules
+## Feature 5 - Structural Validation Rules
 
 ### What it does
 
@@ -556,7 +556,7 @@ Pre-simulation checks that verify a student's topology has the required structur
 
 ### Why it exists
 
-If an instructor's question says "design a system with a load balancer, at least 2 API servers, a cache, and a database," and the student submits a topology with no load balancer, there is no point running 5 simulation scenarios — the submission is structurally invalid. Structural validation provides instant feedback and saves compute.
+If an instructor's question says "design a system with a load balancer, at least 2 API servers, a cache, and a database," and the student submits a topology with no load balancer, there is no point running 5 simulation scenarios - the submission is structurally invalid. Structural validation provides instant feedback and saves compute.
 
 ### How it works internally
 
@@ -605,24 +605,24 @@ def evaluate_structural_rule(rule, topology):
     # ...
 ```
 
-**Where evaluation runs:** Structural rules are evaluated **before** scenarios, **in the backend**, on the raw `TopologyJSON`. They do NOT require the simulator engine — they're pure graph analysis on the topology's node/edge structure. This is distinct from `validateTopology()` in the simulator, which checks schema correctness (valid field types, positive integers, etc.). Structural rules check design correctness (right components, right connections).
+**Where evaluation runs:** Structural rules are evaluated **before** scenarios, **in the backend**, on the raw `TopologyJSON`. They do NOT require the simulator engine - they're pure graph analysis on the topology's node/edge structure. This is distinct from `validateTopology()` in the simulator, which checks schema correctness (valid field types, positive integers, etc.). Structural rules check design correctness (right components, right connections).
 
-**Relationship to `validateTopology()`:** The simulator's existing validator (`src/engine/validation/validator.ts`) uses Zod schemas to verify that the `TopologyJSON` is structurally valid JSON — correct types, valid enums, positive numbers, capacity ≥ workers, etc. Structural rules are a higher layer: they verify the topology is a *good design* for the given question, not just a valid input to the simulator.
+**Relationship to `validateTopology()`:** The simulator's existing validator (`src/engine/validation/validator.ts`) uses Zod schemas to verify that the `TopologyJSON` is structurally valid JSON - correct types, valid enums, positive numbers, capacity ≥ workers, etc. Structural rules are a higher layer: they verify the topology is a *good design* for the given question, not just a valid input to the simulator.
 
 Both run: the simulator's validator runs first (rejecting malformed JSON), then structural rules run (checking design requirements), then scenarios run (testing behavior).
 
 ### What components it requires
 
 - **Backend side:** Structural rule definitions, evaluation functions, storage on `SystemDesignSpec`. All in Django.
-- **NS Simulator side:** Topology validation (`validateTopology()`) already exists. No changes needed. The backend may import `ComponentType` and `ComponentCategory` type definitions for structural rule autocomplete — these could be exported as a shared type package.
+- **NS Simulator side:** Topology validation (`validateTopology()`) already exists. No changes needed. The backend may import `ComponentType` and `ComponentCategory` type definitions for structural rule autocomplete - these could be exported as a shared type package.
 
 ### Explored in
 
-Reference doc (Authoring layer — "which components are allowed in the diagram", Component-restricted Design question type).
+Reference doc (Authoring layer - "which components are allowed in the diagram", Component-restricted Design question type).
 
 ---
 
-## Feature 6 — Question Type Framework
+## Feature 6 - Question Type Framework
 
 ### What it does
 
@@ -681,7 +681,7 @@ Creating scenarios and rubric rules from scratch is complex. Question types prov
 
 > "Design under these constraints."
 
-- **Special feature:** Constraint enforcement ([Feature 8](#feature-8--constraint-enforcement)) — the system verifies the student's topology respects limits (e.g., max 5 nodes, no caching allowed, cost budget)
+- **Special feature:** Constraint enforcement ([Feature 8](#feature-8--constraint-enforcement)) - the system verifies the student's topology respects limits (e.g., max 5 nodes, no caching allowed, cost budget)
 - **Default scenarios:** Normal load within constraints
 - **Scoring emphasis:** Structure (50%), Behavior (30%), Efficiency (20%)
 
@@ -690,7 +690,7 @@ Creating scenarios and rubric rules from scratch is complex. Question types prov
 > "Start with v1, evolve to v2."
 
 - **Provision:** Instructor provides v1 topology. Student submits v2.
-- **Special feature:** Evolution support ([Feature 9](#feature-9--incremental-evolution-support)) — v2 must still pass v1 scenarios (backward compatibility) plus new v2 scenarios
+- **Special feature:** Evolution support ([Feature 9](#feature-9--incremental-evolution-support)) - v2 must still pass v1 scenarios (backward compatibility) plus new v2 scenarios
 - **Default scenarios:** v1 scenarios (must still pass) + v2 scenarios (new requirements)
 - **Scoring emphasis:** Structure (30%), Behavior (30%), Resilience (20%), Efficiency (20%)
 
@@ -707,7 +707,7 @@ Creating scenarios and rubric rules from scratch is complex. Question types prov
 > "Your system must pass these hidden scenarios."
 
 - **Key difference:** Scenarios are NOT revealed to the student. The student designs based on a problem description, and the hidden scenarios test edge cases they should anticipate.
-- **Default scenarios:** Mix of normal, failure, and spike — student doesn't know which
+- **Default scenarios:** Mix of normal, failure, and spike - student doesn't know which
 - **Scoring emphasis:** Behavior (35%), Resilience (35%), Structure (20%), Efficiency (10%)
 
 **10. Tradeoff Evaluation**
@@ -722,7 +722,7 @@ Creating scenarios and rubric rules from scratch is complex. Question types prov
 ### What components it requires
 
 - **Backend side:** Question type enum, per-type scenario/rubric templates, authoring UI that pre-populates fields based on type. All in Django.
-- **NS Simulator side:** Nothing — question types are an authoring abstraction. The simulator doesn't know or care about question types; it receives `TopologyJSON` + overrides and runs them.
+- **NS Simulator side:** Nothing - question types are an authoring abstraction. The simulator doesn't know or care about question types; it receives `TopologyJSON` + overrides and runs them.
 
 ### Explored in
 
@@ -730,7 +730,7 @@ Reference doc (all 10 question type sections with examples).
 
 ---
 
-## Feature 7 — Topology Diffing for Fix/Debug Questions
+## Feature 7 - Topology Diffing for Fix/Debug Questions
 
 ### What it does
 
@@ -738,7 +738,7 @@ Compares a student's submitted topology against the instructor's reference topol
 
 ### Why it exists
 
-For Fix/Debug questions, the scoring isn't just "does the system work now?" — it's "did the student identify and fix the actual problem?" A student who adds 100 extra nodes to brute-force through a bottleneck should score lower than one who correctly identified the misconfigured capacity on a single node.
+For Fix/Debug questions, the scoring isn't just "does the system work now?" - it's "did the student identify and fix the actual problem?" A student who adds 100 extra nodes to brute-force through a bottleneck should score lower than one who correctly identified the misconfigured capacity on a single node.
 
 ### How it works internally
 
@@ -793,11 +793,11 @@ interface TopologyDiff {
 
 ### Explored in
 
-Reference doc (Fix/Debug question type — "Can student identify bottlenecks, Can they modify architecture correctly").
+Reference doc (Fix/Debug question type - "Can student identify bottlenecks, Can they modify architecture correctly").
 
 ---
 
-## Feature 8 — Constraint Enforcement
+## Feature 8 - Constraint Enforcement
 
 ### What it does
 
@@ -828,19 +828,19 @@ type DesignConstraint =
 
 ```
 Student submits TopologyJSON
-  → validateTopology() (schema check — ns-simulator)
-  → enforceConstraints() (design constraints — backend)
-  → evaluateStructuralRules() (required components — backend)
-  → run scenarios (simulation — ns-simulator)
-  → compute score (rubric — backend)
+  → validateTopology() (schema check - ns-simulator)
+  → enforceConstraints() (design constraints - backend)
+  → evaluateStructuralRules() (required components - backend)
+  → run scenarios (simulation - ns-simulator)
+  → compute score (rubric - backend)
 ```
 
 If any constraint is violated, the submission is rejected with a specific message ("Your design uses 8 nodes, but the maximum allowed is 5"). The student can resubmit.
 
-**Cost model integration:** The `cost_budget` constraint requires a cost model that estimates monthly infrastructure cost from the topology. This maps to the existing cost calculator issue (#74 — `T-031: Implement cost calculator`). The cost model assigns per-node cost based on `ComponentType` and `ResourceConfig`:
+**Cost model integration:** The `cost_budget` constraint requires a cost model that estimates monthly infrastructure cost from the topology. This maps to the existing cost calculator issue (#74 - `T-031: Implement cost calculator`). The cost model assigns per-node cost based on `ComponentType` and `ResourceConfig`:
 
 ```typescript
-// From #74 — cost calculator (not yet implemented)
+// From #74 - cost calculator (not yet implemented)
 function estimateMonthlyCost(topology: TopologyJSON): number {
   return topology.nodes.reduce((total, node) => {
     const unitCost = BASE_COSTS[node.type] ?? 50; // $/month
@@ -853,15 +853,15 @@ function estimateMonthlyCost(topology: TopologyJSON): number {
 ### What components it requires
 
 - **Backend side:** Constraint definitions, enforcement logic, per-question constraint configuration. In Django.
-- **NS Simulator side:** Cost calculator (#74) would be beneficial for cost-budget constraints. Otherwise, nothing new — constraints operate on `TopologyJSON` directly.
+- **NS Simulator side:** Cost calculator (#74) would be beneficial for cost-budget constraints. Otherwise, nothing new - constraints operate on `TopologyJSON` directly.
 
 ### Explored in
 
-Reference doc (Constraint-based Design question type — "Limited memory, Cost constraints, No caching allowed").
+Reference doc (Constraint-based Design question type - "Limited memory, Cost constraints, No caching allowed").
 
 ---
 
-## Feature 9 — Incremental Evolution Support
+## Feature 9 - Incremental Evolution Support
 
 ### What it does
 
@@ -869,7 +869,7 @@ For "Evolve v1 to v2" questions, the system runs the student's submission agains
 
 ### Why it exists
 
-System evolution is a critical engineering skill — adding features without breaking existing functionality. This question type tests whether a student can extend an architecture (add real-time features, add multi-region support) while maintaining backward compatibility.
+System evolution is a critical engineering skill - adding features without breaking existing functionality. This question type tests whether a student can extend an architecture (add real-time features, add multi-region support) while maintaining backward compatibility.
 
 ### How it works internally
 
@@ -899,20 +899,20 @@ Student submits v2 topology
 # Change efficiency: 20% weight (penalize excessive changes, reward minimal modifications)
 ```
 
-The "change efficiency" score uses the topology diff ([Feature 7](#feature-7--topology-diffing-for-fixdebug-questions)) — fewer, more targeted changes score higher than wholesale rewrites.
+The "change efficiency" score uses the topology diff ([Feature 7](#feature-7--topology-diffing-for-fixdebug-questions)) - fewer, more targeted changes score higher than wholesale rewrites.
 
 ### What components it requires
 
 - **Backend side:** Multi-scenario-set configuration (v1 set, v2 set), diff-based efficiency scoring. In Django.
-- **NS Simulator side:** Nothing new — the simulator runs scenarios regardless of whether they're labeled "v1" or "v2."
+- **NS Simulator side:** Nothing new - the simulator runs scenarios regardless of whether they're labeled "v1" or "v2."
 
 ### Explored in
 
-Reference doc (Incremental Evolution question type — "Add real-time features to batch system, Add multi-region support").
+Reference doc (Incremental Evolution question type - "Add real-time features to batch system, Add multi-region support").
 
 ---
 
-## Feature 10 — Feedback Generation
+## Feature 10 - Feedback Generation
 
 ### What it does
 
@@ -920,7 +920,7 @@ Produces structured, per-scenario feedback for students after evaluation. Instea
 
 ### Why it exists
 
-A score of 65/100 is meaningless without context. Students need to know: "Your system handled normal traffic (pass), but failed the database failure scenario because you had no read replicas. The payment-svc node reached 100% utilization and rejected 342 requests." This feedback drives learning — the student knows exactly what to fix.
+A score of 65/100 is meaningless without context. Students need to know: "Your system handled normal traffic (pass), but failed the database failure scenario because you had no read replicas. The payment-svc node reached 100% utilization and rejected 342 requests." This feedback drives learning - the student knows exactly what to fix.
 
 ### How it works internally
 
@@ -928,7 +928,7 @@ A score of 65/100 is meaningless without context. Students need to know: "Your s
 
 ```typescript
 interface SubmissionFeedback {
-  overallScore: number;                    // 0–100
+  overallScore: number;                    // 0-100
   overallPass: boolean;
   
   bucketScores: {
@@ -987,16 +987,16 @@ SUGGESTION_RULES = [
 ]
 ```
 
-**Visibility control:** For "Hidden Test Suite" questions (type 9), scenario details are hidden — the student sees "Scenario 3: Failed" but not the specific conditions or workload parameters. This prevents reverse-engineering the test cases.
+**Visibility control:** For "Hidden Test Suite" questions (type 9), scenario details are hidden - the student sees "Scenario 3: Failed" but not the specific conditions or workload parameters. This prevents reverse-engineering the test cases.
 
 ### What components it requires
 
 - **Backend side:** Feedback generation logic, suggestion rules, visibility controls, student-facing API. All in Django.
-- **NS Simulator side:** Nothing — feedback is derived from `SimulationVerdict` data that the simulator already produces.
+- **NS Simulator side:** Nothing - feedback is derived from `SimulationVerdict` data that the simulator already produces.
 
 ### Explored in
 
-Reference doc (Evaluation layer — "stores detailed feedback", "gives better feedback to students").
+Reference doc (Evaluation layer - "stores detailed feedback", "gives better feedback to students").
 
 ---
 
@@ -1065,10 +1065,10 @@ This is the most important section of this document. It defines exactly where ns
 
 **The contract surface has exactly two touch points:**
 
-1. **Input:** `TopologyJSON` (already exists) + scenario overrides (shallow merge — no new types needed)
-2. **Output:** `SimulationVerdict` (new type — [Feature 1](#feature-1--simulation-verdict-contract))
+1. **Input:** `TopologyJSON` (already exists) + scenario overrides (shallow merge - no new types needed)
+2. **Output:** `SimulationVerdict` (new type - [Feature 1](#feature-1--simulation-verdict-contract))
 
-Everything else — authoring, scenarios, rubrics, constraints, scoring, feedback, marks — is backend logic that never touches ns-simulator code.
+Everything else - authoring, scenarios, rubrics, constraints, scoring, feedback, marks - is backend logic that never touches ns-simulator code.
 
 ---
 
@@ -1092,15 +1092,15 @@ The Question Creation system is **adjacent** to the event debugger and terminal,
 |---|---|
 | `DebugEvent[]` (#38) | Grading cares about aggregate verdicts, not individual events |
 | `RequestLifecycle`, `AdmissionDecision` | Students see feedback, not debugging tools |
-| `TimeSeriesSnapshot` streaming (#33) | No real-time visualization — batch processing only |
+| `TimeSeriesSnapshot` streaming (#33) | No real-time visualization - batch processing only |
 | Canvas debug overlay (#158) | No visual canvas in the grading pipeline |
 | Terminal commands, xterm.js | No interactive CLI in the grading pipeline |
-| Worker protocol expansion (#68) | No pause/resume/speed — simulations run to completion |
+| Worker protocol expansion (#68) | No pause/resume/speed - simulations run to completion |
 | `useSimulation` hook (#69) | No React renderer in the grading pipeline |
 
 ### Implementation order implication
 
-Question Creation can be built **independently** of the event debugger and terminal. The only shared prerequisite is a stable `SimulationOutput` — which already exists. The `SimulationVerdict` contract ([Feature 1](#feature-1--simulation-verdict-contract)) is a thin projection layer that can be added at any time.
+Question Creation can be built **independently** of the event debugger and terminal. The only shared prerequisite is a stable `SimulationOutput` - which already exists. The `SimulationVerdict` contract ([Feature 1](#feature-1--simulation-verdict-contract)) is a thin projection layer that can be added at any time.
 
 If the event debugger and terminal are being built in phases (as outlined in the combined implementation order), the Question Creation features can run in parallel without blocking or being blocked.
 
@@ -1114,28 +1114,28 @@ Only two things need to change in ns-simulator to support Question Creation:
 
 **New file:** `src/engine/analysis/verdict.ts`
 **Contents:** `SimulationVerdict` interface + `projectToVerdict()` function
-**Size:** Small — ~100 lines of type definitions and field mapping
+**Size:** Small - ~100 lines of type definitions and field mapping
 **Dependencies:** Only `SimulationOutput` (already exists)
 
 ### 2. Headless batch runner (Feature 2)
 
 **New file:** `src/cli/commands/evaluate.ts` (or extend `src/cli/index.ts`)
 **Contents:** `nssim evaluate` command that accepts `--scenarios`, runs multiple simulations, outputs `SimulationVerdict[]`
-**Size:** Medium — ~200 lines of orchestration, override merging, timeout handling
+**Size:** Medium - ~200 lines of orchestration, override merging, timeout handling
 **Dependencies:** `SimulationEngine`, `validateTopology`, `projectToVerdict`
 
 ### Optional: Topology diff utility (Feature 7)
 
 **New file:** `src/engine/analysis/diff.ts`
 **Contents:** `diffTopologies(a, b): TopologyDiff` function
-**Size:** Small — ~150 lines of deep comparison
+**Size:** Small - ~150 lines of deep comparison
 **Dependencies:** `TopologyJSON` types only
 
 ### Optional: Shared type exports
 
 **Modified:** `package.json` exports or a dedicated `src/types/public.ts`
 **Contents:** Export `ComponentType`, `ComponentCategory`, `TopologyJSON`, `SimulationVerdict` as a public type package that the Django backend can reference for type safety
-**Size:** Trivial — re-exports of existing types
+**Size:** Trivial - re-exports of existing types
 
 Everything else is backend work that does not touch ns-simulator.
 
@@ -1145,13 +1145,13 @@ Everything else is backend work that does not touch ns-simulator.
 
 | Feature | Reference Doc Section |
 |---|---|
-| 1. Simulation Verdict Contract | Evaluation layer — "metrics/verdict response contract" |
-| 2. Headless Batch Runner | Evaluation layer — "backend runs simulator scenarios", "May need a batch runner" |
-| 3. Scenario Specification Model | Authoring layer — "what scenarios should be tested" |
-| 4. Rubric & Scoring Engine | Scoring, simplified — "four buckets: structure, behavior, resilience, efficiency" |
-| 5. Structural Validation Rules | Authoring layer — "which components are allowed in the diagram" |
+| 1. Simulation Verdict Contract | Evaluation layer - "metrics/verdict response contract" |
+| 2. Headless Batch Runner | Evaluation layer - "backend runs simulator scenarios", "May need a batch runner" |
+| 3. Scenario Specification Model | Authoring layer - "what scenarios should be tested" |
+| 4. Rubric & Scoring Engine | Scoring, simplified - "four buckets: structure, behavior, resilience, efficiency" |
+| 5. Structural Validation Rules | Authoring layer - "which components are allowed in the diagram" |
 | 6. Question Type Framework | All 10 question type sections |
-| 7. Topology Diffing | Fix/Debug question type — "Can student identify bottlenecks" |
+| 7. Topology Diffing | Fix/Debug question type - "Can student identify bottlenecks" |
 | 8. Constraint Enforcement | Constraint-based Design question type |
 | 9. Incremental Evolution Support | Incremental Evolution question type |
-| 10. Feedback Generation | Evaluation layer — "stores detailed feedback", "gives better feedback" |
+| 10. Feedback Generation | Evaluation layer - "stores detailed feedback", "gives better feedback" |

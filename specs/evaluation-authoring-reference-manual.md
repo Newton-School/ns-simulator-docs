@@ -1,4 +1,4 @@
-# Evaluation Authoring — Reference Manual & DSL Guidebook (Domain-Specific Language)
+# Evaluation Authoring - Reference Manual & DSL Guidebook (Domain-Specific Language)
 
 > **Scope.** The complete, authoritative reference for authoring **system-design
 > evaluation questions** (`QuestionPackage`) for the ns-simulator: every
@@ -18,7 +18,7 @@
 > **What's new (2026-08).** Node capacity is now derived from a discrete **instance
 > model** (§9), not free-typed workers; every node has an **execution profile**
 > (`cpu-bound` / `io-bound`) that decides how many concurrent workers its hardware
-> yields (§9.3 — this is why a datastore shows 64–128 "workers/connections" while a
+> yields (§9.3 - this is why a datastore shows 64-128 "workers/connections" while a
 > compute service shows 2). Assignment behaviour (locked resources, connector edges,
 > execution-profile lock) is governed by an **environment profile** (§10). Newton
 > assignments are authored as **Django test-case rows**, not a raw `question.json`
@@ -26,12 +26,12 @@
 
 ---
 
-## Section 1 — Philosophy & The Authoring Recipe
+## Section 1 - Philosophy & The Authoring Recipe
 
 ### 1.1 Discriminatory authoring
 A question is only "authored" (vs merely "written") when it **discriminates**: a
 *good* design passes and a *gamed* design fails **on the intended axis**. Gaming
-is any way to pass without the target competence — over-provisioning a single
+is any way to pass without the target competence - over-provisioning a single
 node, tuning a metric, using the wrong-but-tolerated store, memorizing prose.
 Discrimination comes from grading **≥3 orthogonal axes**:
 
@@ -50,8 +50,8 @@ measure (exactly-once, no-double-book) are carried by **T + J**.
 Every question MUST be validated by grading **two** topologies through
 `sim evaluate question`:
 
-1. **Reference topology** — a correct solution → expect **PASS** (full score).
-2. **Gamed topology** — a deliberately-wrong solution → expect **FAIL** on the
+1. **Reference topology** - a correct solution → expect **PASS** (full score).
+2. **Gamed topology** - a deliberately-wrong solution → expect **FAIL** on the
    *intended* check (read the failing `detail`).
 
 ```bash
@@ -59,14 +59,14 @@ sim evaluate question <package.json> <reference-topology.json>   # exit 0, full 
 sim evaluate question <package.json> <gamed-topology.json>       # non-zero, fails intended axis
 ```
 
-If the gamed design passes, the question is **under-constrained** — tighten the
+If the gamed design passes, the question is **under-constrained** - tighten the
 `semanticCriteria`/`rubric`. A question that has not been graded both ways is not
-authored. (Every kind in this manual was validated this way — see
+authored. (Every kind in this manual was validated this way - see
 `question-bank-initial-game-states.md` §Validation status.)
 
 ### 1.3 Workload characterization
 `workloadCategory` selects which axis dominates and what load is injected. It is
-an **author-side selector**, optionally surfaced to the student as a hint — **not**
+an **author-side selector**, optionally surfaced to the student as a hint - **not**
 the teaching mechanism (the student should infer the character from the FRs +
 scale numbers and be forced into the right design by the simulation).
 
@@ -80,7 +80,7 @@ scale numbers and be forced into the right design by the simulation).
 
 > **"Equal"** read/write is authored as a `requestDistribution` with `read`/`write`
 > weights ~0.5/0.5 and no single dominant axis; the grade then rests on structure +
-> justification. There is no `equal` enum value — express it via the distribution.
+> justification. There is no `equal` enum value - express it via the distribution.
 >
 > **CPU-bound / resource-allocation questions.** There is also **no**
 > `workloadCategory: "compute"` enum in the shipped schema. Author those as an
@@ -90,7 +90,7 @@ scale numbers and be forced into the right design by the simulation).
 
 ---
 
-## Section 2 — Workload & Scale Configuration
+## Section 2 - Workload & Scale Configuration
 
 ### 2.1 Where workload is authored (and where it is NOT)
 - **Graded workload = question JSON** (`suite.cases[].workload`), injected over the
@@ -98,7 +98,7 @@ scale numbers and be forced into the right design by the simulation).
   (anti-gaming): the student cannot lower the load, reseed, or change the mix.
 - **The request mix is JSON-only.** Neither the canvas scenario editor
   (`ScenarioState.workloadOverride`) nor a source node's `defaultWorkload` can carry
-  a `requestDistribution` — both are typed `Omit<WorkloadProfile, 'sourceNodeId' | 'requestDistribution'>`.
+  a `requestDistribution` - both are typed `Omit<WorkloadProfile, 'sourceNodeId' | 'requestDistribution'>`.
   So read/write character is set **exclusively** in the question package.
 - The student's on-canvas scenario (RPS/pattern/source/faults) affects only their
   own dry-runs and is **overridden** by the injected suite at grade time.
@@ -106,9 +106,9 @@ scale numbers and be forced into the right design by the simulation).
 ### 2.2 Tractable vs display scale
 | Field | Purpose | Value guidance |
 |-------|---------|----------------|
-| `prompt.scale.peakRps` | **display** — the real-world target shown in the brief | the real number (e.g. `200000`) |
-| `prompt.scale.readWriteRatio` | **display** — shown as `99:1`; also the source the sim mix *should* mirror | the real ratio |
-| `suite.cases[].workload.baseRps` | **tractable simulation load** the browser can actually run | **~2,000–5,000** rps |
+| `prompt.scale.peakRps` | **display** - the real-world target shown in the brief | the real number (e.g. `200000`) |
+| `prompt.scale.readWriteRatio` | **display** - shown as `99:1`; also the source the sim mix *should* mirror | the real ratio |
+| `suite.cases[].workload.baseRps` | **tractable simulation load** the browser can actually run | **~2,000-5,000** rps |
 
 The browser cannot run 200K rps × 30s (6M events). Author a **representative**
 `baseRps` that still stresses the design, and size nodes + thresholds together.
@@ -132,8 +132,8 @@ type token.
 | Field | Required | Rule |
 |-------|----------|------|
 | `type` | ✅ | free string; used in edge `condition` (`request.type === "read"`) and GET/POST inference |
-| `weight` | ✅ | fraction 0–1; weights across the array should sum to 1.0 |
-| `sizeBytes` | ✅ (full topology) | payload bytes — drives bandwidth/serialization; **a full topology's entries require it** (the suite override tolerates its absence but a merged topology does not) |
+| `weight` | ✅ | fraction 0-1; weights across the array should sum to 1.0 |
+| `sizeBytes` | ✅ (full topology) | payload bytes - drives bandwidth/serialization; **a full topology's entries require it** (the suite override tolerates its absence but a merged topology does not) |
 | `metadata` | optional | untyped `Record<string, unknown>` escape hatch (not consumed by grading today) |
 
 > **Why declare payload sizes.** `sizeBytes` feeds edge bandwidth and transfer
@@ -154,7 +154,7 @@ matter today:
 |---------|------------------|-----------------------|
 | `suite.cases[].workload.pattern` | If you author a full workload, `pattern` must be explicit. The product's interactive defaults now favor **`constant`** traffic for predictability. | For deterministic graded cases, prefer `constant` unless arrival jitter is part of the lesson. Use `poisson` only intentionally. |
 | Edge latency when no explicit edge latency is authored | The renderer/serializer now resolves a bare edge to a **path-type-derived constant median latency (no jitter)**. Log-normal latency only appears when the edge explicitly chooses the log-normal model or supplies `mu` / `sigma`. | If the question depends on latency variance or burst bunching, author explicit log-normal edge latency in the topology. Do not assume omitted latency means jitter. |
-| Node capacity when `resources.instanceType` / `instanceCount` are present | The engine now treats the **instance model** as authoritative for effective concurrency on that node (derived from vCPU × count × execution profile — **§9**). Legacy nodes with no instance-model resources still run off raw `queue.workers` / `queue.capacity`. | For saturation / scaling questions, treat `resources` as part of the real topology DSL. Once you opt into instance-model resources, raw queue numbers are no longer the whole story — size via `instanceType` + `workloadKind`, not `workers`. |
+| Node capacity when `resources.instanceType` / `instanceCount` are present | The engine now treats the **instance model** as authoritative for effective concurrency on that node (derived from vCPU × count × execution profile - **§9**). Legacy nodes with no instance-model resources still run off raw `queue.workers` / `queue.capacity`. | For saturation / scaling questions, treat `resources` as part of the real topology DSL. Once you opt into instance-model resources, raw queue numbers are no longer the whole story - size via `instanceType` + `workloadKind`, not `workers`. |
 | Cost in the live product vs cost in question grading | The app now has a richer instance-aware live cost model and resource displays, but **`budget.unit:"cost"` in question grading still uses the older v1 heuristic** from `budget.ts`. | Do not assume the UI cost chip and the graded `$` axis are numerically identical. Use `budget.nodes` / `budget.edges` for hard anti-kitchen-sink caps; treat `budget.cost` as a heuristic grading axis until the grading DSL is upgraded. |
 
 For authored question packages, the safest practice is:
@@ -165,11 +165,11 @@ For authored question packages, the safest practice is:
 
 ---
 
-## Section 3 — Functional Requirements (FR) Engine
+## Section 3 - Functional Requirements (FR) Engine
 
 FRs are **prose in `prompt.functionalRequirements`**; the engine does not parse
 them. Each FR must be backed by a structural/semantic **obligation** or explicitly
-labeled context — no orphan FRs.
+labeled context - no orphan FRs.
 
 ### 3.1 Mapping FRs to DSL obligations
 | FR intent | DSL obligation | Example |
@@ -190,7 +190,7 @@ labeled context — no orphan FRs.
 The sim models **flow and capacity**, not application logic. FRs like *"generate a
 unique short code"*, *"return 301"*, *"encode base62"* are **not gradeable in the
 simulation**. Convert them to:
-1. a **structural proxy** — the component that *would* do it must exist (a store
+1. a **structural proxy** - the component that *would* do it must exist (a store
    for the code→URL mapping), and
 2. a **`justify` prompt** carrying the nuance as context, and
 3. a **context label** in the prompt text so the student knows it is narrative.
@@ -198,7 +198,7 @@ simulation**. Convert them to:
 ```json
 "functionalRequirements": [
   "Create a short code for a long URL (write path to a store)",
-  "Redirect a short code to its long URL (read path; a permanent redirect — see Justify)"
+  "Redirect a short code to its long URL (read path; a permanent redirect - see Justify)"
 ],
 "justify": [
   { "id": "redirect-semantics",
@@ -214,13 +214,13 @@ simulation**. Convert them to:
 
 ---
 
-## Section 4 — Non-Functional Requirements (NFR) & Simulation Rules
+## Section 4 - Non-Functional Requirements (NFR) & Simulation Rules
 
-### 4.1 Performance NFRs vs correctness NFRs — the hard boundary
+### 4.1 Performance NFRs vs correctness NFRs - the hard boundary
 | NFR flavour | Simulatable? | Graded by |
 |-------------|--------------|-----------|
-| **Performance** — latency, throughput, availability, utilization | ✅ | `rubric` `simulation` check |
-| **Correctness** — consistency, exactly-once, ordering, immutability, no-double-book | ❌ | `storageFit` / `guardedPath` + `justify` — **NEVER** a `simulation` check |
+| **Performance** - latency, throughput, availability, utilization | ✅ | `rubric` `simulation` check |
+| **Correctness** - consistency, exactly-once, ordering, immutability, no-double-book | ❌ | `storageFit` / `guardedPath` + `justify` - **NEVER** a `simulation` check |
 
 The engine has no notion of contention, dedup, or transactional correctness. A
 `simulation` check on a correctness property never resolves and silently mis-grades.
@@ -257,7 +257,7 @@ A `rubric` check's `kind` is inferred from the metric prefix
 `topology.sourceCount` · `topology.totalWorkers` · `topology.totalReplicas` ·
 `topology.componentCounts.<type>` · `topology.categoryCounts.<category>`
 
-> **Anti-example — `summary.latencyP99Ms` is INVALID.** It does not resolve
+> **Anti-example - `summary.latencyP99Ms` is INVALID.** It does not resolve
 > (`getByPath(verdict, 'summary.latencyP99Ms')` → undefined → the check silently
 > fails at grade time). The correct key is **`summary.latency.p99`**. The authoring
 > validator raises `metric.badLatencyKey` for this exact mistake.
@@ -271,7 +271,7 @@ A `rubric` check's `kind` is inferred from the metric prefix
   ]
 }
 ```
-`op` ∈ `< | <= | > | >= | == | !=`. `passThreshold` = fraction (0–1) of points
+`op` ∈ `< | <= | > | >= | == | !=`. `passThreshold` = fraction (0-1) of points
 required for the rubric to pass (default 1 = every point).
 
 ### 4.3 Topology vs simulation obligations (the caching nuance)
@@ -285,11 +285,11 @@ payment→idempotency-store) where there is no legitimate bypass.
 
 ---
 
-## Section 5 — Anti-Patterns, Hard Fails & Structural Checks
+## Section 5 - Anti-Patterns, Hard Fails & Structural Checks
 
 ### 5.1 Hard-fail semantic checks
 `"hardFail": true` on a semantic criterion **zeroes the whole question** when that
-criterion fails, regardless of other credit — for *architecturally naive* mistakes
+criterion fails, regardless of other credit - for *architecturally naive* mistakes
 (not merely suboptimal ones):
 
 ```json
@@ -311,11 +311,11 @@ structuralRules  →  (if any fail, STOP: simulation + semantic skipped)
 justification  →  semantic (forbidUnjustified reads justification results)  →  simulation (suite) + rubric
 ```
 
-- A failing `structuralRule` **prevents** semantic/simulation from running — the
+- A failing `structuralRule` **prevents** semantic/simulation from running - the
   design fails at the structural gate. If you want a *specific* semantic check to
   be the failure point, ensure the gamed design **passes structural first**
-  (e.g. include the required broker but fan out with a queue, so `fanout` — not a
-  `requires_component` — is the failing check).
+  (e.g. include the required broker but fan out with a queue, so `fanout` - not a
+  `requires_component` - is the failing check).
 - `structuralRules` carry **no points** in the host contract; they are pass/fail
   gates. Points live on `rubric` checks and `semanticCriteria`.
 
@@ -332,12 +332,12 @@ Base fields on every rule: `id`, `description`, `kind`.
 | `max_component_count` | `componentType`, `maxCount` | ≤ maxCount of the type |
 | `min_node_count` / `max_node_count` | `count` | total nodes ≥ / ≤ count |
 | `forbids_component` | `componentType` | zero of the type present |
-| `requires_connected_graph` | — | every node reachable (undirected BFS) |
-| `requires_single_source` | — | exactly one source node (no inbound edge) |
+| `requires_connected_graph` | - | every node reachable (undirected BFS) |
+| `requires_single_source` | - | exactly one source node (no inbound edge) |
 
 ---
 
-## Section 6 — Justifications, Tradeoffs & Cost Constraints
+## Section 6 - Justifications, Tradeoffs & Cost Constraints
 
 ### 6.1 Justification schema (`justify`)
 ```json
@@ -353,7 +353,7 @@ Base fields on every rule: `id`, `description`, `kind`.
 |-------|----------|------|
 | `id` | ✅ | unique; referenced by `forbidUnjustified.justifyId` |
 | `decision` | ✅ | the decision the student must defend |
-| `boundTo` | optional | `{ nodeId?, componentType? }` — ties the answer to a real graph element |
+| `boundTo` | optional | `{ nodeId?, componentType? }` - ties the answer to a real graph element |
 | `requires.choice` | ✅ | graph-consistency gate: answer must name the component **actually placed** (anti-stuffing) |
 | `requires.number` | optional | answer must cite a **scale/NFR number** this question defines |
 | `requires.tradeoff` | ✅ | answer must state what is given up |
@@ -363,7 +363,7 @@ Grading is **deterministic, no LLM**: (1) graph-consistency (mentions the placed
 component's alias), (2) number-citation (within 0.5%), (3) tradeoff token. Outcome
 ∈ `passed | partial | failed | missing`.
 
-### 6.2 Budget (`budget`) — anti-kitchen-sink  *(graded — `budget.ts`)*
+### 6.2 Budget (`budget`) - anti-kitchen-sink  *(graded - `budget.ts`)*
 ```json
 "budget": { "unit": "cost", "cap": 600 }
 ```
@@ -373,12 +373,12 @@ as a **`topology.budget`** check row that **fails the contract when
 `actual > cap`** (drops `allPassed`), so an over-provisioned "kitchen-sink" design
 fails the **$** axis rather than being explicitly forbidden.
 
-- **`nodes` / `edges`** — `actual` = node / edge **count**. The primary
+- **`nodes` / `edges`** - `actual` = node / edge **count**. The primary
   anti-kitchen-sink lever; exact and price-model-free.
-- **`cost`** — `actual` = a **v1 capacity-cost heuristic** (no real price sheet
+- **`cost`** - `actual` = a **v1 capacity-cost heuristic** (no real price sheet
   yet): per node `1 + replicas + ceil(workers / 50)`, plus `1` per edge. This
   penalizes over-provisioned capacity (high replicas/workers). Swap in a real cost
-  model later without changing the DSL — the heuristic is clearly labeled in the
+  model later without changing the DSL - the heuristic is clearly labeled in the
   failure `detail` (`"… (v1 capacity-cost heuristic)"`).
 
 The row shows as **pending** before grading and passes/fails after. Note
@@ -406,184 +406,184 @@ a valid justification** (`justificationPassed(justifyId) === true`).
 
 ---
 
-## Section 7 — Master Property & DSL Reference Table
+## Section 7 - Master Property & DSL Reference Table
 
 Every customizable property across the DSL. **Scope** names the containing object.
 
 | Property Name / Key | Scope / Context | Data Type / Enum Values | Required / Optional | Description & Usage Rules | Gotchas & Validation Errors |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `version` | QuestionPackage | `"1.0"` (literal) | Required | Package schema version. | Must equal `"1.0"`. |
-| `id` | QuestionPackage | string | Required | Stable question id. | — |
-| `title` | QuestionPackage | string | Required | Human title. | — |
-| `description` | QuestionPackage | string | Optional | Long description. | — |
-| `difficulty` | QuestionPackage | `beginner \| intermediate \| advanced \| expert` | Required | Difficulty tier. | — |
-| `tags` | QuestionPackage | string[] | Optional | Free tags. | — |
-| `estimatedTimeMinutes` | QuestionPackage | number | Optional | Est. solve time. | — |
-| `type` | QuestionPackage | `fix \| build-budget \| optimize \| open-build \| scaling \| ha-chaos \| tradeoff` | Required | Question archetype. | — |
-| `workloadCategory` | QuestionPackage | `read-heavy \| write-heavy \| connection-heavy \| correctness-heavy \| batch-heavy` | Optional | Primary evaluation axis selector. | No `compute`/`equal` enum — `batch-worker` node is category `compute`; "equal" = a 0.5/0.5 `requestDistribution`. |
+| `id` | QuestionPackage | string | Required | Stable question id. | - |
+| `title` | QuestionPackage | string | Required | Human title. | - |
+| `description` | QuestionPackage | string | Optional | Long description. | - |
+| `difficulty` | QuestionPackage | `beginner \| intermediate \| advanced \| expert` | Required | Difficulty tier. | - |
+| `tags` | QuestionPackage | string[] | Optional | Free tags. | - |
+| `estimatedTimeMinutes` | QuestionPackage | number | Optional | Est. solve time. | - |
+| `type` | QuestionPackage | `fix \| build-budget \| optimize \| open-build \| scaling \| ha-chaos \| tradeoff` | Required | Question archetype. | - |
+| `workloadCategory` | QuestionPackage | `read-heavy \| write-heavy \| connection-heavy \| correctness-heavy \| batch-heavy` | Optional | Primary evaluation axis selector. | No `compute`/`equal` enum - `batch-worker` node is category `compute`; "equal" = a 0.5/0.5 `requestDistribution`. |
 | `domains` | QuestionPackage | `QuestionDomain[]` (`compute \| storage \| network \| resilience \| correctness \| cost`) | Optional but strongly recommended | Declares the bottleneck domain(s) the question is teaching. Drives authoring-validator consistency checks and platform behavior such as edge/resource edit policy. | Missing ⇒ validator `domains.missing`; `network` / `resilience` / `cost` currently warn as V2 domains. |
 | `concepts` | QuestionPackage | `string[]` (non-empty kebab-case slugs by convention) | Optional | Fine-grained lesson tags, narrower than `domains` (for example `read-cache`, `store-fit`, `async-decoupling`). | Free-form metadata today; schema enforces only non-empty strings. |
-| `author` | QuestionPackage | string | Optional | Author id. | — |
-| `createdAt` | QuestionPackage | ISO string | Optional | Timestamp. | — |
+| `author` | QuestionPackage | string | Optional | Author id. | - |
+| `createdAt` | QuestionPackage | ISO string | Optional | Timestamp. | - |
 | `prompt.text` | prompt | string (markdown) | Required | Problem statement. | Frame as "design the architecture, not code". |
-| `prompt.functionalRequirements` | prompt | string[] | Required | FRs (prose). | Not parsed — each must map to an obligation (§3) or be labeled context. |
+| `prompt.functionalRequirements` | prompt | string[] | Required | FRs (prose). | Not parsed - each must map to an obligation (§3) or be labeled context. |
 | `prompt.nonFunctionalRequirements` | prompt | `NFRTarget[]` | Required | Structured NFRs. | Orphan NFR (no matching rubric check) ⇒ validator `nfr.orphan`. |
 | `prompt.scale` | prompt | `ScaleParameters` | Required | Display + derivation numbers. | Display-only unless injected into `suite.workload`. |
-| `prompt.additionalContext` | prompt | string | Optional | Extra context. | — |
+| `prompt.additionalContext` | prompt | string | Optional | Extra context. | - |
 | `NFRTarget.metric` | NFR | `latency_p99 \| latency_p50 \| availability \| error_rate \| throughput` | Required | NFR metric. | Distinct from verdict metric keys. |
-| `NFRTarget.operator` | NFR | `< \| <= \| > \| >=` | Required | Comparison. | — |
-| `NFRTarget.value` | NFR | number | Required | Target value. | — |
-| `NFRTarget.unit` | NFR | `ms \| percent \| req_per_sec \| nines` | Required | Unit. | — |
-| `NFRTarget.description` | NFR | string | Required | Student-facing label. | — |
-| `scale.dau` | scale | number ≥ 0 | Optional | Daily active users (display). | — |
+| `NFRTarget.operator` | NFR | `< \| <= \| > \| >=` | Required | Comparison. | - |
+| `NFRTarget.value` | NFR | number | Required | Target value. | - |
+| `NFRTarget.unit` | NFR | `ms \| percent \| req_per_sec \| nines` | Required | Unit. | - |
+| `NFRTarget.description` | NFR | string | Required | Student-facing label. | - |
+| `scale.dau` | scale | number ≥ 0 | Optional | Daily active users (display). | - |
 | `scale.peakRps` | scale | number ≥ 0 | Optional | Real-world peak (display). | Do NOT put in `baseRps`. Validator warns `scale.rpsNotInjected` if no case sets `baseRps`. |
-| `scale.readWriteRatio` | scale | number 0–100 | Optional | Reads % (display + derivation). | Display-only unless injected as typed `requestDistribution` ⇒ validator `scale.mixNotInjected`. |
-| `scale.storageGb` | scale | number ≥ 0 | Optional | Storage size (display). | — |
-| `scale.retentionDays` | scale | number ≥ 0 | Optional | Retention (display). | — |
-| `scale.growthRatePercent` | scale | number ≥ 0 | Optional | Growth (display). | — |
+| `scale.readWriteRatio` | scale | number 0-100 | Optional | Reads % (display + derivation). | Display-only unless injected as typed `requestDistribution` ⇒ validator `scale.mixNotInjected`. |
+| `scale.storageGb` | scale | number ≥ 0 | Optional | Storage size (display). | - |
+| `scale.retentionDays` | scale | number ≥ 0 | Optional | Retention (display). | - |
+| `scale.growthRatePercent` | scale | number ≥ 0 | Optional | Growth (display). | - |
 | `scaffold.type` | scaffold | `empty \| partial \| complete` | Required | Starting canvas. | `partial`/`complete` require a `topology`. |
 | `scaffold.topology` | scaffold | `TopologyJSON` | Conditional | Given nodes/edges. | Required unless `type: "empty"`. |
-| `scaffold.lockedNodeIds` | scaffold | string[] | Optional | Immutable nodes. | — |
-| `scaffold.lockedEdgeIds` | scaffold | string[] | Optional | Immutable edges. | — |
+| `scaffold.lockedNodeIds` | scaffold | string[] | Optional | Immutable nodes. | - |
+| `scaffold.lockedEdgeIds` | scaffold | string[] | Optional | Immutable edges. | - |
 | `scaffold.baselineVerdict` | scaffold | `SimulationVerdict` | Optional | Baseline to beat (`optimize`). | Must be a versioned verdict. |
-| `constraints.canModifyScaffold` | constraints | boolean | Required | May edit scaffold nodes. | — |
-| `constraints.canRemoveScaffoldNodes` | constraints | boolean | Required | May delete scaffold nodes. | — |
-| `constraints.allowedNodeTypes` | constraints | string[] | Optional | Palette allowlist. | — |
-| `constraints.forbiddenNodeTypes` | constraints | string[] | Optional | Palette denylist. | — |
-| `constraints.maxNodeCount` | constraints | number | Optional | Hard node ceiling. | — |
+| `constraints.canModifyScaffold` | constraints | boolean | Required | May edit scaffold nodes. | - |
+| `constraints.canRemoveScaffoldNodes` | constraints | boolean | Required | May delete scaffold nodes. | - |
+| `constraints.allowedNodeTypes` | constraints | string[] | Optional | Palette allowlist. | - |
+| `constraints.forbiddenNodeTypes` | constraints | string[] | Optional | Palette denylist. | - |
+| `constraints.maxNodeCount` | constraints | number | Optional | Hard node ceiling. | - |
 | `constraints.maxBudget` | constraints | number | Optional | Hard cost ceiling. | Distinct from graded `budget`. |
-| `constraints.maxTotalWorkers` | constraints | number | Optional | Hard worker ceiling. | — |
+| `constraints.maxTotalWorkers` | constraints | number | Optional | Hard worker ceiling. | - |
 | `structuralRules[].id` | structuralRule | string | Required | Unique id. | Duplicate ids rejected. |
 | `structuralRules[].description` | structuralRule | string | Required | Row label + failure text prefix. | Never parsed; only echoed. |
-| `structuralRules[].kind` | structuralRule | see §5.3 | Required | Rule kind. | — |
+| `structuralRules[].kind` | structuralRule | see §5.3 | Required | Rule kind. | - |
 | `…componentType` / `category` / `fromType` / `toType` / `mode` / `minCount` / `maxCount` / `minReplicas` / `count` | structuralRule | per kind (§5.3) | per kind | Kind-specific fields. | `componentType` = a valid `ComponentType` string; `category` = a `ComponentCategory`. |
 | `semanticCriteria[].id` | semanticCriterion | string | Required | Unique id. | Duplicate ids rejected. |
-| `semanticCriteria[].description` | semanticCriterion | string | Optional | Row label + `detail`. | — |
-| `semanticCriteria[].points` | semanticCriterion | number | Required | Points (full/partial→floor(½)/0). | — |
+| `semanticCriteria[].description` | semanticCriterion | string | Optional | Row label + `detail`. | - |
+| `semanticCriteria[].points` | semanticCriterion | number | Required | Points (full/partial→floor(½)/0). | - |
 | `semanticCriteria[].hardFail` | semanticCriterion | boolean | Optional | Failing zeroes the question. | Use for architecturally-naive mistakes only. |
-| `semanticCriteria[].kind` | semanticCriterion | `placement \| guardedPath \| fanout \| storageFit \| forbidUnjustified` | Required | Check kind. | — |
-| `placement.componentType` | placement | `ComponentType` | Required | The placed component. | — |
-| `placement.between` | placement | `[ComponentType, ComponentType]` | Optional | On a directed A→…→B path. | — |
-| `placement.notBefore` | placement | `ComponentType` | Optional | Not upstream of X. | — |
-| `placement.orderedPipeline` | placement | `ComponentType[]` | Optional | Types appear in order along a path. | — |
-| `guardedPath.from` | guardedPath | `ComponentType` | Required | Path origin. | — |
-| `guardedPath.guard` | guardedPath | `ComponentType` | Required | Mandatory guard node. | — |
+| `semanticCriteria[].kind` | semanticCriterion | `placement \| guardedPath \| fanout \| storageFit \| forbidUnjustified` | Required | Check kind. | - |
+| `placement.componentType` | placement | `ComponentType` | Required | The placed component. | - |
+| `placement.between` | placement | `[ComponentType, ComponentType]` | Optional | On a directed A→…→B path. | - |
+| `placement.notBefore` | placement | `ComponentType` | Optional | Not upstream of X. | - |
+| `placement.orderedPipeline` | placement | `ComponentType[]` | Optional | Types appear in order along a path. | - |
+| `guardedPath.from` | guardedPath | `ComponentType` | Required | Path origin. | - |
+| `guardedPath.guard` | guardedPath | `ComponentType` | Required | Mandatory guard node. | - |
 | `guardedPath.to` | guardedPath | `ComponentType` | Optional | Path destination. | With a read/write mix, a `to` guardedPath can wrongly fail correct designs (writes bypass) ⇒ validator `guardedPath.readWriteMix`. |
-| `fanout.broker` | fanout | `ComponentType` | Required | Fan-out broker. | — |
-| `fanout.minConsumers` | fanout | number | Required | Distinct downstream consumers required. | — |
-| `fanout.forbiddenBroker` | fanout | `ComponentType` | Optional | Wrong primitive (queue) feeding N ⇒ hard-fail case. | — |
+| `fanout.broker` | fanout | `ComponentType` | Required | Fan-out broker. | - |
+| `fanout.minConsumers` | fanout | number | Required | Distinct downstream consumers required. | - |
+| `fanout.forbiddenBroker` | fanout | `ComponentType` | Optional | Wrong primitive (queue) feeding N ⇒ hard-fail case. | - |
 | `storageFit.accessPattern` | storageFit | `point-lookup \| time-series \| append-only-ledger \| transactional-relational \| search-index \| blob` | Required | The access pattern. | See Appendix C. |
-| `storageFit.accept` | storageFit | `ComponentType[]` | Required | Full-credit store types. | — |
-| `storageFit.partial` | storageFit | `ComponentType[]` | Optional | Half-credit (defensible). | — |
+| `storageFit.accept` | storageFit | `ComponentType[]` | Required | Full-credit store types. | - |
+| `storageFit.partial` | storageFit | `ComponentType[]` | Optional | Half-credit (defensible). | - |
 | `storageFit.antiPattern` | storageFit | `ComponentType[]` | Optional | Anti-pattern types (hard-fail-worthy). | Present anti-pattern ⇒ fail (hard-fail if flagged). |
-| `forbidUnjustified.componentType` | forbidUnjustified | `ComponentType` | Required | Component to guard. | — |
+| `forbidUnjustified.componentType` | forbidUnjustified | `ComponentType` | Required | Component to guard. | - |
 | `forbidUnjustified.justifyId` | forbidUnjustified | string | Optional | Bound justify prompt id. | Dangling ⇒ validator `justify.dangling`; missing ⇒ present component always fails. |
-| `justify[].id` | justify | string | Required | Unique id. | — |
-| `justify[].decision` | justify | string | Required | Decision to defend. | — |
-| `justify[].boundTo` | justify | `{ nodeId?, componentType? }` | Optional | Graph binding. | — |
-| `justify[].requires.choice` | justify | boolean | Required | Graph-consistency gate. | — |
-| `justify[].requires.number` | justify | boolean | Optional | Must cite a scale number. | — |
-| `justify[].requires.tradeoff` | justify | boolean | Required | Must state a tradeoff. | — |
-| `justify[].acceptTradeoffTokens` | justify | string[] | Optional | Tradeoff keywords. | — |
-| `budget.unit` | budget | `cost \| nodes \| edges` | Required | Budget dimension. | — |
-| `budget.cap` | budget | number > 0 | Required | Ceiling. | — |
-| `suite.name` | suite | string | Required | Suite name. | — |
+| `justify[].id` | justify | string | Required | Unique id. | - |
+| `justify[].decision` | justify | string | Required | Decision to defend. | - |
+| `justify[].boundTo` | justify | `{ nodeId?, componentType? }` | Optional | Graph binding. | - |
+| `justify[].requires.choice` | justify | boolean | Required | Graph-consistency gate. | - |
+| `justify[].requires.number` | justify | boolean | Optional | Must cite a scale number. | - |
+| `justify[].requires.tradeoff` | justify | boolean | Required | Must state a tradeoff. | - |
+| `justify[].acceptTradeoffTokens` | justify | string[] | Optional | Tradeoff keywords. | - |
+| `budget.unit` | budget | `cost \| nodes \| edges` | Required | Budget dimension. | - |
+| `budget.cap` | budget | number > 0 | Required | Ceiling. | - |
+| `suite.name` | suite | string | Required | Suite name. | - |
 | `suite.visibleToStudent` | suite | boolean | Required | Show scenarios to student. | `false` = hidden contest suite. |
-| `suite.dryRunCase` | suite | `QuestionSuiteCase` | Optional | Case the student may dry-run. | — |
+| `suite.dryRunCase` | suite | `QuestionSuiteCase` | Optional | Case the student may dry-run. | - |
 | `suite.cases[].id` | suite case | string | Required | Case id. | Empty `cases` ⇒ validator `suite.empty` (error). |
-| `suite.cases[].description` | suite case | string | Optional | Case label. | — |
-| `suite.cases[].global` | suite case | `Partial<GlobalConfig>` | Optional | Global override (seed/duration). | Question-owned — fixes seed to kill seed-farming. |
+| `suite.cases[].description` | suite case | string | Optional | Case label. | - |
+| `suite.cases[].global` | suite case | `Partial<GlobalConfig>` | Optional | Global override (seed/duration). | Question-owned - fixes seed to kill seed-farming. |
 | `suite.cases[].workload` | suite case | `Partial<WorkloadProfile>` | Optional | Injected load (RPS + mix). | The read/write mix lives here (`requestDistribution`). |
 | `suite.cases[].faults` | suite case | `FaultSpec[]` | Optional | Injected chaos faults. | Question-owned HA scenario. |
-| `workload.baseRps` | workload | number > 0 | Required (in a workload) | Tractable RPS (~2–5K). | Not the display scale. |
-| `workload.pattern` | workload | `constant \| poisson \| bursty \| diurnal \| spike \| sawtooth \| replay` | Required (in a full workload) | Arrival pattern. | — |
+| `workload.baseRps` | workload | number > 0 | Required (in a workload) | Tractable RPS (~2-5K). | Not the display scale. |
+| `workload.pattern` | workload | `constant \| poisson \| bursty \| diurnal \| spike \| sawtooth \| replay` | Required (in a full workload) | Arrival pattern. | - |
 | `workload.requestDistribution[].type` | requestDistribution | string | Required | Traffic class (`read`/`write`/`GET`…). | Used in edge `condition`. |
-| `workload.requestDistribution[].weight` | requestDistribution | number 0–1 | Required | Fraction of traffic. | Weights should sum to 1.0. |
+| `workload.requestDistribution[].weight` | requestDistribution | number 0-1 | Required | Fraction of traffic. | Weights should sum to 1.0. |
 | `workload.requestDistribution[].sizeBytes` | requestDistribution | number | Required (full topology) | Payload size. | Missing on a full topology ⇒ validation error. |
 | `workload.requestDistribution[].metadata` | requestDistribution | object | Optional | Untyped escape hatch. | Not consumed by grading. |
 | `global.seed` | global | string | Required (full) | RNG seed. | Question-fixed to prevent seed-farming. |
 | `global.simulationDuration` | global | number > 0 (ms) | Required (full) | Sim length. | Keep short for the browser. |
-| `global.warmupDuration` | global | number ≥ 0 (ms) | Required (full) | Pre-metrics warmup. | — |
-| `global.timeResolution` | global | `microsecond \| millisecond` | Required (full) | Tick resolution. | — |
-| `global.defaultTimeout` | global | number > 0 (ms) | Required (full) | Request timeout. | — |
-| `global.traceSampleRate` | global | number 0–1 | Optional | Trace sampling. | — |
-| `resources.instanceType` | node resources | `InstanceType` (catalog key, §9.2) | Optional | Hardware SKU; resolves vCPU/RAM/price/perf. Opts the node into the instance model. | Not free-typed — must be a catalog key. |
+| `global.warmupDuration` | global | number ≥ 0 (ms) | Required (full) | Pre-metrics warmup. | - |
+| `global.timeResolution` | global | `microsecond \| millisecond` | Required (full) | Tick resolution. | - |
+| `global.defaultTimeout` | global | number > 0 (ms) | Required (full) | Request timeout. | - |
+| `global.traceSampleRate` | global | number 0-1 | Optional | Trace sampling. | - |
+| `resources.instanceType` | node resources | `InstanceType` (catalog key, §9.2) | Optional | Hardware SKU; resolves vCPU/RAM/price/perf. Opts the node into the instance model. | Not free-typed - must be a catalog key. |
 | `resources.instanceCount` | node resources | number ≥ 1 | Optional (=1) | Horizontal scale. | Supersedes `replicas`. |
-| `resources.workloadKind` | node resources | `cpu-bound \| io-bound` | Optional (per-type default) | Execution profile → workers-per-vCPU (1 vs 32, §9.3). | This is why stores show 64–128 and services show 2. |
+| `resources.workloadKind` | node resources | `cpu-bound \| io-bound` | Optional (per-type default) | Execution profile → workers-per-vCPU (1 vs 32, §9.3). | This is why stores show 64-128 and services show 2. |
 | `resources.maxInstances` | node resources | number | Optional | Per-node `instanceCount` quota. | Build-time validation. |
 | `resources.perRequestMemMb` | node resources | number (MB) | Optional | Per-request memory → admission ceiling `K`. | Small value ⇒ RAM never binds (pure queueing). |
 | `resources.pricingModel` | node resources | `on-demand \| reserved \| spot` | Optional (=on-demand) | Price multiplier 1.0 / 0.6 / 0.3. | Provisioned cost only; not the graded `$` axis (§9.5). |
-| `resources.workersPerInstance` / `queueSlots` | node resources | number | Optional | **Derived, read-only** once instance model is set. | Do not tune to size a node — ignored by derivation. |
+| `resources.workersPerInstance` / `queueSlots` | node resources | number | Optional | **Derived, read-only** once instance model is set. | Do not tune to size a node - ignored by derivation. |
 | `resources.cpu` / `memory` / `replicas` | node resources | number | Optional | **@deprecated** legacy free-typed fields. | Read for back-compat only. |
 | `environmentProfile` | Newton `SIMULATOR_CONFIG` / launch payload | `EnvironmentProfileInput` (§10) | Optional | Mode + visibility + capabilities lens. | Not part of `question.json`; authored in the Newton row or launch payload. |
-| `rubric.id` | rubric | string | Required | Rubric id. | — |
-| `rubric.passThreshold` | rubric | number 0–1 | Optional (=1) | Fraction of points to pass. | — |
-| `rubric.checks[].id` | rubric check | string | Required | Check id. | — |
-| `rubric.checks[].description` | rubric check | string | Required | Row label. | — |
+| `rubric.id` | rubric | string | Required | Rubric id. | - |
+| `rubric.passThreshold` | rubric | number 0-1 | Optional (=1) | Fraction of points to pass. | - |
+| `rubric.checks[].id` | rubric check | string | Required | Check id. | - |
+| `rubric.checks[].description` | rubric check | string | Required | Row label. | - |
 | `rubric.checks[].kind` | rubric check | `topology \| simulation \| invariant` | Optional | Inferred from metric prefix if omitted. | Mismatch (simulation check on `topology.*`) ⇒ validator `metric.kindMismatch`. |
 | `rubric.checks[].metric` | rubric check | verdict path (§4.2) | Required | Metric to compare. | `summary.latencyP99Ms` ⇒ validator `metric.badLatencyKey`. |
-| `rubric.checks[].op` | rubric check | `< \| <= \| > \| >= \| == \| !=` | Required | Comparison. | — |
-| `rubric.checks[].value` | rubric check | number | Required | Threshold. | — |
-| `rubric.checks[].points` | rubric check | number | Optional (=1) | Points. | — |
+| `rubric.checks[].op` | rubric check | `< \| <= \| > \| >= \| == \| !=` | Required | Comparison. | - |
+| `rubric.checks[].value` | rubric check | number | Required | Threshold. | - |
+| `rubric.checks[].points` | rubric check | number | Optional (=1) | Points. | - |
 
 ---
 
-## Section 8 — Schema Validation & Engine Gotchas Index
+## Section 8 - Schema Validation & Engine Gotchas Index
 
 ### 8.1 The two-stage validation pipeline
-1. **`parseQuestionPackage(raw)`** — Zod schema validation. Enforces types, enums,
+1. **`parseQuestionPackage(raw)`** - Zod schema validation. Enforces types, enums,
    required fields, and unique ids (`structuralRules`, `semanticCriteria`,
    `justify`). Throws on any schema violation. This is what the Django admin
    `clean()` / the Node `/validate` runs; a malformed package cannot be saved.
-2. **`validateAuthoredQuestion(pkg)`** — the authoring-contract lint (semantic, not
+2. **`validateAuthoredQuestion(pkg)`** - the authoring-contract lint (semantic, not
    schema). Returns `error`/`warning` diagnostics: wrong metric keys, un-injected
    scale numbers, missing `sizeBytes`, orphan NFRs, correctness-on-simulation,
    dangling justify bindings, read/write `guardedPath` misuse. `error`s should block
    a save; `warning`s are advisory.
 
 ### 8.2 Gotcha index
-- **Metric key resolution** — use the exact verdict paths (`summary.latency.p99`).
+- **Metric key resolution** - use the exact verdict paths (`summary.latency.p99`).
   `summary.latencyP99Ms` never resolves. Topology metrics need `kind: "topology"`.
-- **String keys vs enum values** — `componentType`/`category` must be valid
+- **String keys vs enum values** - `componentType`/`category` must be valid
   `ComponentType`/`ComponentCategory` strings. **`batch-worker` is a *type*; its
   *category* is `compute`** (a category is a fixed enum, not the type name).
 - **`sizeBytes` is mandatory** on a full topology's `requestDistribution` entries
   (the suite override is a partial and tolerates its absence).
-- **Read/write mix is JSON-only** — not settable on the canvas or a source node
+- **Read/write mix is JSON-only** - not settable on the canvas or a source node
   (both `Omit` `requestDistribution`); and it only affects the sim when the topology
   routes on `request.type`.
-- **Omitted edge latency is now deterministic by default** — a bare edge resolves to
+- **Omitted edge latency is now deterministic by default** - a bare edge resolves to
   a path-type-derived **constant** median latency, not an implicit log-normal. If a
   question needs network jitter, author it explicitly.
-- **Instance-model resources change the meaning of capacity** — once a node carries
+- **Instance-model resources change the meaning of capacity** - once a node carries
   `resources.instanceType` / `instanceCount`, effective concurrency is derived from
   the instance model (§9). Legacy `queue.workers`-only intuition no longer applies
   unchanged to that node.
-- **Execution profile decides worker count** — `io-bound` yields 32 servers/vCPU,
+- **Execution profile decides worker count** - `io-bound` yields 32 servers/vCPU,
   `cpu-bound` yields 1. A datastore/cache/LB reading "64/128 workers/connections" is
   correct (io-bound); a service reading "2 workers" is correct (cpu-bound). To make a
   store a bottleneck, author it `cpu-bound` on a small instance (§9.3).
-- **`connector` edges carry no physics** — under a connector `edgeModel` (the
+- **`connector` edges carry no physics** - under a connector `edgeModel` (the
   deployed/practice default and ASSIGNMENT default), edges add no latency, bandwidth,
   or egress cost. Author reference/gamed sizing so the discriminator lives in nodes,
   or set the profile/`domains` to get `network` edges when the lesson *is* the edge
-  (§10.3–10.4).
-- **Two authoring shapes must agree** — a Newton assignment ships as Django rows
+  (§10.3-10.4).
+- **Two authoring shapes must agree** - a Newton assignment ships as Django rows
   (§11), not the `question.json` the harness grades. Keep the rows byte-equal to the
   package or students get a different question than you validated.
-- **Short-circuit** — a failing `structuralRule` skips semantic + simulation. Design
+- **Short-circuit** - a failing `structuralRule` skips semantic + simulation. Design
   gamed topologies to pass structural if you want a specific semantic check to fail.
-- **CLI vs in-app** — `forbidUnjustified` fails a present component in the CLI (no
+- **CLI vs in-app** - `forbidUnjustified` fails a present component in the CLI (no
   answer capture) but passes a defended one in-app.
-- **hardFail zeroes the question** — reserve for architecturally-naive mistakes.
-- **Correctness ≠ simulation** — never author a `simulation` check for exactly-once,
+- **hardFail zeroes the question** - reserve for architecturally-naive mistakes.
+- **Correctness ≠ simulation** - never author a `simulation` check for exactly-once,
   ordering, immutability, or no-double-book.
-- **Tractable RPS** — `baseRps` ~2–5K; the real number goes in `prompt.scale`.
-- **Graded cost is still heuristic** — the live app may show richer instance-aware
+- **Tractable RPS** - `baseRps` ~2-5K; the real number goes in `prompt.scale`.
+- **Graded cost is still heuristic** - the live app may show richer instance-aware
   cost numbers, but question-package `budget.unit:"cost"` still grades via
   `estimateNodeCost` in `budget.ts`.
 
-### 8.3 Implementation status — graded vs schema-only
+### 8.3 Implementation status - graded vs schema-only
 Not every schema field drives grading. Author accordingly.
 
 | Feature | Schema | Graded / behavioral? |
@@ -592,28 +592,28 @@ Not every schema field drives grading. Author accordingly.
 | `rubric` (`simulation`/`topology`/`invariant`) | ✅ | ✅ graded |
 | `semanticCriteria` (placement/guardedPath/fanout/storageFit/forbidUnjustified) | ✅ | ✅ graded (evaluators + hardFail) |
 | `justify` (graph-consistent) | ✅ | ✅ graded; feeds `forbidUnjustified` in-app |
-| **`budget`** | ✅ | ✅ **graded** (`budget.ts` — nodes/edges exact, cost = v1 heuristic) |
+| **`budget`** | ✅ | ✅ **graded** (`budget.ts` - nodes/edges exact, cost = v1 heuristic) |
 | `suite.cases[].workload` / `global` / `faults` | ✅ | ✅ injected at grade time |
-| `resources.*` (instance model — `instanceType`/`instanceCount`/`workloadKind`/`perRequestMemMb`) | ✅ | ✅ **behavioral** — drives derived concurrency `c`/`K`, service speed, and cost on that node (§9) |
+| `resources.*` (instance model - `instanceType`/`instanceCount`/`workloadKind`/`perRequestMemMb`) | ✅ | ✅ **behavioral** - drives derived concurrency `c`/`K`, service speed, and cost on that node (§9) |
 | `resources.pricingModel` | ✅ | ⚠️ affects the **live** cost chip / `cost.ts` only; graded `budget.unit:"cost"` still uses the v1 heuristic (§6.2) |
-| `environmentProfile` (mode / visibility / `capabilities`) | ✅ (Newton row / launch) | ⚠️ **platform-facing** — governs edit locks, `edgeModel`, visibility; not a scored axis. Overlaid by `domains` (§10.4) |
-| `edgeModel` (`network` / `connector`) | ✅ | ⚠️ behavioral — `connector` edges carry no sim physics or egress cost (§10.3) |
-| `constraints.*` (`maxNodeCount`, `maxBudget`, `maxTotalWorkers`, `allowed/forbiddenNodeTypes`) | ✅ | ❌ **not enforced at grade time** (UI/palette only) — use `budget` + `max_node_count`/`max_component_count` structural rules to enforce |
+| `environmentProfile` (mode / visibility / `capabilities`) | ✅ (Newton row / launch) | ⚠️ **platform-facing** - governs edit locks, `edgeModel`, visibility; not a scored axis. Overlaid by `domains` (§10.4) |
+| `edgeModel` (`network` / `connector`) | ✅ | ⚠️ behavioral - `connector` edges carry no sim physics or egress cost (§10.3) |
+| `constraints.*` (`maxNodeCount`, `maxBudget`, `maxTotalWorkers`, `allowed/forbiddenNodeTypes`) | ✅ | ❌ **not enforced at grade time** (UI/palette only) - use `budget` + `max_node_count`/`max_component_count` structural rules to enforce |
 | `workloadCategory` | ✅ | ❌ label only (author-side axis selector; not read by grading) |
-| `domains` | ✅ | ⚠️ **advisory + platform-facing** — checked by the authoring validator and consumed by environment-profile / edit-policy logic, but not scored as a rubric axis by themselves |
+| `domains` | ✅ | ⚠️ **advisory + platform-facing** - checked by the authoring validator and consumed by environment-profile / edit-policy logic, but not scored as a rubric axis by themselves |
 | `concepts` | ✅ | ❌ metadata only (taxonomy / indexing aid; not graded) |
-| `type` (`fix`/`build-budget`/`optimize`/`open-build`/`scaling`/`ha-chaos`/`tradeoff`) | ✅ | ❌ **all are labels** — none drives behavior. `optimize` does **not** grade against `scaffold.baselineVerdict`; `build-budget` does not auto-enforce `budget`; `ha-chaos` "works" only via `suite.faults`. |
+| `type` (`fix`/`build-budget`/`optimize`/`open-build`/`scaling`/`ha-chaos`/`tradeoff`) | ✅ | ❌ **all are labels** - none drives behavior. `optimize` does **not** grade against `scaffold.baselineVerdict`; `build-budget` does not auto-enforce `budget`; `ha-chaos` "works" only via `suite.faults`. |
 | `scaffold.baselineVerdict` | ✅ | ❌ not graded (no "beat the baseline" check) |
 | `requestDistribution[].metadata` | ✅ | ❌ not consumed |
-| `readWriteRatio → requestDistribution` auto-derivation | — | ❌ not built (author the mix by hand) |
+| `readWriteRatio → requestDistribution` auto-derivation | - | ❌ not built (author the mix by hand) |
 
 > To enforce a node cap, use `budget:{unit:"nodes",cap:N}` or a
-> `max_node_count`/`max_component_count` structural rule — `constraints.maxNodeCount`
+> `max_node_count`/`max_component_count` structural rule - `constraints.maxNodeCount`
 > alone does nothing at grade time.
 
 ---
 
-## Section 9 — Resource, Instance & Execution-Profile Model (node sizing DSL)
+## Section 9 - Resource, Instance & Execution-Profile Model (node sizing DSL)
 
 Node capacity is no longer a free-typed `queue.workers`. A node's `resources`
 block picks a **discrete instance** from a frozen catalog and an **execution
@@ -642,10 +642,10 @@ cannot ask for 6.5 vCPU or 10²⁰ workers, and more of one axis costs money.
 | `instanceType` | `InstanceType` (catalog key, §9.2) | Hardware SKU → resolves `{ vcpu, ramGb, pricePerHour, perfFactor }`. Never free-typed. |
 | `instanceCount` | number ≥ 1 | Horizontal scale (replaces legacy `replicas`). |
 | `maxInstances` | number | Per-node quota; `instanceCount` may not exceed it (build-time validation error). |
-| `workloadKind` | `cpu-bound \| io-bound` | The **execution profile** — decides workers-per-vCPU (§9.3). |
+| `workloadKind` | `cpu-bound \| io-bound` | The **execution profile** - decides workers-per-vCPU (§9.3). |
 | `perRequestMemMb` | number (MB) | Memory footprint of one in-flight request; divides RAM into the admission ceiling `K`. |
 | `pricingModel` | `on-demand \| reserved \| spot` | Purchasing model → price multiplier (§9.5). Absent = `on-demand`. |
-| `workersPerInstance` / `queueSlots` | number | **Derived defaults, shown read-only.** Authored values are ignored by the derivation once `instanceType`/`instanceCount` are present — do not tune these to size a node. |
+| `workersPerInstance` / `queueSlots` | number | **Derived defaults, shown read-only.** Authored values are ignored by the derivation once `instanceType`/`instanceCount` are present - do not tune these to size a node. |
 | `cpu` / `memory` / `replicas` | number | **@deprecated** legacy free-typed fields, read only for back-compat (`replicas`→`instanceCount` via `getInstanceCount`). |
 
 **Legacy vs instance-model nodes.** A node with **no** `instanceType`/`instanceCount`
@@ -677,9 +677,9 @@ on-demand `$/hr`.
 
 `perfFactor` is relative single-thread speed (compute-optimized `c5` faster,
 burstable `t3` slower). Burstable-credit exhaustion is deliberately **not**
-modelled — `t3` is a flat derate representing sustained/baseline speed.
+modelled - `t3` is a flat derate representing sustained/baseline speed.
 
-### 9.3 Derived concurrency — why a datastore shows 64–128 "workers" and a service shows 2
+### 9.3 Derived concurrency - why a datastore shows 64-128 "workers" and a service shows 2
 
 This is the single most common authoring surprise. **Not every node is
 `cpu-bound`.** The execution profile sets workers-per-vCPU:
@@ -693,10 +693,10 @@ effectiveK (admission ceiling) = max(effectiveC, memCeiling)
   memCeiling = floor(totalRAM_MB / perRequestMemMb)      // RAM-bound
 ```
 
-- **`cpu-bound`** — a compute service actually *occupies* the core, so true
+- **`cpu-bound`** - a compute service actually *occupies* the core, so true
   parallelism ≈ #cores → **1 worker / vCPU**. A `c5.large` (2 vCPU) service = **2
   workers**.
-- **`io-bound`** — a datastore, cache, load balancer, broker, or queue mostly
+- **`io-bound`** - a datastore, cache, load balancer, broker, or queue mostly
   *waits* on disk/network, so one core legitimately multiplexes many concurrent
   in-flight requests → **32 / vCPU**. An `m5.xlarge` (4 vCPU) DB = **128**; a
   `r5.large` (2 vCPU) cache = **64**.
@@ -708,21 +708,21 @@ effectiveK (admission ceiling) = max(effectiveC, memCeiling)
 | Compute processors | `microservice`, `batch-worker` | **cpu-bound** | 1 |
 | Everything else | `relational-db`, `nosql-db`, `kv-store`, `in-memory-cache`, `load-balancer`, `api-endpoint`, `queue`, `message-broker`, `object-storage`, … | **io-bound** | 32 |
 
-The canvas shows the same derived `c` under **per-type vocabulary** — "workers"
+The canvas shows the same derived `c` under **per-type vocabulary** - "workers"
 (services/stores), "connections" (DB/LB), "consumers" (broker/queue), "ops"
 (cache). They are all the one number `effectiveC`. So a NoSQL DB reading "128
 connections" or a broker reading "64 consumers" is **correct and by design**, not
 a bug.
 
 > **Authoring lever.** To make a store a *tight bottleneck* (few servers), author it
-> `cpu-bound` on a small instance — e.g. `t3.small` (2 vCPU) `cpu-bound` = 2
+> `cpu-bound` on a small instance - e.g. `t3.small` (2 vCPU) `cpu-bound` = 2
 > servers. This is how a reference fixture forces a saturation lesson (a
 > read-heavy DB that collapses without a cache). Flipping a store to `cpu-bound`
 > is a modelling choice, not a default.
 
-> **Deep dive.** The canonical explainer for the execution-profile model — the
+> **Deep dive.** The canonical explainer for the execution-profile model - the
 > per-tier defaults, the reasoning, the "one number, many labels" vocabulary, and
-> the `canEditExecutionProfile` lock — is `execution-profile-and-node-concurrency.md`.
+> the `canEditExecutionProfile` lock - is `execution-profile-and-node-concurrency.md`.
 
 ### 9.4 Service speed (`perfFactor` → `serviceTimeMultiplier`)
 
@@ -755,16 +755,16 @@ Per **component type**, a `costModel` (in `resourceDefaults.ts`) decides the bas
 Inter-region **egress** is also charged per edge, keyed off `edge.latency.pathType`
 (`cross-zone` `$0.01/GB`, `cross-region` `$0.02`, `internet` `$0.09`; same-rack /
 same-dc free). Note the **graded question `budget.unit:"cost"` still uses the older
-v1 heuristic** (§6.2) — the instance-aware model above powers the live cost chip and
+v1 heuristic** (§6.2) - the instance-aware model above powers the live cost chip and
 `cost.ts`, not yet the graded `$` axis.
 
 ---
 
-## Section 10 — Environment Profiles & Capabilities (assignment vs practice vs author)
+## Section 10 - Environment Profiles & Capabilities (assignment vs practice vs author)
 
 An **EnvironmentProfile** is a visibility + capability lens layered over one
 question. The same package runs unchanged in three modes; the profile decides what
-the student sees and may edit — it never changes *what* the question is or *how* it
+the student sees and may edit - it never changes *what* the question is or *how* it
 grades.
 
 > Source: `environmentProfile.ts` (`EnvironmentProfile`, `EnvironmentCapabilities`,
@@ -780,7 +780,7 @@ grades.
 | `PRACTICE` | false | `connector` | yes | Free self-paced sandbox |
 
 `DEFAULT_ENVIRONMENT_PROFILE` (standalone / online-deployed default, no host
-payload) is **`PRACTICE` with connector edges** — a learner lands focused on the
+payload) is **`PRACTICE` with connector edges** - a learner lands focused on the
 high-level design, not edge physics. The Newton assignment host forces `ASSIGNMENT`
 on its own path, so the default never downgrades a graded launch.
 
@@ -792,7 +792,7 @@ on its own path, so the default never downgrades a graded launch.
 | `canEditScaffoldNodes` | boolean | Whether scaffold nodes can be edited. |
 | `canTriggerTestRuns` | boolean | Whether the student may dry-run before submit. |
 | `edgeModel` | `network \| connector` | Whether edges are a modelled layer or dumb wires (§10.3). |
-| `canEditEdges` | boolean | Edit edge *properties* — only meaningful in `network` mode. |
+| `canEditEdges` | boolean | Edit edge *properties* - only meaningful in `network` mode. |
 | `canEditResources` | boolean | Change a node's instance type / count / execution profile. |
 | `canEditExecutionProfile` | boolean | Change a node's `workloadKind` (cpu/io) specifically. |
 | `maxTestRuns` | number? | Cap on dry runs (absent = unlimited). |
@@ -800,15 +800,15 @@ on its own path, so the default never downgrades a graded launch.
 | `costBudget` | `{ maxPerHour }`? | Money wall, independent of quota (absent = unbounded). |
 
 Cost/resource totals are **always displayed** regardless of caps; the caps only
-gate. `resourceBudget` and `costBudget` are independent — a design can pass the
+gate. `resourceBudget` and `costBudget` are independent - a design can pass the
 vCPU/RAM quota yet exceed the money cap, and vice versa.
 
-### 10.3 `edgeModel` — network edges vs dumb connectors
+### 10.3 `edgeModel` - network edges vs dumb connectors
 
-- **`network`** — edges carry latency / bandwidth into the sim, expose a
+- **`network`** - edges carry latency / bandwidth into the sim, expose a
   properties panel, and project the edge metric lenses. Editability then follows
   `canEditEdges`.
-- **`connector`** — edges are dumb wires that only express topology: **zero sim
+- **`connector`** - edges are dumb wires that only express topology: **zero sim
   physics, no egress bill, no properties, no edge lenses**. Placing/removing them
   still defines the graph, but they cost and delay nothing. This is the "focus on
   the HLD, don't get tangled in edges" mode.
@@ -816,7 +816,7 @@ vCPU/RAM quota yet exceed the money cap, and vice versa.
 The ladder: `connector` (no edit, no calc) < `network` + locked (no edit, affects
 calc) < `network` + editable.
 
-### 10.4 Domain overrides — how `domains` unlock edits
+### 10.4 Domain overrides - how `domains` unlock edits
 
 The question's `domains` (§7) layer over the profile so a lesson that *is* about a
 locked axis unlocks it (`resolveEdgeModel` / `canEditEdgesForQuestion` /
@@ -829,18 +829,18 @@ locked axis unlocks it (`resolveEdgeModel` / `canEditEdgesForQuestion` /
 
 So a `compute`/`storage` assignment keeps edges as connectors and resources locked;
 a `network` assignment gets editable network edges; a `cost` assignment gets
-editable resources. Choose `domains` deliberately — they drive platform edit policy,
+editable resources. Choose `domains` deliberately - they drive platform edit policy,
 not just metadata.
 
 ---
 
-## Section 11 — Writing Test Cases: the Newton Django-Admin Authoring Format
+## Section 11 - Writing Test Cases: the Newton Django-Admin Authoring Format
 
 There are **two authoring shapes** for the same question:
 
-1. **Standalone `question.json`** (this manual's Sections 1–9) — used for
+1. **Standalone `question.json`** (this manual's Sections 1-9) - used for
    local/standalone authoring and the `validate-question-dir` harness.
-2. **Newton Django test-case rows** — how an assignment is actually authored in the
+2. **Newton Django test-case rows** - how an assignment is actually authored in the
    Newton admin when the simulator is embedded via the GAME iframe
    (`?host=newton`). Each question folder ships a `django-admin-assignment.md` that
    spells the rows out.
@@ -849,57 +849,117 @@ They encode the **same** package; the Newton translator (`newtonGamePlayground.t
 `parseNewtonSeed` / `buildQuestionPackageFromRows`) rebuilds the immutable config
 from the **rows**, not from `initial_game_state`.
 
+Each question folder ships a **`django-admin-assignment.md`** that spells the rows
+out verbatim; it is the copy-paste source for the Newton admin. It opens with a
+standing note: **this shape is Newton-assignment-only** - standalone/local authoring
+at `systems-simulator.newtonschool.co` keeps topology Open/Save and is authored from
+`question.json`, not these rows.
+
 ### 11.1 The frontend contract (assignment mode)
 
 - GAME iframe: `https://systems-simulator.newtonschool.co/?host=newton`.
 - `question_text` renders as **raw Django HTML** (`presentationMode: "raw-html"`).
 - The translator rebuilds config from the **test-case rows**, not `initial_game_state`.
-- `initial_game_state` stays **mutable-only** learner state — paste `{}`, never the
+- `initial_game_state` stays **mutable-only** learner state - paste `{}`, never the
   full `question.json`.
 - Assignment mode **hides** topology Open/Save (and disables `Ctrl/Cmd+O` / `S`),
   hides the header settings entry point, **locks scaffold nodes**, keeps edges in
-  **`connector`** mode, and **locks node resource + execution-profile editing** —
+  **`connector`** mode, and **locks node resource + execution-profile editing** -
   unless a domain overlay unlocks it (§10.4: `network` → edges, `cost` → resources).
-- Justification prompts are hidden and ungraded in Newton assignment mode today —
+- **Because edges are connectors, grading must depend on topology + node choices, not
+  on edge-property tuning** (latency / bandwidth / per-edge concurrency). Say so in
+  the prompt and never author an edge-tuning expectation in a connector assignment.
+- Justification prompts are hidden and ungraded in Newton assignment mode today -
   do **not** include `justify` rows in this flow.
 
-### 11.2 Django fields
+### 11.2 Django question fields
 
-| Field | Value |
-|-------|-------|
+| Django field | Value |
+|--------------|-------|
 | `question_type` | `GAME` |
-| `question_title` | the question title |
-| `question_text` | raw HTML: prompt + `<h3>` Functional Requirements / Non-Functional Targets / Scale blocks |
-| `initial_game_state` | `{}` (mutable-only; never the full package) |
+| `question_title` | the question title (e.g. `Design a URL shortener`) |
+| `question_text` | **raw HTML** (see skeleton below) - rendered as-is |
+| `initial_game_state` | `{}` (mutable-only learner state; never the full package) |
 
-Test-case rows: create in the exact order below; for every row `hidden = false`,
-`output = ""`, `output_file = empty`; paste each JSON block verbatim into the Django
-`input` field. Every row is discriminated by its **`type`** key.
+The `question_text` HTML follows a fixed skeleton - prose prompt paragraphs, then
+three `<h3>` blocks (Functional Requirements / Non-Functional Targets / Scale):
 
-### 11.3 Row types
+```html
+<p>… scenario framing: "design the architecture, not code" …</p>
+<p>… the core write/read paths and the target …</p>
+<p>Target: redirect (read-path) p99 latency under 100 ms at peak.</p>
+<p>In this assignment, links are simple connectors. Focus on which components should connect, not on tuning per-link network properties.</p>
+<p>Traffic: 200,000 peak RPS at a 99:1 read-to-write ratio. …</p>
+<h3>Functional Requirements</h3>
+<ul><li>Write path: …</li><li>Read path: …</li></ul>
+<h3>Non-Functional Targets</h3>
+<ul><li>Redirect (read-path) p99 latency under 100 ms at peak load.</li></ul>
+<h3>Scale</h3>
+<ul><li><strong>DAU:</strong> 50,000,000</li><li><strong>Peak RPS:</strong> 200,000</li><li><strong>Read / Write:</strong> 99:1</li></ul>
+```
 
-**Row 1 — `SIMULATOR_CONFIG`** (the master row). Carries everything that is not a
-rule/criterion/check: identity, `scaffold`, `constraints`, `suite`, `rubric` header
-(`id` + `passThreshold`), `domains`, `concepts`, `presentationMode`,
-`workloadCategory`, and the **`environmentProfile`** block (§10).
+### 11.3 Test-case row conventions (the Django columns)
+
+Each row is one Django test case. Create the rows **in the exact order** below. For
+**every** row:
+
+| Django column | Value |
+|---------------|-------|
+| `title` | `"<ROW_TYPE>: <id>"` - e.g. `SIMULATOR_CONFIG: url-shortener`, `STRUCTURAL_RULE: single-source`, `RUBRIC_CHECK: p99` |
+| `input` | the JSON block for that row, pasted **verbatim** |
+| `hidden` | `false` |
+| `output` | `""` (empty) |
+| `output_file` | empty |
+
+Every `input` object is discriminated by its **`type`** key. The translator reads
+the rows in order; `SIMULATOR_CONFIG` must be first.
+
+### 11.4 Row 1 - `SIMULATOR_CONFIG` (the master row)
+
+Carries everything that is not a rule/criterion/check. Top-level keys:
+
+| Key | Value / notes |
+|-----|---------------|
+| `type` | `"SIMULATOR_CONFIG"` |
+| `configVersion` | `"1.0"` (row schema version) |
+| `questionId` / `questionVersion` | question identity |
+| `questionType` | the archetype (`open-build`, …) - mirrors `type` in `question.json` |
+| `domains` / `concepts` | as in `question.json` §7 - **`domains` drive edit policy** (§10.4) |
+| `difficulty` / `workloadCategory` | as in `question.json` |
+| `presentationMode` | `"raw-html"` (renders `question_text` as HTML) |
+| `promptSource` | `"question_text"` (prompt comes from the Django field, not a `prompt.text`) |
+| `scaffold` | `{ "type": "empty" }` or a `partial`/`complete` topology |
+| `constraints` | `canModifyScaffold` / `canRemoveScaffoldNodes` / `maxNodeCount` |
+| `suite` | the injected workload (`name`, `visibleToStudent`, `cases[]`) - §2 |
+| `rubric` | **header only** here: `{ id, passThreshold }`. The checks are their own rows. |
+| `environmentProfile` | the mode + visibility + capabilities lens - §10 |
 
 ```json
 {
   "type": "SIMULATOR_CONFIG",
   "configVersion": "1.0",
-  "questionId": "cache-placement",
+  "questionId": "url-shortener",
   "questionVersion": "1.0",
   "questionType": "open-build",
-  "domains": ["compute"],
-  "concepts": ["cache-placement"],
-  "difficulty": "beginner",
+  "domains": ["compute", "storage"],
+  "concepts": ["read-cache", "store-fit"],
+  "difficulty": "intermediate",
   "workloadCategory": "read-heavy",
   "presentationMode": "raw-html",
   "promptSource": "question_text",
   "scaffold": { "type": "empty" },
-  "constraints": { "canModifyScaffold": true, "canRemoveScaffoldNodes": true, "maxNodeCount": 10 },
-  "suite": { "name": "cache-suite", "visibleToStudent": false, "cases": [ /* … §2 workload … */ ] },
-  "rubric": { "id": "cache-rubric", "passThreshold": 1 },
+  "constraints": { "canModifyScaffold": true, "canRemoveScaffoldNodes": true, "maxNodeCount": 12 },
+  "suite": {
+    "name": "url-shortener-suite",
+    "visibleToStudent": false,
+    "cases": [
+      { "id": "peak", "description": "Read-heavy peak (injected 99:1)",
+        "workload": { "baseRps": 2000, "requestDistribution": [
+          { "type": "read",  "weight": 0.99, "sizeBytes": 256 },
+          { "type": "write", "weight": 0.01, "sizeBytes": 512 } ] } }
+    ]
+  },
+  "rubric": { "id": "url-rubric", "passThreshold": 1 },
   "environmentProfile": {
     "mode": "ASSIGNMENT",
     "visibility": { "prompt": true, "scaffoldSourceNodes": true, "gradingSuiteDetails": false, "liveMetrics": true, "rubricChecks": "LIVE_DURING_BUILD" },
@@ -913,31 +973,54 @@ rule/criterion/check: identity, `scaffold`, `constraints`, `suite`, `rubric` hea
 }
 ```
 
-**Rows 2…N — one row per rule / criterion / check**, each a stringified object of
-the matching sub-schema with a `type` discriminator:
+### 11.5 Rows 2…N - one row per rule / criterion / check
 
-| Row `type` | Body = one element of | Notes |
+Each is a stringified object of the matching `question.json` sub-schema plus a
+`type` discriminator. The body (minus `type`) must be **byte-equal** to the
+corresponding array element in `question.json`.
+
+| Row `type` | Body = one element of | Kinds |
 |------------|-----------------------|-------|
-| `STRUCTURAL_RULE` | `structuralRules[]` (§5.3) | e.g. `requires_component`, `requires_single_source`. |
-| `SEMANTIC_CRITERION` | `semanticCriteria[]` (§5) | `placement` / `guardedPath` / `fanout` / `storageFit` / `forbidUnjustified`. |
-| `RUBRIC_CHECK` | `rubric.checks[]` (§4.2) | `simulation` / `topology` / `invariant`. |
+| `STRUCTURAL_RULE` | `structuralRules[]` (§5.3) | `requires_component`, `requires_single_source`, … |
+| `SEMANTIC_CRITERION` | `semanticCriteria[]` (§5) | `placement` / `guardedPath` / `fanout` / `storageFit` / `forbidUnjustified` |
+| `RUBRIC_CHECK` | `rubric.checks[]` (§4.2) | `simulation` / `topology` / `invariant` |
+
+Worked example - the remaining url-shortener rows (title → input):
 
 ```json
-{ "type": "STRUCTURAL_RULE", "id": "has-lb", "kind": "requires_component",
-  "componentType": "load-balancer", "description": "A load balancer fronts the system" }
+// STRUCTURAL_RULE: single-source
+{ "type": "STRUCTURAL_RULE", "id": "single-source", "kind": "requires_single_source",
+  "description": "Exactly one traffic source" }
 ```
 ```json
-{ "type": "RUBRIC_CHECK", "id": "p99", "kind": "simulation", "description": "p99 under 120 ms",
-  "metric": "summary.latency.p99", "op": "<", "value": 120, "points": 3 }
+// SEMANTIC_CRITERION: store-fits-point-lookup
+{ "type": "SEMANTIC_CRITERION", "id": "store-fits-point-lookup", "kind": "storageFit",
+  "description": "Short-code lookup is a direct lookup by key", "accessPattern": "point-lookup",
+  "accept": ["kv-store", "nosql-db"], "partial": ["in-memory-cache"], "antiPattern": ["relational-db"],
+  "points": 3, "hardFail": true }
+```
+```json
+// RUBRIC_CHECK: p99
+{ "type": "RUBRIC_CHECK", "id": "p99", "kind": "simulation", "description": "p99 under 100 ms",
+  "metric": "summary.latency.p99", "op": "<", "value": 100, "points": 3 }
+```
+```json
+// RUBRIC_CHECK: no-invariants
+{ "type": "RUBRIC_CHECK", "id": "no-invariants", "kind": "invariant", "description": "No invariant violations",
+  "metric": "invariantViolations.count", "op": "==", "value": 0, "points": 1 }
 ```
 
-The row body (minus `type`) must be byte-equal to the corresponding array element in
-`question.json`. Keep the two shapes in lock-step — `validate-question-dir` grades
-the `question.json`, and the django rows are what actually ships to students, so a
-drift between them means the student sees a different question than the one you
-validated.
+That five-row set (1 `SIMULATOR_CONFIG` + 1 `STRUCTURAL_RULE` + 1 `SEMANTIC_CRITERION`
++ 2 `RUBRIC_CHECK`) is a complete, gradeable Newton assignment. Add more
+`STRUCTURAL_RULE` / `SEMANTIC_CRITERION` / `RUBRIC_CHECK` rows one-per-obligation as
+the question grows.
 
-### 11.4 Per-question authoring checklist (alignment)
+> **Keep the two shapes in lock-step.** `validate-question-dir` grades the
+> `question.json`; the django rows are what actually ships to students. A drift
+> between them means the student sees a different question than the one you
+> validated - §11.6 is the guard.
+
+### 11.6 Per-question authoring checklist (alignment)
 
 - [ ] Every `componentType` referenced (structural + semantic) exists in the current
       palette (`PALETTE_TEMPLATES`).
@@ -953,7 +1036,7 @@ validated.
 
 ---
 
-## Appendix A — The Functional-Requirement Taxonomy (all FR classes)
+## Appendix A - The Functional-Requirement Taxonomy (all FR classes)
 
 Every FR reduces to one of these classes. Each maps to a DSL obligation (T/S) or
 is **narrative** (app-logic the sim can't grade → structural proxy + `justify`).
@@ -975,69 +1058,69 @@ is **narrative** (app-logic the sim can't grade → structural proxy + `justify`
 | **Audit / immutability** | "auditable trail", "append-only" | `storageFit`(append-only-ledger); `forbids_component`(mutable store on that path) + `justify` | S/T/J |
 | **Omit / avoid waste** | "don't add a wasteful CDN" | `forbidUnjustified` + `justify` | T/J |
 | **Cache / accelerate reads** | "keep redirects fast" | Σ p99 under injected read-heavy load (NOT guardedPath) | Σ |
-| **Generate an id / encode** | "generate a unique code", "base62" | **narrative** — structural proxy (a store) + `justify` context | J only |
-| **Return a protocol response** | "return 301/302", "HTTP status" | **narrative** — `justify` context; not modeled | J only |
+| **Generate an id / encode** | "generate a unique code", "base62" | **narrative** - structural proxy (a store) + `justify` context | J only |
+| **Return a protocol response** | "return 301/302", "HTTP status" | **narrative** - `justify` context; not modeled | J only |
 
 ---
 
-## Appendix B — Per-Archetype Solution-Nuance Catalog (the "nitty-gritties")
+## Appendix B - Per-Archetype Solution-Nuance Catalog (the "nitty-gritties")
 
 Nuances an expert answer includes. Classified: **[G]** gradeable in the sim/DSL;
 **[J]** justification-only (deterministic text check); **[N]** narrative/context
 (surface in prompt or `justify`, not gradeable).
 
-**URL Shortener** — base62 code encoding **[N/J]**; 301 (permanent) vs 302
+**URL Shortener** - base62 code encoding **[N/J]**; 301 (permanent) vs 302
 (temporary) redirect **[N/J]**; key = short code, point-lookup **[G storageFit]**;
 counter/ZooKeeper-range vs hash for id generation **[J]**; cache the hot reads
 **[G Σ p99]**; write path persists (not cache-served) **[N/J]**.
 
-**News Feed** — fan-out-on-write vs on-read given the read ratio **[J]**; timeline
+**News Feed** - fan-out-on-write vs on-read given the read ratio **[J]**; timeline
 store is point-lookup **[G]**; broker fans to timeline builders **[G fanout]**;
 celebrity/hot-key handling **[J]**.
 
-**Sensor / time-series** — wide-column/TSDB, NOT relational **[G storageFit hardFail]**;
+**Sensor / time-series** - wide-column/TSDB, NOT relational **[G storageFit hardFail]**;
 partition key = sensor_id, clustering = timestamp **[J]**; downsampling/retention
 **[N]**; write throughput **[G Σ throughput]**.
 
-**Cache placement** — cache between service & DB, not before the LB **[G placement]**;
+**Cache placement** - cache between service & DB, not before the LB **[G placement]**;
 cache-aside vs write-through **[J]**; TTL / invalidation **[J]**.
 
-**Messaging fan-out** — pub/sub broker not a work-queue (queue→N is wrong) **[G fanout hardFail]**;
+**Messaging fan-out** - pub/sub broker not a work-queue (queue→N is wrong) **[G fanout hardFail]**;
 at-least-once vs exactly-once delivery **[J]**; consumer groups **[J]**.
 
-**Cargo-cult CDN** — CDN wasteful for dynamic per-user responses; omit or defend
+**Cargo-cult CDN** - CDN wasteful for dynamic per-user responses; omit or defend
 **[G forbidUnjustified + J]**; static vs dynamic cacheability **[J]**.
 
-**Ride-hailing** — geospatial hot path (geohash/quadtree) off the txn DB
+**Ride-hailing** - geospatial hot path (geohash/quadtree) off the txn DB
 **[G placement]**; payment path = SQL, strongly consistent **[G storageFit]**;
 match latency < 3s **[G Σ]**; location updates high-frequency stream **[T]**;
 surge pricing **[N]**.
 
-**Rate limiter** — counters in a **shared** store, not per-instance **[G requires_edge + guardedPath hardFail]**;
+**Rate limiter** - counters in a **shared** store, not per-instance **[G requires_edge + guardedPath hardFail]**;
 token-bucket vs sliding-window algorithm **[J]**; cache not DB for counters (latency)
 **[J number]**; atomic increments / Lua **[N]**.
 
-**Async SLA** — queue + scalable workers; sync fails the SLA at load **[G Σ + structural]**;
+**Async SLA** - queue + scalable workers; sync fails the SLA at load **[G Σ + structural]**;
 autoscaling policy **[J + $ budget]**; back-pressure / DLQ **[J]**; idempotent workers **[J]**.
 
-**Ticketmaster** — distributed lock (with TTL) serializes seat holds; no double-book
+**Ticketmaster** - distributed lock (with TTL) serializes seat holds; no double-book
 **[G guardedPath hardFail + J]**; virtual waiting queue absorbs surge **[G requires_component + Σ]**;
 bookings transactional-relational **[G storageFit]**; search-index for events **[G]**;
 OCC vs pessimistic locking **[J]**.
 
-**Web Crawler** — frontier→fetch→process ordered pipeline **[G placement orderedPipeline]**;
+**Web Crawler** - frontier→fetch→process ordered pipeline **[G placement orderedPipeline]**;
 URL dedup before enqueue (bloom filter / index) **[G guardedPath + J]**; per-domain
 politeness / rate-limit **[J]**; content dedup (simhash) **[J]**; aggregate throughput
 **[G Σ]**; DLQ for failures **[J]**; content in blob/object-storage **[G storageFit blob]**.
 
-**Payment** — idempotency key guards every write; exactly-once **[G guardedPath hardFail + J]**;
+**Payment** - idempotency key guards every write; exactly-once **[G guardedPath hardFail + J]**;
 immutable append-only double-entry ledger **[G storageFit append-only-ledger hardFail]**;
 reconciliation job **[N]**; 2-phase / saga for cross-service **[J]**; durable, HA
 ledger **[G Σ availability / errorRate]**.
 
 ---
 
-## Appendix C — Access-Pattern Catalog (`storageFit.accessPattern`)
+## Appendix C - Access-Pattern Catalog (`storageFit.accessPattern`)
 
 The full enum + recommended `accept` / `antiPattern` store types. Access pattern
 is an **authored grading concept** (inferred by the student from the FRs); it is
@@ -1047,14 +1130,14 @@ the fit.
 | `accessPattern` | Meaning | `accept` (full credit) | `partial` | `antiPattern` (hard-fail-worthy) |
 |-----------------|---------|------------------------|-----------|-----------------------------------|
 | `point-lookup` | get-by-key (URL→long) | `kv-store`, `nosql-db` | `in-memory-cache` | `relational-db` (at scale) |
-| `time-series` | append + range-by-time (sensors) | `time-series-db`, `columnar-db`, `nosql-db` | — | `relational-db` |
-| `append-only-ledger` | immutable double-entry (payments) | `event-sourcing-store` | — | `in-memory-cache`, mutable stores |
-| `transactional-relational` | ACID, joins, money (bookings) | `relational-db` | — | `in-memory-cache`, `kv-store` |
+| `time-series` | append + range-by-time (sensors) | `time-series-db`, `columnar-db`, `nosql-db` | - | `relational-db` |
+| `append-only-ledger` | immutable double-entry (payments) | `event-sourcing-store` | - | `in-memory-cache`, mutable stores |
+| `transactional-relational` | ACID, joins, money (bookings) | `relational-db` | - | `in-memory-cache`, `kv-store` |
 | `search-index` | full-text / faceted (events, products) | `search-index` | `nosql-db` | `relational-db` (for full-text) |
 | `blob` | large immutable objects (media, crawl content) | `object-storage`, `block-storage` | `distributed-file-system` | `relational-db`, `kv-store` |
 
-> **Candidate additions** (not yet in the enum — future work): `wide-column`
+> **Candidate additions** (not yet in the enum - future work): `wide-column`
 > (distinct from time-series), `graph-traversal` (`graph-db`), `vector-similarity`
 > (`vector-db`), `geospatial` (geohash/quadtree over a KV/index), `counter`
-> (atomic increment — cache), `stream` (`stream`/`event-bus`). Until added, model
+> (atomic increment - cache), `stream` (`stream`/`event-bus`). Until added, model
 > these via `accept`/`antiPattern` type lists on the nearest pattern + a `justify`.

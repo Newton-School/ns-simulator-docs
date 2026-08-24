@@ -2,7 +2,7 @@
 
 Technical feature specification defining the property model for edges in the simulation topology: latency distributions, packet loss, error rates, bandwidth, concurrency limits, protocol semantics, path type classification, and the default value system that populates these properties when users don't specify them.
 
-This spec consolidates the `EdgeDefinition` type, the `EDGE_DEFAULTS` constant in the serializer, the engine's edge transfer logic, and the validator's edge-level checks into a single reference for what an edge is, what properties it carries, and how those properties affect request transit. It exists because edges are the transport layer of the simulation — every request that moves between nodes passes through an edge, and the edge's properties determine whether the request arrives (packet loss), arrives in error (error rate), arrives late (latency distribution), or arrives at all (deadline check). The Environment Definition & Configuration Model spec proposes edge-level defaults and overrides; this spec defines what those defaults and overrides contain.
+This spec consolidates the `EdgeDefinition` type, the `EDGE_DEFAULTS` constant in the serializer, the engine's edge transfer logic, and the validator's edge-level checks into a single reference for what an edge is, what properties it carries, and how those properties affect request transit. It exists because edges are the transport layer of the simulation - every request that moves between nodes passes through an edge, and the edge's properties determine whether the request arrives (packet loss), arrives in error (error rate), arrives late (latency distribution), or arrives at all (deadline check). The Environment Definition & Configuration Model spec proposes edge-level defaults and overrides; this spec defines what those defaults and overrides contain.
 
 ---
 
@@ -41,7 +41,7 @@ Edge Properties & Defaults is the subsystem that models the network transport be
 
 | Pain | Who is affected | Technical cause | Consequence |
 | ---- | --------------- | --------------- | ----------- |
-| Edge defaults are renderer-only | Engine developers, CLI users | `EDGE_DEFAULTS` is defined in `src/renderer/src/hooks/useTopologySerializer.ts:28-36` — a renderer concern | Topology JSON created outside the renderer (CLI, tests, API) must specify all edge properties explicitly or rely on the engine's Zod defaults |
+| Edge defaults are renderer-only | Engine developers, CLI users | `EDGE_DEFAULTS` is defined in `src/renderer/src/hooks/useTopologySerializer.ts:28-36` - a renderer concern | Topology JSON created outside the renderer (CLI, tests, API) must specify all edge properties explicitly or rely on the engine's Zod defaults |
 | Path type is cosmetic | Users | `latency.pathType` is set on each edge but the engine does not adjust latency based on it | `same-rack` and `cross-region` edges can have identical latency distributions, misleading users who expect path type to matter |
 | Bandwidth is not enforced | Users | `EdgeDefinition.bandwidth` is a required field set to 1000 Mbps by default, but the engine never throttles or queues based on it | Bandwidth appears in the config but has no runtime effect |
 | maxConcurrentRequests is not enforced | Users | `EdgeDefinition.maxConcurrentRequests` is required and defaulted to 100, but the engine never tracks or limits concurrent in-flight requests per edge | Concurrency limits appear in the config but have no runtime effect |
@@ -148,7 +148,7 @@ Step 5: Schedule arrival
   schedule request-arrival at targetNodeId at arrivalTime
 ```
 
-Steps 1-4 are short-circuit exits — if any triggers, subsequent steps are skipped. This means a lost packet never incurs latency, and an error never incurs latency either.
+Steps 1-4 are short-circuit exits - if any triggers, subsequent steps are skipped. This means a lost packet never incurs latency, and an error never incurs latency either.
 
 **Latency sampling (`engine.ts:490-493`)**
 
@@ -159,7 +159,7 @@ private sampleEdgeLatencyUs(edge: EdgeDefinition): bigint {
 }
 ```
 
-The sampled value is clamped to a minimum of 0 ms. The distribution config can be any of the 14 supported distributions — while the serializer always produces `log-normal`, topology JSON from other sources can use `constant`, `uniform`, `exponential`, etc.
+The sampled value is clamped to a minimum of 0 ms. The distribution config can be any of the 14 supported distributions - while the serializer always produces `log-normal`, topology JSON from other sources can use `constant`, `uniform`, `exponential`, etc.
 
 ### What's missing
 
@@ -196,22 +196,22 @@ Defines every property on `EdgeDefinition`, its type, its valid range, its defau
 | Property | Type | Required | Default (from serializer) | Runtime effect | Range |
 | --- | --- | --- | --- | --- | --- |
 | `id` | `string` | Yes | Auto-generated: `${source}->${target}` | Edge identity for routing, debugging, tracing | Non-empty |
-| `source` | `string` | Yes | From canvas edge | Edge origin node — routing table adjacency list key | Must reference existing node |
-| `target` | `string` | Yes | From canvas edge | Edge destination node — where requests arrive | Must reference existing node |
-| `label` | `string?` | No | `undefined` | Display only — shown on canvas edge | Any string |
+| `source` | `string` | Yes | From canvas edge | Edge origin node - routing table adjacency list key | Must reference existing node |
+| `target` | `string` | Yes | From canvas edge | Edge destination node - where requests arrive | Must reference existing node |
+| `label` | `string?` | No | `undefined` | Display only - shown on canvas edge | Any string |
 | `mode` | Literal union | Yes | Inferred from target's `asyncBoundary` | Routing: async = fan-out, sync = compete | `synchronous\|asynchronous\|streaming\|conditional` |
-| `protocol` | Literal union | Yes | Inferred from target component type | **None** — informational only | `https\|grpc\|tcp\|udp\|websocket\|amqp\|kafka` |
+| `protocol` | Literal union | Yes | Inferred from target component type | **None** - informational only | `https\|grpc\|tcp\|udp\|websocket\|amqp\|kafka` |
 | `latency.distribution` | `DistributionConfig` | Yes | `{ type: 'log-normal', mu: 2.3, sigma: 0.5 }` | Sampled for each transit; determines arrival time | Any valid distribution config |
-| `latency.pathType` | Literal union | Yes | `'same-dc'` | **None** — informational only | `same-rack\|same-dc\|cross-zone\|cross-region\|internet` |
-| `bandwidth` | `number` | Yes | `1000` (Mbps) | **None** — not enforced | Positive number |
-| `maxConcurrentRequests` | `number` | Yes | `100` | **None** — not enforced | Positive integer |
+| `latency.pathType` | Literal union | Yes | `'same-dc'` | **None** - informational only | `same-rack\|same-dc\|cross-zone\|cross-region\|internet` |
+| `bandwidth` | `number` | Yes | `1000` (Mbps) | **None** - not enforced | Positive number |
+| `maxConcurrentRequests` | `number` | Yes | `100` | **None** - not enforced | Positive integer |
 | `packetLossRate` | `number` | Yes | `0.0` (from 0%) | Probability of silent drop → request-timeout | `[0.0, 1.0]` |
 | `errorRate` | `number` | Yes | `0.001` (from 0.1%) | Probability of explicit failure → request-rejected (edge_error_rate) | `[0.0, 1.0]` |
 | `weight` | `number?` | No | `undefined` (treated as 1 in weighted selection) | Routing: weighted random selection probability | Positive number or undefined |
 | `condition` | `string?` | No | `undefined` | Routing: condition-based edge filtering | `request.type === "X"` format |
-| `sourceHandle` | `string?` | No | From canvas | React Flow metadata — no engine effect | Any string |
-| `targetHandle` | `string?` | No | From canvas | React Flow metadata — no engine effect | Any string |
-| `animated` | `boolean?` | No | `undefined` | React Flow metadata — no engine effect | boolean |
+| `sourceHandle` | `string?` | No | From canvas | React Flow metadata - no engine effect | Any string |
+| `targetHandle` | `string?` | No | From canvas | React Flow metadata - no engine effect | Any string |
+| `animated` | `boolean?` | No | `undefined` | React Flow metadata - no engine effect | boolean |
 
 **Properties with runtime effect**: `mode`, `latency.distribution`, `packetLossRate`, `errorRate`, `weight`, `condition`.
 
@@ -237,7 +237,7 @@ Defines the cascade of default values that populate edge properties when users d
 
 ### Why it exists
 
-Most users draw edges on the canvas and accept default values — they don't configure latency distributions or error rates per edge. The default system must be sensible, consistent, and accessible to all topology creators (renderer, CLI, tests, API). Currently, only the renderer applies defaults, creating an asymmetry.
+Most users draw edges on the canvas and accept default values - they don't configure latency distributions or error rates per edge. The default system must be sensible, consistent, and accessible to all topology creators (renderer, CLI, tests, API). Currently, only the renderer applies defaults, creating an asymmetry.
 
 ### How it works internally
 
@@ -262,10 +262,10 @@ serializeEdge() in useTopologySerializer.ts:180-223
 TopologyJSON.edges[] (all properties populated)
     │
     ▼
-validateTopology() — schema validation (all required fields present)
+validateTopology() - schema validation (all required fields present)
     │
     ▼
-SimulationEngine constructor — no additional edge defaults applied
+SimulationEngine constructor - no additional edge defaults applied
 ```
 
 Note: Unlike nodes (where both `validator.ts` and `engine.ts` apply defaults), edges have a single default application point: the serializer. The engine and validator assume all edge properties are already populated.
@@ -332,7 +332,7 @@ This type would live in the environment model and replace `EDGE_DEFAULTS`. The r
 | `cross-region` | `log-normal(mu=4.5, sigma=0.3)` | ~95 ms | Inter-region (e.g., us-east to eu-west) |
 | `internet` | `log-normal(mu=5.0, sigma=0.7)` | ~200 ms | Public internet with high variance |
 
-These would be used when no explicit latency distribution is set on the edge and the path type is specified. This makes path type meaningful at runtime — a `cross-region` edge would automatically have higher latency than a `same-dc` edge.
+These would be used when no explicit latency distribution is set on the edge and the path type is specified. This makes path type meaningful at runtime - a `cross-region` edge would automatically have higher latency than a `same-dc` edge.
 
 ### What components it requires
 
@@ -354,11 +354,11 @@ Defines the pipeline that a request passes through when traversing an edge: pack
 
 ### Why it exists
 
-Edge properties are only meaningful if they produce observable effects during simulation. The transfer pipeline is where latency slows down requests, packet loss creates silent timeouts, error rates cause explicit rejections, and deadline checks prevent stale arrivals. Understanding this pipeline is essential for interpreting simulation results — users need to know why a request timed out (was it node processing or edge latency?) and what properties to tune.
+Edge properties are only meaningful if they produce observable effects during simulation. The transfer pipeline is where latency slows down requests, packet loss creates silent timeouts, error rates cause explicit rejections, and deadline checks prevent stale arrivals. Understanding this pipeline is essential for interpreting simulation results - users need to know why a request timed out (was it node processing or edge latency?) and what properties to tune.
 
 ### How it works internally
 
-**Pipeline implementation — `enqueueEdgeTransfer()` in `src/engine/engine.ts:728-770`**:
+**Pipeline implementation - `enqueueEdgeTransfer()` in `src/engine/engine.ts:728-770`**:
 
 ```
                     ┌──────────────────┐
@@ -407,7 +407,7 @@ if (this.distributions.random() < edge.packetLossRate) {
 }
 ```
 
-If the random sample is below the loss rate, the request is silently dropped — it never arrives at the target. A `request-timeout` event is scheduled at the request's deadline (or immediately if the deadline has passed). The `scope: 'in-flight'` data field indicates this is a transit loss, not a node timeout.
+If the random sample is below the loss rate, the request is silently dropped - it never arrives at the target. A `request-timeout` event is scheduled at the request's deadline (or immediately if the deadline has passed). The `scope: 'in-flight'` data field indicates this is a transit loss, not a node timeout.
 
 **Step 2: Error rate** (`engine.ts:743-754`)
 
@@ -487,7 +487,7 @@ Users configure protocol and path type on edges expecting them to matter. Curren
 
 ### How it works internally
 
-**Protocol — current state**:
+**Protocol - current state**:
 
 The 7 supported protocols (`https`, `grpc`, `tcp`, `udp`, `websocket`, `amqp`, `kafka`) are:
 - Set during serialization (inferred from target component type or user-specified)
@@ -511,7 +511,7 @@ In a real system, protocol affects overhead (HTTP/2 framing vs gRPC binary encod
 
 These would be applied as additive latency modifiers or loss rate modifiers during edge transfer.
 
-**Path type — current state**:
+**Path type - current state**:
 
 The 5 path types (`same-rack`, `same-dc`, `cross-zone`, `cross-region`, `internet`) are:
 - Set during serialization (user-specified or `'same-dc'` default)
@@ -554,14 +554,14 @@ This only applies when the user has not set an explicit distribution. If they ha
 | Adjacent spec | What this spec provides | What this spec consumes | Shared data |
 | --- | --- | --- | --- |
 | **Environment Definition & Configuration Model** | Edge property schema, default values, path type profiles | `EnvironmentEdgeDefaults`, per-edge overrides | `EdgeDefinition`, `EnvironmentEdgeConfig` |
-| **Request Pattern Configuration** | — | Request `sizeBytes` consumed by bandwidth calculations (deferred) | `Request.sizeBytes` |
+| **Request Pattern Configuration** | - | Request `sizeBytes` consumed by bandwidth calculations (deferred) | `Request.sizeBytes` |
 | **Request Flow Direction & Topology Rules** | Edge properties consumed during transfer after route selection | Route selection results (which edges) | `ResolveRoute.edge` → `enqueueEdgeTransfer` |
-| **Request Type Model** | — | `request.sizeBytes` per type for bandwidth modeling | `Request.sizeBytes` |
-| **Throughput Calculation** | Edge-level throughput (requests/sec per edge, deferred) | — | Per-edge metrics |
-| **Queue Depth Calculation** | Edge-induced latency that affects total latency and deadline pressure | — | Sampled latency values |
+| **Request Type Model** | - | `request.sizeBytes` per type for bandwidth modeling | `Request.sizeBytes` |
+| **Throughput Calculation** | Edge-level throughput (requests/sec per edge, deferred) | - | Per-edge metrics |
+| **Queue Depth Calculation** | Edge-induced latency that affects total latency and deadline pressure | - | Sampled latency values |
 | **Arrival, Departure & Request Lifecycle Semantics** | Edge transfer as the transition between forwarded and arrived states | `request-forwarded` → edge → `request-arrival` event sequence | Edge transfer events |
 | **Request Rejection Behaviour** | `edge_error_rate` rejection reason | Rejection metrics and causes | `request-rejected` with `reason: 'edge_error_rate'` |
-| **Cost Calculation & Budgeting** | Bandwidth and protocol as cost factors (data transfer costs) | — | `bandwidth`, `protocol` |
+| **Cost Calculation & Budgeting** | Bandwidth and protocol as cost factors (data transfer costs) | - | `bandwidth`, `protocol` |
 | **Simulation Validation & Pattern Accuracy** | Edge latency distributions as validation targets | Empirical latency measurements vs configured distributions | `latency.distribution` vs observed |
 | **Default-Driven Simplification Layer** | Edge defaults as the simplification mechanism (draw edge, accept defaults) | Progressive disclosure rules for edge properties | `EDGE_DEFAULTS`, path type presets |
 
@@ -583,10 +583,10 @@ This only applies when the user has not set an explicit distribution. If they ha
 
 | Feature | Source files | Types | Key functions |
 | --- | --- | --- | --- |
-| Edge Property Schema | `types.ts:309-339` | `EdgeDefinition` | — |
+| Edge Property Schema | `types.ts:309-339` | `EdgeDefinition` | - |
 | Edge Default System | `useTopologySerializer.ts:28-36, 180-223` | `EDGE_DEFAULTS`, `EdgeRuntimeData` | `serializeEdge()`, `inferProtocol()` |
-| Edge Transfer Mechanics | `engine.ts:728-770, 490-493` | — | `enqueueEdgeTransfer()`, `sampleEdgeLatencyUs()` |
-| Protocol/Path Semantics | `types.ts:315-319` | Protocol union, PathType union | — |
+| Edge Transfer Mechanics | `engine.ts:728-770, 490-493` | - | `enqueueEdgeTransfer()`, `sampleEdgeLatencyUs()` |
+| Protocol/Path Semantics | `types.ts:315-319` | Protocol union, PathType union | - |
 
 ---
 

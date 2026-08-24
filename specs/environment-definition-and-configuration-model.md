@@ -2,7 +2,7 @@
 
 Technical feature specification defining the shared environment configuration contract that all simulation features depend on.
 
-This spec consolidates the product discussion notes around environment definition, global defaults, node-level settings, edge-level settings, constraints, allowed/disallowed behaviours, and request movement rules into a single architectural model. It exists because every downstream simulation feature — throughput calculation, queue depth, rejection behaviour, cost estimation, request pattern configuration — needs to read from a stable, validated, normalized source of truth. Without this contract, each feature would independently derive its inputs from scattered sources, leading to inconsistent defaults, duplicated validation, and configuration drift between the topology JSON, the canvas UI, and the engine runtime.
+This spec consolidates the product discussion notes around environment definition, global defaults, node-level settings, edge-level settings, constraints, allowed/disallowed behaviours, and request movement rules into a single architectural model. It exists because every downstream simulation feature - throughput calculation, queue depth, rejection behaviour, cost estimation, request pattern configuration - needs to read from a stable, validated, normalized source of truth. Without this contract, each feature would independently derive its inputs from scattered sources, leading to inconsistent defaults, duplicated validation, and configuration drift between the topology JSON, the canvas UI, and the engine runtime.
 
 ---
 
@@ -27,7 +27,7 @@ This spec consolidates the product discussion notes around environment definitio
 
 The Environment Definition & Configuration Model is a typed, normalized configuration contract that captures everything the simulation engine needs to know before a run begins: global defaults for request patterns, node capacity, queue depth, edge properties, and behaviour rules; per-node and per-edge overrides; and constraints that gate whether a simulation is valid to execute.
 
-It lets the product offer a default-driven setup where users define a topology and press Run without manually configuring every node or edge. It lets the engine consume a single `NormalizedSimulationEnvironment` object instead of re-deriving defaults from scattered sources at runtime. It is foundational because every later spec — throughput calculation, queue depth formulas, rejection behaviour, cost budgeting — reads its input parameters from this environment contract rather than from raw topology JSON or ad-hoc inline defaults.
+It lets the product offer a default-driven setup where users define a topology and press Run without manually configuring every node or edge. It lets the engine consume a single `NormalizedSimulationEnvironment` object instead of re-deriving defaults from scattered sources at runtime. It is foundational because every later spec - throughput calculation, queue depth formulas, rejection behaviour, cost budgeting - reads its input parameters from this environment contract rather than from raw topology JSON or ad-hoc inline defaults.
 
 ### Classification
 
@@ -46,7 +46,7 @@ It lets the product offer a default-driven setup where users define a topology a
 | Node defaults are hardcoded in two places | Engine developers | `SimulationEngine.withNodeDefaults()` in `src/engine/engine.ts:627-635` applies `{ workers: 1, capacity: 100, discipline: 'fifo' }` and `{ distribution: { type: 'constant', value: 1 }, timeout: 30_000 }`. The validator in `src/engine/validation/validator.ts:617-630` applies identical defaults independently. Both must stay in sync manually. | A default changed in one location but not the other produces silent divergence between validation and execution |
 | Edge defaults are hardcoded in the renderer | Frontend developers | `useTopologySerializer.ts:28-36` defines `EDGE_DEFAULTS` (latencyMu, latencySigma, bandwidth, etc.) as a local constant. The engine has no corresponding edge default object. | Edge defaults are invisible to the engine; any future edge-level calculation must re-derive them or accept the serializer's baked-in values |
 | No single environment config object | All consumers | `TopologyJSON` combines topology structure (nodes, edges) with runtime config (`global`, `workload`) and optional test harness fields (`faults`, `invariants`, `scenarios`). There is no separation between "environment setup" and "topology shape". | Downstream features (throughput, cost, rejection) must pick individual fields from `TopologyJSON` and know which are environment concerns vs topology concerns |
-| Behaviour rules are implicit | Engine developers, product team | Whether rejection is enabled, whether bidirectional edges are supported, whether node-level pattern overrides are allowed — none of these are represented as configuration. They are implicit in code paths. | Adding or changing a behaviour requires modifying engine internals rather than flipping an environment-level flag |
+| Behaviour rules are implicit | Engine developers, product team | Whether rejection is enabled, whether bidirectional edges are supported, whether node-level pattern overrides are allowed - none of these are represented as configuration. They are implicit in code paths. | Adding or changing a behaviour requires modifying engine internals rather than flipping an environment-level flag |
 | No constraint model | Engine developers, users | `validateTopology` validates structural correctness (Zod schema, cross-references, connectivity) but has no concept of environment-level constraints like "capacity must not exceed X" or "this behaviour combination is unsupported". | Invalid environment configurations reach the simulation engine and produce confusing runtime failures instead of clear pre-simulation diagnostics |
 | Scenario state is renderer-only | Engine developers | `ScenarioState` in `src/renderer/src/types/ui.ts:55-63` holds global overrides and workload overrides, but this type is a renderer concern and is not shared with the engine. | The engine cannot validate or normalize scenario-level configuration independently of the UI |
 
@@ -110,24 +110,24 @@ The current architecture distributes simulation configuration across four layers
 **Topology JSON (the engine's input contract)**
 
 - `src/engine/core/types.ts` defines `TopologyJSON`, the top-level input to the simulation engine. It combines structural concerns (nodes array, edges array) with runtime configuration (`global: GlobalConfig`, `workload?: WorkloadProfile`) and optional test harness fields (`faults`, `invariants`, `scenarios`). There is no separation between "environment setup" and "topology shape".
-- `GlobalConfig` (same file, lines 435–442) holds `simulationDuration`, `seed`, `warmupDuration`, `timeResolution`, `defaultTimeout`, and `traceSampleRate`. These are the closest thing to global environment settings, but they cover only time and sampling — not capacity defaults, queue defaults, edge defaults, or behaviour rules.
-- `ComponentNode` (lines 291–307) carries per-node configuration: `resources`, `queue`, `processing`, `resilience`, `slo`, `failureModes`, `scaling`, and an escape-hatch `config: Record<string, unknown>`. There is no standard "node override" structure — overrides are implicit in whether these optional fields are present.
-- `EdgeDefinition` (lines 309–339) carries per-edge configuration with required fields for `mode`, `protocol`, `latency`, `bandwidth`, `maxConcurrentRequests`, `packetLossRate`, and `errorRate`. Every field is required on the wire; defaults are applied during serialization, not at the engine level.
+- `GlobalConfig` (same file, lines 435-442) holds `simulationDuration`, `seed`, `warmupDuration`, `timeResolution`, `defaultTimeout`, and `traceSampleRate`. These are the closest thing to global environment settings, but they cover only time and sampling - not capacity defaults, queue defaults, edge defaults, or behaviour rules.
+- `ComponentNode` (lines 291-307) carries per-node configuration: `resources`, `queue`, `processing`, `resilience`, `slo`, `failureModes`, `scaling`, and an escape-hatch `config: Record<string, unknown>`. There is no standard "node override" structure - overrides are implicit in whether these optional fields are present.
+- `EdgeDefinition` (lines 309-339) carries per-edge configuration with required fields for `mode`, `protocol`, `latency`, `bandwidth`, `maxConcurrentRequests`, `packetLossRate`, and `errorRate`. Every field is required on the wire; defaults are applied during serialization, not at the engine level.
 
 **Validation layer**
 
-- `src/engine/validation/validator.ts` exports `validateTopology(input: unknown): ValidationResult`. It performs Zod schema parsing via `TopologyJSONSchema`, then cross-reference validation (node id uniqueness, edge source/target existence, workload sourceNodeId validity), then structural warnings (connectivity, source/sink role checks). It also applies hardcoded defaults: lines 617–630 mutate nodes missing `queue` or `processing` config with `{ workers: 1, capacity: 100, discipline: 'fifo' }` and `{ distribution: { type: 'constant', value: 1 }, timeout: 30_000 }`.
-- `ValidationResult` (lines 525–535) returns `{ valid: boolean; data?: TopologyJSON; errors?: ValidationError[]; warnings?: string[] }`. `ValidationError` has `path` and `message` fields. There is no concept of constraint severity, diagnostic codes, or structured constraint types.
+- `src/engine/validation/validator.ts` exports `validateTopology(input: unknown): ValidationResult`. It performs Zod schema parsing via `TopologyJSONSchema`, then cross-reference validation (node id uniqueness, edge source/target existence, workload sourceNodeId validity), then structural warnings (connectivity, source/sink role checks). It also applies hardcoded defaults: lines 617-630 mutate nodes missing `queue` or `processing` config with `{ workers: 1, capacity: 100, discipline: 'fifo' }` and `{ distribution: { type: 'constant', value: 1 }, timeout: 30_000 }`.
+- `ValidationResult` (lines 525-535) returns `{ valid: boolean; data?: TopologyJSON; errors?: ValidationError[]; warnings?: string[] }`. `ValidationError` has `path` and `message` fields. There is no concept of constraint severity, diagnostic codes, or structured constraint types.
 
 **Engine runtime defaults**
 
-- `src/engine/engine.ts` line 627–635: `SimulationEngine.withNodeDefaults()` applies the same queue and processing defaults as the validator, independently. This is the second copy of these defaults.
-- `src/engine/engine.ts` line 59–71: The `SimulationEngine` constructor reads `topology.global.seed`, `topology.global.warmupDuration`, `topology.global.traceSampleRate`, `topology.global.simulationDuration`, and `topology.global.defaultTimeout` directly from the `TopologyJSON` object. There is no normalization step.
+- `src/engine/engine.ts` line 627-635: `SimulationEngine.withNodeDefaults()` applies the same queue and processing defaults as the validator, independently. This is the second copy of these defaults.
+- `src/engine/engine.ts` line 59-71: The `SimulationEngine` constructor reads `topology.global.seed`, `topology.global.warmupDuration`, `topology.global.traceSampleRate`, `topology.global.simulationDuration`, and `topology.global.defaultTimeout` directly from the `TopologyJSON` object. There is no normalization step.
 
 **Renderer-side serialization and defaults**
 
-- `src/renderer/src/hooks/useTopologySerializer.ts` lines 28–36: `EDGE_DEFAULTS` defines `latencyMu: 2.3`, `latencySigma: 0.5`, `pathType: 'same-dc'`, `bandwidth: 1000`, `maxConcurrentRequests: 100`, `packetLossRatePercent: 0`, `errorRatePercent: 0.1`. These defaults are applied during serialization from canvas state to `TopologyJSON`. The engine never sees them as defaults — it receives fully populated `EdgeDefinition` objects.
-- `src/renderer/src/types/ui.ts` lines 77–87: `DEFAULT_SCENARIO_STATE` defines default global config values: `simulationDuration: 60_000`, `warmupDuration: 5_000`, `seed: 'default-seed'`, `defaultTimeout: 5_000`, `traceSampleRate: 0.01`. These are renderer-only defaults that feed into `TopologyJSON.global` during serialization.
+- `src/renderer/src/hooks/useTopologySerializer.ts` lines 28-36: `EDGE_DEFAULTS` defines `latencyMu: 2.3`, `latencySigma: 0.5`, `pathType: 'same-dc'`, `bandwidth: 1000`, `maxConcurrentRequests: 100`, `packetLossRatePercent: 0`, `errorRatePercent: 0.1`. These defaults are applied during serialization from canvas state to `TopologyJSON`. The engine never sees them as defaults - it receives fully populated `EdgeDefinition` objects.
+- `src/renderer/src/types/ui.ts` lines 77-87: `DEFAULT_SCENARIO_STATE` defines default global config values: `simulationDuration: 60_000`, `warmupDuration: 5_000`, `seed: 'default-seed'`, `defaultTimeout: 5_000`, `traceSampleRate: 0.01`. These are renderer-only defaults that feed into `TopologyJSON.global` during serialization.
 - `src/engine/catalog/componentSpecs.ts`: `ComponentSpec.createDefaultSimulationConfig()` generates per-component-type defaults for queue workers, capacity, and processing distribution. These defaults are baked into canvas node data at drag-and-drop time and serialized into `ComponentNode` fields. They are not accessible as "environment defaults" at runtime.
 
 **Data flow summary**
@@ -154,14 +154,14 @@ Canvas state (React Flow nodes/edges + ScenarioState)
 | No unified global defaults model | Node defaults are hardcoded in `engine.ts:627` and `validator.ts:617`; edge defaults are in `useTopologySerializer.ts:28`; global config defaults are in `ui.ts:77` | Changing a default requires updating 2-4 locations; the engine and validator can silently diverge | Default-Driven Simplification Layer |
 | No standard node override mechanism | Node overrides are implicit: if `ComponentNode.queue` is present, it overrides the hardcoded default; there is no merge semantics or precedence model | Cannot implement "environment says X, but this node says Y" as a first-class concept | Throughput Calculation, Queue Depth Calculation |
 | No edge default ownership in the engine | `EDGE_DEFAULTS` lives in the renderer; the engine receives fully populated edges | Future edge-level calculations (throughput, cost) cannot distinguish "user chose this value" from "serializer applied the default" | Edge Properties & Defaults |
-| No behaviour rules | Whether rejection is enabled, whether bidirectional edges exist, whether node-level overrides are allowed — these are implicit in code paths, not configuration | Adding a new behaviour (e.g., "allow node-level pattern overrides") requires engine code changes rather than environment config changes | Request Rejection Behaviour, Request Flow Direction |
+| No behaviour rules | Whether rejection is enabled, whether bidirectional edges exist, whether node-level overrides are allowed - these are implicit in code paths, not configuration | Adding a new behaviour (e.g., "allow node-level pattern overrides") requires engine code changes rather than environment config changes | Request Rejection Behaviour, Request Flow Direction |
 | No constraint schema | `validateTopology` checks structural correctness but has no environment-level constraint concept | Cannot express "capacity must be ≤ 10,000" or "this behaviour combination is unsupported" as declarative rules | Simulation Validation & Pattern Accuracy |
 | No shared validation contract for environment | `ValidationResult` has `path` and `message` but no severity levels, diagnostic codes, or structured constraint types | Future features cannot programmatically handle specific validation failures | All validation-dependent specs |
 | No stable data contract for calculation inputs | Throughput, queue depth, rejection, and cost features do not have a typed contract for their inputs | Each calculation feature must independently extract its parameters from `TopologyJSON` and `ComponentNode`, risking inconsistent reads | Throughput Calculation, Queue Depth Calculation, Cost Calculation |
 
 ### What the source material explores
 
-The product discussion notes frame environment definition as the foundational layer for the entire simulation system. They specify that an environment should include: a request pattern (global default, with optional per-node overrides); configuration parameters for capacity, queue depth, and throughput; constraints that prevent invalid setups; allowed and disallowed behaviours (rejection, bidirectional flow, node-level overrides); node-level and global-level settings with a clear inheritance model; and rules that control how requests move through the system. The notes emphasize a default-driven, progressive-disclosure approach: v1 should let users define a topology, choose or accept a default request pattern, and run a simulation without configuring every node or edge. Advanced configuration — per-node patterns, custom edge properties, request types, detailed rejection rules — should be introduced progressively once the core model is stable.
+The product discussion notes frame environment definition as the foundational layer for the entire simulation system. They specify that an environment should include: a request pattern (global default, with optional per-node overrides); configuration parameters for capacity, queue depth, and throughput; constraints that prevent invalid setups; allowed and disallowed behaviours (rejection, bidirectional flow, node-level overrides); node-level and global-level settings with a clear inheritance model; and rules that control how requests move through the system. The notes emphasize a default-driven, progressive-disclosure approach: v1 should let users define a topology, choose or accept a default request pattern, and run a simulation without configuring every node or edge. Advanced configuration - per-node patterns, custom edge properties, request types, detailed rejection rules - should be introduced progressively once the core model is stable.
 
 ---
 
@@ -295,7 +295,7 @@ export interface SimulationEnvironmentConfig {
   /** Stable identifier for this environment configuration. */
   id: string
 
-  /** Human-readable name. Metadata only — does not affect simulation. */
+  /** Human-readable name. Metadata only - does not affect simulation. */
   name: string
 
   /** Global simulation parameters (duration, seed, warmup, timeout). */
@@ -599,10 +599,10 @@ export type EnvironmentConstraintType =
 | `id` | Generated by the renderer or CLI when an environment is created; `'default'` for the implicit environment |
 | `name` | User-provided or `'Default Environment'` |
 | `global.*` | Mapped from `ScenarioState.global` (renderer) or `GlobalConfig` (CLI/JSON) |
-| `defaults.requestPatternId` | `'constant'` — matching current hardcoded behaviour |
-| `defaults.node.queue` | `{ workers: 1, capacity: 100, discipline: 'fifo' }` — extracted from `engine.ts:628` |
-| `defaults.node.processing` | `{ distribution: { type: 'constant', value: 1 }, timeout: 30_000 }` — extracted from `engine.ts:629-631` |
-| `defaults.node.maxCapacity` | `100` — matching `QueueConfig.capacity` default |
+| `defaults.requestPatternId` | `'constant'` - matching current hardcoded behaviour |
+| `defaults.node.queue` | `{ workers: 1, capacity: 100, discipline: 'fifo' }` - extracted from `engine.ts:628` |
+| `defaults.node.processing` | `{ distribution: { type: 'constant', value: 1 }, timeout: 30_000 }` - extracted from `engine.ts:629-631` |
+| `defaults.node.maxCapacity` | `100` - matching `QueueConfig.capacity` default |
 | `defaults.edge.*` | Extracted from `useTopologySerializer.ts:EDGE_DEFAULTS` and converted to engine units |
 | `nodes[id]` | Populated from `ComponentNode` optional fields during environment assembly |
 | `edges[id]` | Populated from `EdgeDefinition` fields that differ from defaults during environment assembly |
@@ -611,9 +611,9 @@ export type EnvironmentConstraintType =
 
 **Alternatives rejected:**
 
-1. *Extending `TopologyJSON` directly* — rejected because `TopologyJSON` is an existing serialization contract used by the CLI, file persistence, and the worker protocol. Adding environment fields to it would mix concerns and break backward compatibility.
-2. *Storing defaults only in the renderer* — rejected because the engine and CLI need access to the same defaults without depending on renderer code.
-3. *Using a flat config object instead of nested defaults/overrides* — rejected because the inheritance model (global → node → edge) requires a hierarchical structure to express precedence clearly.
+1. *Extending `TopologyJSON` directly* - rejected because `TopologyJSON` is an existing serialization contract used by the CLI, file persistence, and the worker protocol. Adding environment fields to it would mix concerns and break backward compatibility.
+2. *Storing defaults only in the renderer* - rejected because the engine and CLI need access to the same defaults without depending on renderer code.
+3. *Using a flat config object instead of nested defaults/overrides* - rejected because the inheritance model (global → node → edge) requires a hierarchical structure to express precedence clearly.
 
 #### Integration points
 
@@ -631,10 +631,10 @@ export type EnvironmentConstraintType =
 ### What components it requires
 
 **Engine-side:**
-- `src/engine/core/environmentTypes.ts` — new file defining all environment types
-- `src/engine/environment/assembleEnvironment.ts` — new module: function to assemble `SimulationEnvironmentConfig` from `TopologyJSON` + user overrides
-- `src/engine/environment/normalizeEnvironment.ts` — new module: function to produce `NormalizedSimulationEnvironment` from validated config
-- `src/engine/environment/productDefaults.ts` — new module: single source of truth for all product hard defaults
+- `src/engine/core/environmentTypes.ts` - new file defining all environment types
+- `src/engine/environment/assembleEnvironment.ts` - new module: function to assemble `SimulationEnvironmentConfig` from `TopologyJSON` + user overrides
+- `src/engine/environment/normalizeEnvironment.ts` - new module: function to produce `NormalizedSimulationEnvironment` from validated config
+- `src/engine/environment/productDefaults.ts` - new module: single source of truth for all product hard defaults
 - Update `src/engine/engine.ts` to consume `NormalizedSimulationEnvironment`
 - Update `src/engine/validation/validator.ts` to validate against the constraint model
 
@@ -666,13 +666,13 @@ The environment provides a three-level inheritance model for simulation configur
 
 ### Why it exists
 
-The v1 product direction is "simple and default-driven." Users should be able to draw a topology and press Run. Today, this works because the serializer and engine each apply their own hardcoded defaults — but these defaults are invisible, duplicated, and not overridable at the environment level. The inheritance model makes defaults explicit, centralizes them, and provides a clean override path for progressive configuration.
+The v1 product direction is "simple and default-driven." Users should be able to draw a topology and press Run. Today, this works because the serializer and engine each apply their own hardcoded defaults - but these defaults are invisible, duplicated, and not overridable at the environment level. The inheritance model makes defaults explicit, centralizes them, and provides a clean override path for progressive configuration.
 
 ### How it works internally
 
 #### Data source
 
-**Current node defaults** — applied in two places:
+**Current node defaults** - applied in two places:
 
 `src/engine/engine.ts:627-635`:
 ```ts
@@ -700,7 +700,7 @@ if (!node.processing) {
 }
 ```
 
-**Current edge defaults** — applied only in the serializer:
+**Current edge defaults** - applied only in the serializer:
 
 `src/renderer/src/hooks/useTopologySerializer.ts:28-36` (as shown above).
 
@@ -728,10 +728,10 @@ if (!node.processing) {
 
 **Precedence (highest to lowest):**
 
-1. **Validation constraints** — constraints can block a configuration regardless of what defaults or overrides say
-2. **Node/edge-level overrides** — explicit per-node or per-edge values, if allowed by behaviour rules
-3. **Environment global defaults** — `EnvironmentDefaults` values
-4. **Product hard defaults** — built-in constants that never change
+1. **Validation constraints** - constraints can block a configuration regardless of what defaults or overrides say
+2. **Node/edge-level overrides** - explicit per-node or per-edge values, if allowed by behaviour rules
+3. **Environment global defaults** - `EnvironmentDefaults` values
+4. **Product hard defaults** - built-in constants that never change
 
 #### New types
 
@@ -762,7 +762,7 @@ export interface NormalizedSimulationEnvironment {
 ```ts
 /**
  * Node configuration after defaults and overrides have been resolved.
- * Every field is required — no optional values.
+ * Every field is required - no optional values.
  */
 export interface ResolvedNodeConfig {
   /** Node identifier from the topology. */
@@ -861,16 +861,16 @@ This allows the engine to read node config from `environment.nodes[nodeId]` inst
 ### What components it requires
 
 **Engine-side:**
-- `src/engine/environment/normalizeEnvironment.ts` — normalization function
-- `src/engine/environment/productDefaults.ts` — product hard defaults (single source of truth)
-- Update `src/engine/engine.ts` — accept `NormalizedSimulationEnvironment`, remove `withNodeDefaults()`
-- Update `src/engine/validation/validator.ts` — remove inline default mutations
+- `src/engine/environment/normalizeEnvironment.ts` - normalization function
+- `src/engine/environment/productDefaults.ts` - product hard defaults (single source of truth)
+- Update `src/engine/engine.ts` - accept `NormalizedSimulationEnvironment`, remove `withNodeDefaults()`
+- Update `src/engine/validation/validator.ts` - remove inline default mutations
 
 **Shared layer:**
 - `ResolvedNodeConfig`, `ResolvedEdgeConfig`, `NormalizedSimulationEnvironment` in `src/engine/core/environmentTypes.ts`
 
 **Renderer/frontend-side:**
-- Update `src/renderer/src/hooks/useTopologySerializer.ts` — replace `EDGE_DEFAULTS` with reads from environment defaults
+- Update `src/renderer/src/hooks/useTopologySerializer.ts` - replace `EDGE_DEFAULTS` with reads from environment defaults
 - Display which values are inherited vs overridden (data support only; no visual spec)
 
 ### Explored in
@@ -890,9 +890,9 @@ Environment validation checks that a `SimulationEnvironmentConfig` is valid befo
 
 ### Why it exists
 
-Today, `validateTopology()` in `src/engine/validation/validator.ts` validates structural correctness of `TopologyJSON` — Zod schema conformance, node/edge id uniqueness, cross-references, connectivity. But it has no concept of environment-level constraints, behaviour rule enforcement, or diagnostic severity beyond error/warning strings.
+Today, `validateTopology()` in `src/engine/validation/validator.ts` validates structural correctness of `TopologyJSON` - Zod schema conformance, node/edge id uniqueness, cross-references, connectivity. But it has no concept of environment-level constraints, behaviour rule enforcement, or diagnostic severity beyond error/warning strings.
 
-When downstream features introduce throughput limits, capacity ceilings, and behaviour-gated configurations, the validation layer must be able to express: "this environment allows rejection, but this node's capacity is set to 0, which would reject all requests — that's an error." The current validator cannot express such constraints because it has no environment model to validate against.
+When downstream features introduce throughput limits, capacity ceilings, and behaviour-gated configurations, the validation layer must be able to express: "this environment allows rejection, but this node's capacity is set to 0, which would reject all requests - that's an error." The current validator cannot express such constraints because it has no environment model to validate against.
 
 ### How it works internally
 
@@ -923,7 +923,7 @@ The function performs:
 4. Time logic checks (simulationDuration > warmupDuration)
 5. Graph connectivity checks (reachability from source nodes)
 
-This covers topology-level validation. Environment-level validation — constraint checking, behaviour rule enforcement, override permission checks — does not exist.
+This covers topology-level validation. Environment-level validation - constraint checking, behaviour rule enforcement, override permission checks - does not exist.
 
 #### Processing/logic
 
@@ -1046,9 +1046,9 @@ Both raw-config and normalized-config validation are useful because:
 
 Environment validation should run:
 
-1. **Before simulation** — in the assembly pipeline, after topology validation passes and before normalization. This is the primary validation point.
-2. **Before persistence** — if the renderer supports saving environment configs, validation should run before writing to detect issues before the user closes the session.
-3. **In tests** — test fixtures should construct `SimulationEnvironmentConfig` objects and validate them before passing to the engine. This replaces the current pattern of passing raw `TopologyJSON` and relying on the engine's internal defaults.
+1. **Before simulation** - in the assembly pipeline, after topology validation passes and before normalization. This is the primary validation point.
+2. **Before persistence** - if the renderer supports saving environment configs, validation should run before writing to detect issues before the user closes the session.
+3. **In tests** - test fixtures should construct `SimulationEnvironmentConfig` objects and validate them before passing to the engine. This replaces the current pattern of passing raw `TopologyJSON` and relying on the engine's internal defaults.
 
 Integration with existing code:
 
@@ -1059,15 +1059,15 @@ Integration with existing code:
 ### What components it requires
 
 **Engine-side:**
-- `src/engine/environment/validateEnvironment.ts` — new module: `validateSimulationEnvironment()` and `validateNormalizedEnvironment()`
-- `src/engine/core/environmentTypes.ts` — `EnvironmentValidationResult`, `EnvironmentDiagnostic` types
-- Update `src/engine/worker/simulation.worker.ts` — run environment validation before constructing `SimulationEngine`
+- `src/engine/environment/validateEnvironment.ts` - new module: `validateSimulationEnvironment()` and `validateNormalizedEnvironment()`
+- `src/engine/core/environmentTypes.ts` - `EnvironmentValidationResult`, `EnvironmentDiagnostic` types
+- Update `src/engine/worker/simulation.worker.ts` - run environment validation before constructing `SimulationEngine`
 
 **Shared layer:**
 - `EnvironmentValidationResult` and `EnvironmentDiagnostic` are importable by both engine and renderer
 
 **Renderer/frontend-side:**
-- Update `src/renderer/src/hooks/useSimulation.ts` — validate before running
+- Update `src/renderer/src/hooks/useSimulation.ts` - validate before running
 - Expose validation diagnostics in store for display (data only; no visual spec)
 
 ### Explored in
@@ -1139,16 +1139,16 @@ Integration with existing code:
 | Assumption/question | Affected feature | Risk if wrong | Needs product answer? |
 | --- | --- | --- | --- |
 | v1 environment config is assembled automatically from `TopologyJSON` + `ScenarioState`; users do not manually edit a raw environment JSON | Feature 1 | If users need to edit environment JSON directly, a schema and editor are needed earlier | Yes |
-| Node-level overrides for queue and processing are enabled in v1 (they already exist implicitly via `ComponentNode` optional fields) | Feature 2 | If overrides should be disabled in v1, the behaviour rule `allowNodePatternOverrides: false` must be the default and the normalization logic must enforce it | No — current codebase already supports overrides |
-| Edge-level overrides exist in v1 (the serializer already populates per-edge values) | Feature 2 | If edge overrides should be deferred, `allowEdgeOverrides: false` must be the default and all edges must use environment defaults | Yes — product should confirm whether edge customization is v1 |
-| `allowRejection: true` is the v1 default (the engine already rejects on `capacity_exceeded`) | Feature 1 | If rejection should be off by default, `GGcKNode.handleArrival` needs a guard that checks the behaviour rule | No — current engine already rejects |
-| `allowBidirectionalRequests: false` is the v1 default (the engine only supports source→target traversal) | Feature 1 | If bidirectional is needed in v1, the routing table needs changes beyond this spec | No — current engine does not support it |
-| Request direction lives on edges (as `EnvironmentEdgeConfig.direction`), not on nodes or topology-level config | Feature 1 | If direction should be a topology-level or node-level concern, the type model changes | Yes — product should confirm |
-| Request type is NOT part of the v1 environment model (it is already modeled in `WorkloadProfile.requestDistribution`) | Feature 1 | If request type needs environment-level config (e.g., "this environment supports GET and POST"), a `requestTypes` field is needed | Yes — likely deferred |
-| Cost/budget config is deferred (no cost model exists in the codebase) | Feature 1 | If cost config is needed in v1, a `cost` field must be added to `SimulationEnvironmentConfig` | Yes — likely deferred |
+| Node-level overrides for queue and processing are enabled in v1 (they already exist implicitly via `ComponentNode` optional fields) | Feature 2 | If overrides should be disabled in v1, the behaviour rule `allowNodePatternOverrides: false` must be the default and the normalization logic must enforce it | No - current codebase already supports overrides |
+| Edge-level overrides exist in v1 (the serializer already populates per-edge values) | Feature 2 | If edge overrides should be deferred, `allowEdgeOverrides: false` must be the default and all edges must use environment defaults | Yes - product should confirm whether edge customization is v1 |
+| `allowRejection: true` is the v1 default (the engine already rejects on `capacity_exceeded`) | Feature 1 | If rejection should be off by default, `GGcKNode.handleArrival` needs a guard that checks the behaviour rule | No - current engine already rejects |
+| `allowBidirectionalRequests: false` is the v1 default (the engine only supports source→target traversal) | Feature 1 | If bidirectional is needed in v1, the routing table needs changes beyond this spec | No - current engine does not support it |
+| Request direction lives on edges (as `EnvironmentEdgeConfig.direction`), not on nodes or topology-level config | Feature 1 | If direction should be a topology-level or node-level concern, the type model changes | Yes - product should confirm |
+| Request type is NOT part of the v1 environment model (it is already modeled in `WorkloadProfile.requestDistribution`) | Feature 1 | If request type needs environment-level config (e.g., "this environment supports GET and POST"), a `requestTypes` field is needed | Yes - likely deferred |
+| Cost/budget config is deferred (no cost model exists in the codebase) | Feature 1 | If cost config is needed in v1, a `cost` field must be added to `SimulationEnvironmentConfig` | Yes - likely deferred |
 | Environment constraints that block simulation are limited to structural issues in v1 (missing config, id mismatches, range violations) | Feature 3 | If product-level constraints (e.g., "max 50 nodes per environment") are needed, the constraint model must support them | Yes |
 | The environment config is not persisted separately from the topology JSON file in v1 | Feature 1 | If environments should be saved and loaded independently of topologies, a persistence layer is needed | Yes |
-| `SimulationEngine` constructor should accept both `TopologyJSON` (for structure) and `NormalizedSimulationEnvironment` (for config) rather than a single merged object | Feature 1 | If the engine should receive a single object, the topology structure must be embedded in the normalized environment, increasing coupling | No — separation is cleaner |
+| `SimulationEngine` constructor should accept both `TopologyJSON` (for structure) and `NormalizedSimulationEnvironment` (for config) rather than a single merged object | Feature 1 | If the engine should receive a single object, the topology structure must be embedded in the normalized environment, increasing coupling | No - separation is cleaner |
 
 ---
 
