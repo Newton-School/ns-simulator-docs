@@ -19,14 +19,14 @@ The goal is not to list every possible future feature. The goal is to list the t
 
 These are the foundations already present in the repo or already implemented in this workstream.
 
-### Foundation A — Engine-side grading base
+### Foundation A - Engine-side grading base
 
 - `SimulationVerdict` and verdict projection exist.
 - `evaluateSuite()` exists.
 - `Rubric`, `gradeVerdict()`, and `gradeBatch()` exist.
 - CLI `evaluate` and `grade` flows exist.
 
-### Foundation B — Minimum question runtime loop
+### Foundation B - Minimum question runtime loop
 
 - `QuestionPackage` and `AttemptState` schemas exist.
 - Host `launch-context` and `submit` seams exist.
@@ -34,12 +34,12 @@ These are the foundations already present in the repo or already implemented in 
 - In-session grading and grade summary loop exists.
 - Active question state exists in the renderer store.
 
-### Foundation C — UX support
+### Foundation C - UX support
 
 - Auto-layout exists and is tested.
 - Question panel can remain mounted inside the left sidebar.
 
-### Foundation D — Product-definition docs
+### Foundation D - Product-definition docs
 
 - [system-design-leetcode-environment-model.md](../specs/system-design-leetcode-environment-model.md)
 - [worked-example-order-processing-question.md](../specs/worked-example-order-processing-question.md)
@@ -96,7 +96,7 @@ The ticket order below crosses these workstreams where dependencies require it.
 
 ## Detailed Tickets
 
-## QEF-00 — Minimum question loop foundations
+## QEF-00 - Minimum question loop foundations
 
 **Status:** Done enough to build on
 
@@ -114,7 +114,7 @@ It means the next tickets are not about inventing the platform from zero. They a
 
 ---
 
-## QEF-01 — `EnvironmentProfile` type, launch injection, and store plumbing
+## QEF-01 - `EnvironmentProfile` type, launch injection, and store plumbing
 
 **Priority:** P0
 
@@ -144,7 +144,7 @@ The rest of the student-mode product depends on a first-class environment lens. 
 
 ---
 
-## QEF-02 — Runtime gating across panels, controls, and chrome
+## QEF-02 - Runtime gating across panels, controls, and chrome
 
 **Priority:** P0
 
@@ -176,7 +176,7 @@ Environment profile data is useless until it actually changes what the learner c
 
 ---
 
-## QEF-03 — Palette allowlist and forbidden-type enforcement
+## QEF-03 - Palette allowlist and forbidden-type enforcement
 
 **Priority:** P0
 
@@ -207,7 +207,7 @@ Bounding the design space is the first real product move from "freeform simulato
 
 ---
 
-## QEF-04 — Locked scaffold nodes/edges and read-only editing rules
+## QEF-04 - Locked scaffold nodes/edges and read-only editing rules
 
 **Priority:** P0
 
@@ -238,7 +238,7 @@ Palette isolation alone is not enough for guided questions. Scaffold-owned struc
 
 ---
 
-## QEF-05 — Constraint feedback surface and pre-submit validation
+## QEF-05 - Constraint feedback surface and pre-submit validation
 
 **Priority:** P0
 
@@ -268,7 +268,7 @@ Once constraints exist, they need visible feedback. Otherwise students hit unexp
 
 ---
 
-## QEF-06 — Attempt autosave emit / restore round-trip
+## QEF-06 - Attempt autosave emit / restore round-trip
 
 **Priority:** P1
 
@@ -298,7 +298,7 @@ The runtime already knows what an `AttemptState` is. The next missing piece is d
 
 ---
 
-## QEF-07 — Curated results surfaces and feedback-timing policy
+## QEF-07 - Curated results surfaces and feedback-timing policy
 
 **Priority:** P1
 
@@ -327,7 +327,7 @@ Without curated results, student modes still feel like the full simulator and di
 
 ---
 
-## QEF-08 — Structural-check schema and topology-query MVP
+## QEF-08 - Structural-check schema and topology-query MVP
 
 **Priority:** P1
 
@@ -356,7 +356,7 @@ The generalized evaluation framework depends on coarse structural validity. This
 
 ---
 
-## QEF-09 — Structural checks in grading pipeline and learner feedback
+## QEF-09 - Structural checks in grading pipeline and learner feedback
 
 **Priority:** P1
 
@@ -386,7 +386,7 @@ Schema without integration does not change product behavior.
 
 ---
 
-## QEF-10 — Comparative checks and baseline-verdict support
+## QEF-10 - Comparative checks and baseline-verdict support
 
 **Priority:** P1
 
@@ -414,7 +414,7 @@ This unlocks `Optimize` questions and baseline-improvement grading without inven
 
 ---
 
-## QEF-11 — Suite fault overrides in evaluator
+## QEF-11 - Suite fault overrides in evaluator
 
 **Priority:** P1
 
@@ -443,7 +443,7 @@ Without per-case fault injection, `HA / Chaos` questions remain only conceptual.
 
 ---
 
-## QEF-12 — Resource-budget evaluator MVP (`nodeCount`, `maxTotalWorkers`)
+## QEF-12 - Resource-budget evaluator MVP (`nodeCount`, `maxTotalWorkers`)
 
 **Priority:** P1
 
@@ -473,7 +473,7 @@ This is the smallest budget slice that provides real tradeoff discipline without
 
 ---
 
-## QEF-13 — Cost-model integration for budget questions
+## QEF-13 - Cost-model integration for budget questions
 
 **Priority:** P2
 
@@ -500,7 +500,7 @@ This depends on the broader cost-model work already specified elsewhere in the d
 
 ---
 
-## QEF-14 — Suite auto-seeder from FR/NFR/scale
+## QEF-14 - Suite auto-seeder from FR/NFR/scale
 
 **Priority:** P2
 
@@ -523,7 +523,7 @@ It improves authoring efficiency but is not required for the first real question
 
 ---
 
-## QEF-15 — End-to-end exemplar: guided open-build order-processing question
+## QEF-15 - End-to-end exemplar: guided open-build order-processing question
 
 **Priority:** P2
 
@@ -546,7 +546,7 @@ The worked example should become a real runnable exemplar before expanding the f
 
 ---
 
-## QEF-16 — End-to-end exemplar: fix/debug question type
+## QEF-16 - End-to-end exemplar: fix/debug question type
 
 **Priority:** P2
 
@@ -568,7 +568,7 @@ The roadmap already emphasizes shipping one real question type completely before
 
 ---
 
-## QEF-17 — End-to-end exemplar: optimize question type
+## QEF-17 - End-to-end exemplar: optimize question type
 
 **Priority:** P2
 
@@ -585,7 +585,7 @@ This question type only becomes credible once baseline comparison exists.
 
 ---
 
-## QEF-18 — End-to-end exemplar: HA / Chaos question type
+## QEF-18 - End-to-end exemplar: HA / Chaos question type
 
 **Priority:** P2
 
@@ -602,7 +602,7 @@ Needs faulted scenarios in the evaluator first.
 
 ---
 
-## QEF-19 — End-to-end exemplar: tradeoff / budget-box question type
+## QEF-19 - End-to-end exemplar: tradeoff / budget-box question type
 
 **Priority:** P2
 
@@ -619,7 +619,7 @@ This needs credible budget constraints, ideally cost-aware ones.
 
 ---
 
-## QEF-20 — Editorial unlocks and progression surfaces
+## QEF-20 - Editorial unlocks and progression surfaces
 
 **Priority:** P2
 
@@ -641,7 +641,7 @@ Editorial is most useful once at least one high-quality exemplar question exists
 
 ---
 
-## QEF-21 — Simulator-side author preview harness polish
+## QEF-21 - Simulator-side author preview harness polish
 
 **Priority:** P3
 
@@ -658,7 +658,7 @@ Author preview matters, but the learner-facing runtime should be correct first.
 
 ---
 
-## QEF-22 — Django / LMS contract hardening and submission lifecycle alignment
+## QEF-22 - Django / LMS contract hardening and submission lifecycle alignment
 
 **Priority:** P3
 
@@ -738,7 +738,7 @@ Django backend owns:
 | D8 | P2 | DJQ-09 | Assignment lifecycle integration for simulator questions | DJQ-05, DJQ-06, DJQ-07 |
 | D9 | P2 | DJQ-10 | Contract-fixture test suite and local end-to-end smoke harness | DJQ-02, DJQ-04, DJQ-05 |
 
-### DJQ-01 — Question package persistence and retrieval model
+### DJQ-01 - Question package persistence and retrieval model
 
 **Priority:** P0
 
@@ -759,7 +759,7 @@ Django cannot host the simulator runtime meaningfully until it can store and ret
 - Versioned payloads remain inspectable for debugging.
 - The host can assemble a launchable question package without touching simulator internals.
 
-### DJQ-02 — Dev host harness page for iframe launch / submit flow
+### DJQ-02 - Dev host harness page for iframe launch / submit flow
 
 **Priority:** P0
 
@@ -783,7 +783,7 @@ This is the fastest local integration loop for backend developers. It proves the
 - The page can inject a sample or stored question package.
 - The page visibly shows returned submit payloads.
 
-### DJQ-03 — Launch-context assembly service
+### DJQ-03 - Launch-context assembly service
 
 **Priority:** P0
 
@@ -806,7 +806,7 @@ Django owns the student-facing launch decision: which question, which prior atte
 - Prior attempts restore correctly through the same path.
 - The payload contract is logged and inspectable in development.
 
-### DJQ-04 — Submit ingestion endpoint and raw payload persistence
+### DJQ-04 - Submit ingestion endpoint and raw payload persistence
 
 **Priority:** P0
 
@@ -829,7 +829,7 @@ The backend must store the simulator's result as the source-of-truth payload bef
 - Repeated identical submissions can be compared and audited.
 - Submission failures are visible and recoverable in development.
 
-### DJQ-05 — Attempt autosave persistence and restore pipeline
+### DJQ-05 - Attempt autosave persistence and restore pipeline
 
 **Priority:** P1
 
@@ -851,7 +851,7 @@ Once the simulator emits `AttemptState`, Django should own restoration so studen
 - Autosave never overwrites a newer submitted attempt incorrectly.
 - Restore uses the same `launch-context` contract as first launch.
 
-### DJQ-06 — Marks adapter from simulator contract / grade payload
+### DJQ-06 - Marks adapter from simulator contract / grade payload
 
 **Priority:** P1
 
@@ -873,7 +873,7 @@ Django owns the marks pipeline, but it should compute marks from simulator-retur
 - Marks logic can evolve without changing simulator internals.
 - Raw simulator outputs remain available for debugging and regrading.
 
-### DJQ-07 — Feedback generation from simulator-owned results
+### DJQ-07 - Feedback generation from simulator-owned results
 
 **Priority:** P1
 
@@ -895,7 +895,7 @@ The backend owns final learner-facing feedback generation, but it should derive 
 - Feedback can be reproduced from stored simulator results.
 - Backend feedback does not require re-running the simulator.
 
-### DJQ-08 — Scenario storage and environment-profile selection in authoring UI
+### DJQ-08 - Scenario storage and environment-profile selection in authoring UI
 
 **Priority:** P1
 
@@ -916,7 +916,7 @@ Django owns question authoring and needs explicit storage for which scenarios an
 - A setter can choose whether a question launches in `PRACTICE`, `ASSIGNMENT`, or author preview.
 - Scenario metadata is durable and editable in backend-owned UI.
 
-### DJQ-09 — Assignment lifecycle integration for simulator questions
+### DJQ-09 - Assignment lifecycle integration for simulator questions
 
 **Priority:** P2
 
@@ -937,7 +937,7 @@ The launch / submit seam and raw persistence should be correct before full assig
 - Simulator-backed questions behave like first-class assignment items in Django.
 - Submission and reopen rules are consistent with the rest of the platform.
 
-### DJQ-10 — Contract-fixture test suite and local end-to-end smoke harness
+### DJQ-10 - Contract-fixture test suite and local end-to-end smoke harness
 
 **Priority:** P2
 

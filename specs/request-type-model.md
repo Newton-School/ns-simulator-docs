@@ -2,7 +2,7 @@
 
 Technical feature specification defining what a "request type" is in the simulator, how types are created, how they flow through the topology, and what downstream effects they produce.
 
-This spec consolidates the `Request` interface, the `requestDistribution` array on `WorkloadProfile`, the type-based condition matching in `RoutingTable`, and the untyped `metadata` escape hatch into a unified model of request identity. It exists because request type is the primary mechanism for heterogeneous traffic — different types consume different resources, follow different routes, and trigger different SLO evaluations — yet the current model treats type as an opaque string with no schema, no per-type properties, and no lifecycle effects beyond routing conditions. Downstream specs (throughput, queue depth, rejection, cost) all operate on requests, and their accuracy depends on whether the type model captures enough about each request to differentiate its behaviour.
+This spec consolidates the `Request` interface, the `requestDistribution` array on `WorkloadProfile`, the type-based condition matching in `RoutingTable`, and the untyped `metadata` escape hatch into a unified model of request identity. It exists because request type is the primary mechanism for heterogeneous traffic - different types consume different resources, follow different routes, and trigger different SLO evaluations - yet the current model treats type as an opaque string with no schema, no per-type properties, and no lifecycle effects beyond routing conditions. Downstream specs (throughput, queue depth, rejection, cost) all operate on requests, and their accuracy depends on whether the type model captures enough about each request to differentiate its behaviour.
 
 ---
 
@@ -25,7 +25,7 @@ This spec consolidates the `Request` interface, the `requestDistribution` array 
 
 ### Capability definition
 
-The Request Type Model defines the schema for what distinguishes one kind of request from another in the simulation. Today, a request has a `type` string, a `sizeBytes` number, and a `priority` number — but these exist as flat fields on the `Request` interface with no type-level definition that binds them together or assigns per-type behaviour. This spec formalizes the concept of a "request type definition" that associates a type name with its properties (size, priority distribution, processing weight, SLO tier) and traces how that definition flows from workload configuration through routing and processing to metrics and analysis.
+The Request Type Model defines the schema for what distinguishes one kind of request from another in the simulation. Today, a request has a `type` string, a `sizeBytes` number, and a `priority` number - but these exist as flat fields on the `Request` interface with no type-level definition that binds them together or assigns per-type behaviour. This spec formalizes the concept of a "request type definition" that associates a type name with its properties (size, priority distribution, processing weight, SLO tier) and traces how that definition flows from workload configuration through routing and processing to metrics and analysis.
 
 ### Classification
 
@@ -45,7 +45,7 @@ The Request Type Model defines the schema for what distinguishes one kind of req
 | No per-type processing weight | Users | All requests at a node have the same service time distribution (from `ProcessingConfig.distribution`) regardless of type | Cannot model that GET requests are 10x faster than POST requests at the same service |
 | No per-type SLO | Users | `SLOConfig` is per-node, not per-type | Cannot set different latency targets for read vs write requests |
 | Priority is not type-derived | Users | Priority is assigned randomly (10% high, 90% normal) in `workload.ts:164`, independent of type | Cannot model that "alert" type requests always get high priority while "batch" type requests always get low priority |
-| sizeBytes is per-distribution-entry, not per-type-definition | Engine developers | `requestDistribution[].sizeBytes` is a flat number alongside `type` and `weight` | If the same type appears in multiple distributions (proposed multi-workload), its size could differ — no single source of truth for type properties |
+| sizeBytes is per-distribution-entry, not per-type-definition | Engine developers | `requestDistribution[].sizeBytes` is a flat number alongside `type` and `weight` | If the same type appears in multiple distributions (proposed multi-workload), its size could differ - no single source of truth for type properties |
 | No type-level metrics | Users | Metrics are aggregated per-node, not per-type | Cannot answer "what is the P99 latency for GET requests?" without post-processing trace data |
 
 ### Proposed responsibility boundary
@@ -107,8 +107,8 @@ export interface Request {
 
 The `Request` is the fundamental unit of work in the simulator. Every event in the system operates on a request. Key observations:
 
-- `type` is a bare `string`. No enum, no union, no registry. The JSDoc says `"GET"`, `"POST"`, `"DB_QUERY"` — these are examples, not constraints.
-- `sizeBytes` is a number assigned at creation time from `requestDistribution[].sizeBytes`. It is consumed by edge bandwidth calculations (conceptually — the engine does not currently throttle by bandwidth) and by the tracer.
+- `type` is a bare `string`. No enum, no union, no registry. The JSDoc says `"GET"`, `"POST"`, `"DB_QUERY"` - these are examples, not constraints.
+- `sizeBytes` is a number assigned at creation time from `requestDistribution[].sizeBytes`. It is consumed by edge bandwidth calculations (conceptually - the engine does not currently throttle by bandwidth) and by the tracer.
 - `priority` is a number where 0 = high, 1 = normal, 2 = low. Assigned randomly at creation time: `this.rng.boolean(0.1) ? 0 : 1` (10% high, 90% normal, never low). Consumed by priority queue discipline in `GGcKNode` when `discipline === 'priority'`.
 - `metadata` is an untyped escape hatch. The engine uses it internally for terminal status tracking (`__terminal`). No user-facing metadata is defined.
 
@@ -167,7 +167,7 @@ The Environment Definition & Configuration Model spec references request types v
 
 ### What it does
 
-Defines the set of properties that every request carries from creation to termination. These properties are the identity of the request — they determine how it is routed, processed, measured, and reported.
+Defines the set of properties that every request carries from creation to termination. These properties are the identity of the request - they determine how it is routed, processed, measured, and reported.
 
 ### Why it exists
 
@@ -181,16 +181,16 @@ The `Request` interface is the most-touched type in the engine: every event hand
 
 | Field | Set by | Set when | Consumed by | Mutable? |
 | --- | --- | --- | --- | --- |
-| `id` | `WorkloadGenerator.createRequest` | Request creation | Everything — primary key for maps, traces, metrics, events | No |
+| `id` | `WorkloadGenerator.createRequest` | Request creation | Everything - primary key for maps, traces, metrics, events | No |
 | `type` | `WorkloadGenerator.pickRequestDistributionEntry` | Request creation | `RoutingTable.matchesCondition` for conditional routing | No |
-| `sizeBytes` | `WorkloadGenerator.pickRequestDistributionEntry` | Request creation | Edge bandwidth calculations (conceptual — not yet implemented) | No |
+| `sizeBytes` | `WorkloadGenerator.pickRequestDistributionEntry` | Request creation | Edge bandwidth calculations (conceptual - not yet implemented) | No |
 | `priority` | `WorkloadGenerator.createRequest` (random) | Request creation | `GGcKNode.dequeue` when discipline is `priority` | No |
 | `createdAt` | `WorkloadGenerator.createRequest` | Request creation | Latency calculation: `totalLatency = clock - createdAt` | No |
 | `deadline` | `WorkloadGenerator.createRequest` | Request creation | Timeout scheduling: `request.deadline <= arrivalTime` triggers timeout | No |
-| `path` | `SimulationEngine.appendNodeToPath` | Each node arrival | Debug lifecycle, trace analysis | Yes — appended |
-| `spans` | `GGcKNode.handleCompletion` | Each processing completion | Tracer recording, latency breakdown | Yes — appended |
+| `path` | `SimulationEngine.appendNodeToPath` | Each node arrival | Debug lifecycle, trace analysis | Yes - appended |
+| `spans` | `GGcKNode.handleCompletion` | Each processing completion | Tracer recording, latency breakdown | Yes - appended |
 | `retryCount` | Initialized to 0 | Request creation | Not currently consumed (retry logic not implemented) | Conceptually mutable |
-| `metadata` | Engine internals | Various | `__terminal` flag prevents double-processing of completed requests | Yes — mutated |
+| `metadata` | Engine internals | Various | `__terminal` flag prevents double-processing of completed requests | Yes - mutated |
 
 **Request ID format**:
 
@@ -241,7 +241,7 @@ Proposes a `RequestTypeDefinition` type that formalizes the properties associate
 
 Currently, request type properties are scattered: `type` and `sizeBytes` live in `requestDistribution`, `priority` is assigned randomly at creation time, and there are no per-type processing weights or SLO targets. This means the same type string could have different `sizeBytes` in different distributions (if multi-workload is implemented), and there is no way to express "all GET requests should have priority 1 and take 2x longer to process at database nodes."
 
-A type definition registry centralizes these properties so every consumer — workload generator, routing table, metrics collector, SLO evaluator — can look up a type's characteristics by name.
+A type definition registry centralizes these properties so every consumer - workload generator, routing table, metrics collector, SLO evaluator - can look up a type's characteristics by name.
 
 ### How it works internally
 
@@ -308,7 +308,7 @@ requestDistribution: Array<{
 }>
 ```
 
-The `sizeBytes` on the distribution entry becomes an optional override. If omitted, the type definition's `sizeBytes` is used. This preserves backward compatibility — existing distributions with explicit `sizeBytes` continue to work.
+The `sizeBytes` on the distribution entry becomes an optional override. If omitted, the type definition's `sizeBytes` is used. This preserves backward compatibility - existing distributions with explicit `sizeBytes` continue to work.
 
 **Resolution flow**:
 
@@ -419,7 +419,7 @@ This is the only runtime behaviour that currently differentiates requests by typ
 
 **Processing by type (proposed)**:
 
-Currently, `GGcKNode.startProcessing` samples service time from `this.config.processing.distribution` — the same distribution for all requests at that node. The proposal:
+Currently, `GGcKNode.startProcessing` samples service time from `this.config.processing.distribution` - the same distribution for all requests at that node. The proposal:
 
 ```
 serviceTimeMs = distributions.fromConfig(node.processing.distribution)
@@ -427,7 +427,7 @@ processingWeight = requestTypeRegistry.get(request.type)?.processingWeight ?? 1.
 adjustedServiceTimeMs = serviceTimeMs * processingWeight
 ```
 
-This is a simple multiplicative adjustment. A `processingWeight` of 2.0 doubles the sampled service time; 0.5 halves it. The underlying distribution shape is unchanged — only the scale is modified.
+This is a simple multiplicative adjustment. A `processingWeight` of 2.0 doubles the sampled service time; 0.5 halves it. The underlying distribution shape is unchanged - only the scale is modified.
 
 **When processing weight helps**:
 
@@ -460,11 +460,11 @@ Proposes extending the SLO evaluation and metrics aggregation systems to operate
 
 ### Why it exists
 
-Per-node SLOs mask type-level problems. If an API service handles 70% GETs (fast) and 30% POSTs (slow), the node-level P99 might be healthy even when POST P99 is severely degraded — the fast GETs dilute the metric. Real SRE practice defines SLOs per endpoint (which maps to per type in the simulator). Without type-level metrics, the simulator cannot surface the most actionable capacity insights.
+Per-node SLOs mask type-level problems. If an API service handles 70% GETs (fast) and 30% POSTs (slow), the node-level P99 might be healthy even when POST P99 is severely degraded - the fast GETs dilute the metric. Real SRE practice defines SLOs per endpoint (which maps to per type in the simulator). Without type-level metrics, the simulator cannot surface the most actionable capacity insights.
 
 ### How it works internally
 
-**Current SLO evaluation (`src/engine/analysis/output.ts` — `detectSLOBreaches`)**:
+**Current SLO evaluation (`src/engine/analysis/output.ts` - `detectSLOBreaches`)**:
 
 SLO evaluation operates on `PerNodeMetrics` which are aggregated across all request types at each node. The check compares `latencyP99` and `errorRate` against `SLOConfig.latencyP99`, `SLOConfig.availabilityTarget`, and `SLOConfig.errorBudget`.
 
@@ -574,7 +574,7 @@ generateSimulationOutput()
 | # | Assumption / Question | Status | Impact if wrong |
 | --- | --- | --- | --- |
 | 1 | `processingWeight` is a multiplicative scalar applied to the sampled service time, not an additive offset | Design decision | Additive would give different distributional properties; multiplicative preserves the shape |
-| 2 | Type definitions are optional — existing topologies with plain `requestDistribution` entries continue to work with synthesized default definitions | Assumption | If required, backward compatibility breaks |
+| 2 | Type definitions are optional - existing topologies with plain `requestDistribution` entries continue to work with synthesized default definitions | Assumption | If required, backward compatibility breaks |
 | 3 | Per-type metrics are additive to, not replacing, per-node metrics | Assumption | Replacing would break existing dashboards and analysis |
 | 4 | The `metadata` field on `Request` can carry the `processingWeight` as a computed property without adding a new field to the `Request` interface | Implementation choice | Adding a field to `Request` is cleaner but requires broader changes |
 | 5 | Priority model should support both fixed (type-determined) and weighted (probabilistic) assignment | Design decision | Fixed-only is simpler but loses the ability to model priority jitter |

@@ -1,4 +1,4 @@
-# Event Debugger & Log System — Prototype Feature Specification
+# Event Debugger & Log System - Prototype Feature Specification
 
 This document describes the features explored across five HTML prototypes for the NS Simulator's event debugging and request lifecycle inspection system. It is written from a feature perspective: what each capability does, why it exists, how it works internally, what engine data it consumes, and what components it requires to be built.
 
@@ -9,19 +9,19 @@ The prototypes were generated as static HTML mockups to explore different approa
 ## Table of Contents
 
 1. [Problem Context](#problem-context)
-2. [Feature 1 — Event Log](#feature-1--event-log)
-3. [Feature 2 — Request Detail Inspector](#feature-2--request-detail-inspector)
-4. [Feature 3 — Request Trace Waterfall](#feature-3--request-trace-waterfall)
-5. [Feature 4 — Step-Through Request Debugger](#feature-4--step-through-request-debugger)
-6. [Feature 5 — Canvas Debug Overlay](#feature-5--canvas-debug-overlay)
-7. [Feature 6 — Request Path Mini-Map](#feature-6--request-path-mini-map)
-8. [Feature 7 — Request Lifecycle Rail](#feature-7--request-lifecycle-rail)
-9. [Feature 8 — Sequence Diagram Debugger](#feature-8--sequence-diagram-debugger)
-10. [Feature 9 — Stack Trace Debugger](#feature-9--stack-trace-debugger)
-11. [Feature 10 — Node Intake Lens](#feature-10--node-intake-lens)
-12. [Feature 11 — Actual vs Expected Path Diff](#feature-11--actual-vs-expected-path-diff)
-13. [Feature 12 — State Machine View](#feature-12--state-machine-view)
-14. [Feature 13 — Event Log Display Variants](#feature-13--event-log-display-variants)
+2. [Feature 1 - Event Log](#feature-1--event-log)
+3. [Feature 2 - Request Detail Inspector](#feature-2--request-detail-inspector)
+4. [Feature 3 - Request Trace Waterfall](#feature-3--request-trace-waterfall)
+5. [Feature 4 - Step-Through Request Debugger](#feature-4--step-through-request-debugger)
+6. [Feature 5 - Canvas Debug Overlay](#feature-5--canvas-debug-overlay)
+7. [Feature 6 - Request Path Mini-Map](#feature-6--request-path-mini-map)
+8. [Feature 7 - Request Lifecycle Rail](#feature-7--request-lifecycle-rail)
+9. [Feature 8 - Sequence Diagram Debugger](#feature-8--sequence-diagram-debugger)
+10. [Feature 9 - Stack Trace Debugger](#feature-9--stack-trace-debugger)
+11. [Feature 10 - Node Intake Lens](#feature-10--node-intake-lens)
+12. [Feature 11 - Actual vs Expected Path Diff](#feature-11--actual-vs-expected-path-diff)
+13. [Feature 12 - State Machine View](#feature-12--state-machine-view)
+14. [Feature 13 - Event Log Display Variants](#feature-13--event-log-display-variants)
 15. [Layout Options](#layout-options)
 16. [Engine Integration Requirements](#engine-integration-requirements)
 17. [Prototype-to-Feature Map](#prototype-to-feature-map)
@@ -45,7 +45,7 @@ The simulation pipeline today works as follows:
 
 - **No event-level visibility.** The engine processes events internally but does not expose them to the renderer. Users see aggregate metrics but cannot inspect individual events or understand the sequence of decisions that led to a rejection.
 - **No single-request tracing in the UI.** The `RequestTracer` collects span data (arrival time, queue wait, service time, departure time per node), but this data only appears in the final `traces` array. There is no way to follow one request through the topology in real-time.
-- **No debugging controls.** The worker supports `pause`/`resume`/`step(count)` messages (see `simulation.worker.ts` — `runChunked` processes 20,000 events per chunk with `await sleep(0)` for message pickup), but the renderer's `SimulationControls` only exposes Run/Pause/Resume/Stop. There is no step-through mode or request-level debugging.
+- **No debugging controls.** The worker supports `pause`/`resume`/`step(count)` messages (see `simulation.worker.ts` - `runChunked` processes 20,000 events per chunk with `await sleep(0)` for message pickup), but the renderer's `SimulationControls` only exposes Run/Pause/Resume/Stop. There is no step-through mode or request-level debugging.
 - **No canvas feedback during simulation.** Nodes on the canvas show static configuration. There is no visual indication of which nodes are processing, which are saturated, or where a specific request currently is.
 
 ### What the prototypes explore
@@ -54,11 +54,11 @@ The five prototypes collectively explore ~13 distinct features that address thes
 
 ---
 
-## Feature 1 — Event Log
+## Feature 1 - Event Log
 
 ### What it does
 
-A scrollable, filterable table of every `SimulationEvent` processed by the engine during a run. This is the foundational display — most other features build on top of it.
+A scrollable, filterable table of every `SimulationEvent` processed by the engine during a run. This is the foundational display - most other features build on top of it.
 
 ### Why it exists
 
@@ -79,13 +79,13 @@ Aggregate metrics hide causality. When `ResultsTray` shows "342 rejections at pa
 }
 ```
 
-The engine currently consumes events in `processEvents()` and discards them after handling. To power the event log, the engine needs to emit events to the renderer — either by buffering them in the worker and streaming via the existing `postMessage` protocol, or by adding a new `EventsMessage` type to the worker's outbound protocol (`src/engine/worker/protocols.ts`).
+The engine currently consumes events in `processEvents()` and discards them after handling. To power the event log, the engine needs to emit events to the renderer - either by buffering them in the worker and streaming via the existing `postMessage` protocol, or by adding a new `EventsMessage` type to the worker's outbound protocol (`src/engine/worker/protocols.ts`).
 
 **Filtering:** The prototypes show a query-syntax filter bar (e.g., `status:rejected OR node:payment-svc-v2`, `request:req-9148`). This requires client-side filtering across the event fields:
-- `request:<id>` — match `requestId`
-- `node:<id>` — match `nodeId`
-- `status:<level>` — match derived status (rejected/timeout/success/info)
-- `type:<eventType>` — match `EventType` directly
+- `request:<id>` - match `requestId`
+- `node:<id>` - match `nodeId`
+- `status:<level>` - match derived status (rejected/timeout/success/info)
+- `type:<eventType>` - match `EventType` directly
 - Boolean operators (OR, AND)
 
 **Row data per event:**
@@ -95,7 +95,7 @@ The engine currently consumes events in `processEvents()` and discards them afte
 - Node ID
 - Human-readable message (derived from event type + data payload)
 - Status badge (derived: `request-rejected` → danger, `request-timeout` → warn, `processing-complete` → success, everything else → info)
-- Reason code (extracted from `event.data.reason` — values like `capacity_exceeded`, `node_failed`, `node_timeout`, `security_blocked`, `edge_error_rate` come from the engine's rejection/timeout handlers)
+- Reason code (extracted from `event.data.reason` - values like `capacity_exceeded`, `node_failed`, `node_timeout`, `security_blocked`, `edge_error_rate` come from the engine's rejection/timeout handlers)
 
 **Summary badges:** The filter bar shows aggregate counts ("3 rejected", "1 timeout") computed by reducing the visible event set.
 
@@ -110,7 +110,7 @@ Prototype 1 (Options A, B, C), Prototype 2, Prototype 3 (DevTools Table, Waterfa
 
 ---
 
-## Feature 2 — Request Detail Inspector
+## Feature 2 - Request Detail Inspector
 
 ### What it does
 
@@ -120,7 +120,7 @@ When the user clicks an event log row, a detail panel shows the full context of 
 
 An event row shows *what* happened. The detail inspector answers *why*. For a `request-rejected` event, the user needs to see:
 - What was the rejection reason? (`capacity_exceeded` means `activeWorkers + queue.length >= maxCapacity` in `GGcKNode.handleArrival`)
-- What was the queue state? (queue length, active workers, capacity — the three values that determine admission in the G/G/c/K model)
+- What was the queue state? (queue length, active workers, capacity - the three values that determine admission in the G/G/c/K model)
 - What path did the request take to get here? (which nodes did it pass through before being rejected?)
 
 ### How it works internally
@@ -146,7 +146,7 @@ An event row shows *what* happened. The detail inspector answers *why*. For a `r
 
 Plus the node's configured capacity (`queue.capacity`, `queue.workers`) from the `ComponentNode` definition. The prototypes display this as: "Queue length: 100", "Workers: 8/8", "Capacity: 100".
 
-**Trace waterfall:** The detail panel also shows the request's per-hop timing breakdown — see [Feature 3](#feature-3--request-trace-waterfall).
+**Trace waterfall:** The detail panel also shows the request's per-hop timing breakdown - see [Feature 3](#feature-3--request-trace-waterfall).
 
 ### What components it requires
 
@@ -159,11 +159,11 @@ All five prototypes. Every prototype includes a detail panel triggered by clicki
 
 ---
 
-## Feature 3 — Request Trace Waterfall
+## Feature 3 - Request Trace Waterfall
 
 ### What it does
 
-A per-hop timing breakdown showing how long a request spent at each node — decomposed into queue wait, service time, and edge latency. Renders as horizontal bars per node, with the bar width proportional to time.
+A per-hop timing breakdown showing how long a request spent at each node - decomposed into queue wait, service time, and edge latency. Renders as horizontal bars per node, with the bar width proportional to time.
 
 ### Why it exists
 
@@ -194,15 +194,15 @@ When a request takes 71.9ms end-to-end, the user needs to know where that time w
   end: number,         // ms from request creation
   queueWait: number,   // ms
   serviceTime: number, // ms
-  edgeLatency: number  // ms — inferred: start - previousSpan.end
+  edgeLatency: number  // ms - inferred: start - previousSpan.end
 }
 ```
 
-The edge latency is derived, not directly measured — it's the gap between when the previous node released the request and when this node received it. This gap includes the stochastic edge latency sampled from `edge.latency.distribution` in `SimulationEngine.sampleEdgeLatencyUs()`.
+The edge latency is derived, not directly measured - it's the gap between when the previous node released the request and when this node received it. This gap includes the stochastic edge latency sampled from `edge.latency.distribution` in `SimulationEngine.sampleEdgeLatencyUs()`.
 
 **Rendering:** Each hop is a row. The bar fill width = `(hop.total / maxTotal) * 100%`. Rejected hops (where the request never entered processing) show a minimal red bar with "Rejected before processing" text.
 
-**Limitation:** The `RequestTracer` is sample-based — it uses `traceSampleRate` (default 1%) to decide whether to trace a request, using FNV-1a hash of the request ID. For the debugger to work on arbitrary requests, the sample rate would need to be raised for debugged requests, or the engine would need to always trace when in debug mode.
+**Limitation:** The `RequestTracer` is sample-based - it uses `traceSampleRate` (default 1%) to decide whether to trace a request, using FNV-1a hash of the request ID. For the debugger to work on arbitrary requests, the sample rate would need to be raised for debugged requests, or the engine would need to always trace when in debug mode.
 
 ### What components it requires
 
@@ -215,7 +215,7 @@ Prototype 1 (all options), Prototype 2 (detail panel), Prototype 4 (all views).
 
 ---
 
-## Feature 4 — Step-Through Request Debugger
+## Feature 4 - Step-Through Request Debugger
 
 ### What it does
 
@@ -223,7 +223,7 @@ Allows the user to follow a single request through the simulation one event at a
 
 ### Why it exists
 
-The event log is post-hoc — it shows what happened after the fact. The step-through debugger lets users *experience* the request's journey in order, watching the system state change at each hop. This is the difference between reading a stack trace and stepping through code in a debugger.
+The event log is post-hoc - it shows what happened after the fact. The step-through debugger lets users *experience* the request's journey in order, watching the system state change at each hop. This is the difference between reading a stack trace and stepping through code in a debugger.
 
 ### How it works internally
 
@@ -251,7 +251,7 @@ The event log is post-hoc — it shows what happened after the fact. The step-th
 | Next Rejection / Jump To Failure | `currentIndex = events.findIndex(e => e.status === 'rejected')` |
 | Reset | Exit debug mode, clear highlights |
 
-**How events are filtered for a single request:** Walk the full event log and filter by `event.requestId === targetId`. The engine assigns request IDs in `WorkloadGenerator.generateNext()`. For branching requests (fan-out), the engine creates branch IDs like `req-9148::branch-1` in `cloneRequestForBranch()` — the debugger would need to decide whether to follow branches.
+**How events are filtered for a single request:** Walk the full event log and filter by `event.requestId === targetId`. The engine assigns request IDs in `WorkloadGenerator.generateNext()`. For branching requests (fan-out), the engine creates branch IDs like `req-9148::branch-1` in `cloneRequestForBranch()` - the debugger would need to decide whether to follow branches.
 
 **Relationship to engine pause/step:** The worker already supports `step(count)` messages (see `simulation.worker.ts`). The prototype's step-through operates on a *recorded* event stream (post-run), not on live simulation stepping. A live version would require posting `step` messages to the worker and receiving individual events back, which is architecturally different from the current chunked execution model.
 
@@ -266,7 +266,7 @@ Prototype 2 (primary feature), Prototype 4 (all three views), Prototype 5 (Films
 
 ---
 
-## Feature 5 — Canvas Debug Overlay
+## Feature 5 - Canvas Debug Overlay
 
 ### What it does
 
@@ -279,13 +279,13 @@ The topology is already on screen. Using it as a spatial debugger lets users see
 ### How it works internally
 
 **Node highlighting:** Three visual states applied via CSS classes on React Flow nodes:
-- `current` (blue border, 4px box-shadow ring, slight translateY(-2px) lift) — the node the request is currently at.
-- `rejected` (red border, red ring) — the node where the request was terminally rejected.
-- Dimmed (opacity: 0.38) — all nodes NOT on the request's path. Applied via a parent `debug-mode` class on the canvas container.
+- `current` (blue border, 4px box-shadow ring, slight translateY(-2px) lift) - the node the request is currently at.
+- `rejected` (red border, red ring) - the node where the request was terminally rejected.
+- Dimmed (opacity: 0.38) - all nodes NOT on the request's path. Applied via a parent `debug-mode` class on the canvas container.
 
 **Edge highlighting:** SVG path elements get `active` (blue, 5px stroke, drop-shadow glow) or `rejected` (red equivalent) classes. Non-path edges dim to 28% opacity.
 
-**Packet dot animation:** An absolutely positioned 13px circle that moves to each event's canvas coordinates. The prototypes store `position: {x, y}` per event — in the real implementation, these coordinates would be derived from the React Flow node positions (the node's center or handle position).
+**Packet dot animation:** An absolutely positioned 13px circle that moves to each event's canvas coordinates. The prototypes store `position: {x, y}` per event - in the real implementation, these coordinates would be derived from the React Flow node positions (the node's center or handle position).
 
 **Coordination with existing canvas:** The existing `useHandleProximity` and `useMagneticSnap` hooks both operate on node handle positions. The debug overlay would need to:
 1. Read node positions from the React Flow `getNodes()` API.
@@ -298,11 +298,11 @@ The topology is already on screen. Using it as a spatial debugger lets users see
 
 ### Explored in
 
-Prototype 2 (primary feature — full SVG edge highlighting, packet animation, node dimming), Prototype 5 (Filmstrip — simplified version with div-based edges).
+Prototype 2 (primary feature - full SVG edge highlighting, packet animation, node dimming), Prototype 5 (Filmstrip - simplified version with div-based edges).
 
 ---
 
-## Feature 6 — Request Path Mini-Map
+## Feature 6 - Request Path Mini-Map
 
 ### What it does
 
@@ -310,13 +310,13 @@ A vertical list of all nodes on the request's configured path, with colored dots
 
 ### Why it exists
 
-The canvas shows the full topology — which can have dozens of nodes. The mini-map provides a focused, linear view of just the nodes this specific request will visit (or has visited), making it easy to see how far through the path the request got before failing.
+The canvas shows the full topology - which can have dozens of nodes. The mini-map provides a focused, linear view of just the nodes this specific request will visit (or has visited), making it easy to see how far through the path the request got before failing.
 
 ### How it works internally
 
 **Path construction:** The `Request` object (in `src/engine/core/events.ts`) maintains a `path: string[]` array. Each time `handleRequestArrival` fires, the engine calls `appendNodeToPath(request, nodeId)`, pushing the node ID. The mini-map uses this array.
 
-**Expected path vs actual path:** The expected path comes from the `RoutingTable` — walking the topology's edges from the source node. The actual path comes from the `request.path` array. The mini-map compares these: nodes in the actual path get "done" or "current" status; nodes in the expected path but not in the actual path get "pending".
+**Expected path vs actual path:** The expected path comes from the `RoutingTable` - walking the topology's edges from the source node. The actual path comes from the `request.path` array. The mini-map compares these: nodes in the actual path get "done" or "current" status; nodes in the expected path but not in the actual path get "pending".
 
 **Dot states:**
 
@@ -334,11 +334,11 @@ The canvas shows the full topology — which can have dozens of nodes. The mini-
 
 ### Explored in
 
-Prototype 2 (inspector panel), Prototype 3 (Request-Centric view — as a "hop trail" under each request card).
+Prototype 2 (inspector panel), Prototype 3 (Request-Centric view - as a "hop trail" under each request card).
 
 ---
 
-## Feature 7 — Request Lifecycle Rail
+## Feature 7 - Request Lifecycle Rail
 
 ### What it does
 
@@ -346,7 +346,7 @@ A horizontal row of "phase cards" representing the high-level stages of a reques
 
 ### Why it exists
 
-The event log is low-level — it shows raw `SimulationEvent` types. The lifecycle rail abstracts these into human-meaningful phases ("this request was in the Auth phase", "it failed at the Payment phase"). This is useful for users who think in terms of system architecture rather than event queues.
+The event log is low-level - it shows raw `SimulationEvent` types. The lifecycle rail abstracts these into human-meaningful phases ("this request was in the Auth phase", "it failed at the Payment phase"). This is useful for users who think in terms of system architecture rather than event queues.
 
 ### How it works internally
 
@@ -359,10 +359,10 @@ The event log is low-level — it shows raw `SimulationEvent` types. The lifecyc
 The phase model is a higher-level abstraction over the raw events. For the real implementation, phases would be derived from the topology's node ordering (the path from source to terminal).
 
 **Phase states:**
-- Default (white) — not yet reached.
-- Done (green border/background) — request has passed this phase.
-- Current (blue, lifted with shadow) — request is at this phase now.
-- Failed (red, lifted with red shadow) — request was rejected at this phase.
+- Default (white) - not yet reached.
+- Done (green border/background) - request has passed this phase.
+- Current (blue, lifted with shadow) - request is at this phase now.
+- Failed (red, lifted with red shadow) - request was rejected at this phase.
 
 **Connector bar:** A 4px horizontal line spanning all phases. The blue fill width = `(currentPhaseIndex / totalPhases) * 100%`.
 
@@ -371,9 +371,9 @@ The phase model is a higher-level abstraction over the raw events. For the real 
 **State cards below the rail:** Four summary cards that update on each step: "Lifecycle state", "Current node", "Current event", "Terminal reason". These provide at-a-glance context.
 
 **Enriched phase data:** Each phase carries node runtime state at the time of the event:
-- `queue: number` — current queue length
-- `workers: string` — format "active/total" (e.g., "8/8")
-- `capacity: string` — max capacity K
+- `queue: number` - current queue length
+- `workers: string` - format "active/total" (e.g., "8/8")
+- `capacity: string` - max capacity K
 
 These map directly to `GGcKNode.getState()` values. The payment node's rejection data (`queue: 100, workers: "8/8", capacity: "100"`) shows the exact state that triggered the admission check failure in `handleArrival()`: `currentLoad (100) >= maxCapacity (100)`.
 
@@ -388,7 +388,7 @@ Prototype 4 (Lifecycle Rail view).
 
 ---
 
-## Feature 8 — Sequence Diagram Debugger
+## Feature 8 - Sequence Diagram Debugger
 
 ### What it does
 
@@ -422,11 +422,11 @@ Prototype 4 (Sequence Debugger view).
 
 ---
 
-## Feature 9 — Stack Trace Debugger
+## Feature 9 - Stack Trace Debugger
 
 ### What it does
 
-Presents the request's lifecycle as a "call stack" — a vertical list of frames on the left (like an IDE's debugger sidebar), with a main panel showing a "debug card" displaying the current frame's variables (nodeId, eventType, reason, queueLength, workers, capacity) in a grid layout, plus a progress bar.
+Presents the request's lifecycle as a "call stack" - a vertical list of frames on the left (like an IDE's debugger sidebar), with a main panel showing a "debug card" displaying the current frame's variables (nodeId, eventType, reason, queueLength, workers, capacity) in a grid layout, plus a progress bar.
 
 ### Why it exists
 
@@ -434,20 +434,20 @@ This is the most developer-familiar metaphor. Software engineers are trained to 
 
 ### How it works internally
 
-**Left panel — call stack frames:** One card per lifecycle phase, stacked vertically. Newest frame at current index is highlighted. States: default, done (green), current (blue with ring), failed (red with ring). Each frame shows: phase name, result badge, node ID, event type + timestamp.
+**Left panel - call stack frames:** One card per lifecycle phase, stacked vertically. Newest frame at current index is highlighted. States: default, done (green), current (blue with ring), failed (red with ring). Each frame shows: phase name, result badge, node ID, event type + timestamp.
 
-**Main panel — debug card:**
+**Main panel - debug card:**
 - Request badge (e.g., "req-9148")
 - Big status text (24px, 950 weight): "Rejected at {node}" or "Paused at {node}"
 - Description paragraph
 - Progress bar: fill width = `(currentIndex / totalFrames) * 100%`. Blue for normal, red for rejection.
 - **Locals grid** (3-column): Renders like IDE watch variables.
-  - `nodeId` — current node
-  - `eventType` — current event type
-  - `reason` — rejection reason or "-"
-  - `queueLength` — from `GGcKNode.getState().queueLength`
-  - `workers` — from `GGcKNode.getState().activeWorkers` / `ComponentNode.queue.workers`
-  - `capacity` — from `ComponentNode.queue.capacity`
+  - `nodeId` - current node
+  - `eventType` - current event type
+  - `reason` - rejection reason or "-"
+  - `queueLength` - from `GGcKNode.getState().queueLength`
+  - `workers` - from `GGcKNode.getState().activeWorkers` / `ComponentNode.queue.workers`
+  - `capacity` - from `ComponentNode.queue.capacity`
 
 **Right panel:** Standard detail panel with full event metadata and trace waterfall.
 
@@ -461,7 +461,7 @@ Prototype 4 (Stack Trace view).
 
 ---
 
-## Feature 10 — Node Intake Lens
+## Feature 10 - Node Intake Lens
 
 ### What it does
 
@@ -484,9 +484,9 @@ This is the most pedagogically valuable view. The G/G/c/K model's admission chec
 **Meter bars:** Three horizontal bars, each showing utilization ratio. When at 100%, the bar is red; otherwise blue. The meter fill width = `(current / max) * 100%`.
 
 **Slot grid:** A grid of `capacity` small squares (20 columns). Each slot is colored:
-- Blue (`used`) — first `activeWorkers` slots (busy workers)
-- Amber (`queued`) — next `queueLength` slots (requests waiting)
-- Red (`reject`) — one extra slot representing the incoming request that was turned away
+- Blue (`used`) - first `activeWorkers` slots (busy workers)
+- Amber (`queued`) - next `queueLength` slots (requests waiting)
+- Red (`reject`) - one extra slot representing the incoming request that was turned away
 
 This maps exactly to the admission check in `GGcKNode.handleArrival()`:
 ```typescript
@@ -512,13 +512,13 @@ Prototype 5 (Node Intake Lens view).
 
 ---
 
-## Feature 11 — Actual vs Expected Path Diff
+## Feature 11 - Actual vs Expected Path Diff
 
 ### What it does
 
 Side-by-side comparison of two paths:
-1. **Expected path** — the full route the request *would* take if no failures occurred (derived from the topology's edge graph).
-2. **Actual path** — the route the request *actually* took before being rejected.
+1. **Expected path** - the full route the request *would* take if no failures occurred (derived from the topology's edge graph).
+2. **Actual path** - the route the request *actually* took before being rejected.
 
 A third section explains the difference: where the paths diverge and why.
 
@@ -530,7 +530,7 @@ When a request is rejected mid-path, the user may not realize it was *supposed* 
 
 **Expected path construction:** Walk the topology's edges from the source node, following `RoutingTable.resolveTarget()` at each hop. For topologies with conditional or weighted routing, this would need to use the "most likely" or "configured default" path.
 
-**Actual path:** From `request.path[]` — the array of nodeIds visited.
+**Actual path:** From `request.path[]` - the array of nodeIds visited.
 
 **Rendering:** Each path is a horizontal chain of "stop" badges connected by colored connectors.
 - Expected path: all stops green, all connectors green.
@@ -551,7 +551,7 @@ Prototype 5 (Actual vs Expected view).
 
 ---
 
-## Feature 12 — State Machine View
+## Feature 12 - State Machine View
 
 ### What it does
 
@@ -566,7 +566,7 @@ This view formalizes the request lifecycle as a state machine, which maps direct
 | Generated | `handleRequestGenerated` |
 | In Flight | `enqueueEdgeTransfer` (request is on an edge) |
 | Queued | `GGcKNode.handleArrival` returned `{ status: 'queued' }` |
-| Processing | `GGcKNode.startProcessing` — worker assigned |
+| Processing | `GGcKNode.startProcessing` - worker assigned |
 | Routing | `handleProcessingComplete` → `routing.resolveTarget` |
 | Rejected | `handleRequestRejected` |
 
@@ -582,7 +582,7 @@ The guard condition `currentLoad >= K` is the exact admission check in `GGcKNode
 
 ### What components it requires
 
-- **Renderer-side:** A `StateMachineView` component. The state machine is static (same for all requests) — only the current state and transition highlighting changes per step.
+- **Renderer-side:** A `StateMachineView` component. The state machine is static (same for all requests) - only the current state and transition highlighting changes per step.
 
 ### Explored in
 
@@ -590,7 +590,7 @@ Prototype 5 (State Machine view).
 
 ---
 
-## Feature 13 — Event Log Display Variants
+## Feature 13 - Event Log Display Variants
 
 ### What it does
 
@@ -608,10 +608,10 @@ Events grouped by `requestId`. Each request becomes a card showing its terminal 
 Events grouped by `nodeId`. Each node becomes a card with aggregate stats (event count, rejection count, latest timestamp, utilization bar). Best for: answering "which nodes are unhealthy?" and "is this node rejecting requests?".
 
 **4. Incident Feed (Prototype 3)**
-Filtered to only show terminal events (rejections, timeouts). Styled as incident cards with severity-colored borders. Best for: rapid triage — seeing only the failures, sorted by severity.
+Filtered to only show terminal events (rejections, timeouts). Styled as incident cards with severity-colored borders. Best for: rapid triage - seeing only the failures, sorted by severity.
 
 **5. Waterfall / Timeline (Prototype 1 Option C, Prototype 3)**
-Swim-lane timeline with one lane per node. Events are positioned horizontally by timestamp. Best for: understanding timing relationships — which events happened concurrently, where there are gaps or bursts.
+Swim-lane timeline with one lane per node. Events are positioned horizontally by timestamp. Best for: understanding timing relationships - which events happened concurrently, where there are gaps or bursts.
 
 ### What components each requires
 
@@ -624,7 +624,7 @@ All variants consume the same `SimulationEvent[]` data. The difference is in gro
 
 ### Explored in
 
-Prototype 3 (all five), Prototype 1 (Option C — waterfall).
+Prototype 3 (all five), Prototype 1 (Option C - waterfall).
 
 ---
 
@@ -637,7 +637,7 @@ The prototypes explore where in the existing workspace these features should liv
 Add the event log and detail inspector as a new tab in the existing `ResultsTray` bottom panel, alongside Summary, Per-node, etc. The canvas highlights nodes/edges during debugging.
 
 **Pros:** No layout disruption. Fits naturally into the existing `WorkspaceLayout` resizable split.
-**Cons:** Vertical space is limited — the bottom panel is currently 305px.
+**Cons:** Vertical space is limited - the bottom panel is currently 305px.
 
 ### Option B: Right Debugger Inspector
 
@@ -694,7 +694,7 @@ The worker would accumulate events in a buffer during `processEvents()` and flus
 
 **3. Debug mode tracing.** When debugging a specific request, force `RequestTracer.shouldTrace()` to return `true` for that request ID, overriding the sample rate.
 
-**4. Expected path computation.** A utility that walks the topology's edges from a source node to compute the expected full path. This doesn't exist today — `RoutingTable.resolveTarget` only resolves one hop at a time and depends on the request's runtime state.
+**4. Expected path computation.** A utility that walks the topology's edges from a source node to compute the expected full path. This doesn't exist today - `RoutingTable.resolveTarget` only resolves one hop at a time and depends on the request's runtime state.
 
 ---
 
@@ -702,19 +702,19 @@ The worker would accumulate events in a buffer during `processEvents()` and flus
 
 | Feature | P1 | P2 | P3 | P4 | P5 |
 |---|---|---|---|---|---|
-| 1. Event Log | A,B,C | Yes | DevTools, Waterfall | — | Filmstrip |
+| 1. Event Log | A,B,C | Yes | DevTools, Waterfall | - | Filmstrip |
 | 2. Request Detail Inspector | Yes | Yes | Yes | Yes | Yes |
-| 3. Request Trace Waterfall | Yes | Yes | — | Yes | — |
-| 4. Step-Through Debugger | — | Yes | — | Yes | Yes |
-| 5. Canvas Debug Overlay | — | Yes | — | — | Yes |
-| 6. Request Path Mini-Map | — | Yes | Req-Centric | — | — |
-| 7. Lifecycle Rail | — | — | — | Yes | — |
-| 8. Sequence Diagram | — | — | — | Yes | — |
-| 9. Stack Trace Debugger | — | — | — | Yes | — |
-| 10. Node Intake Lens | — | — | — | — | Yes |
-| 11. Actual vs Expected Diff | — | — | — | — | Yes |
-| 12. State Machine View | — | — | — | — | Yes |
-| 13. Display Variants (5) | C | — | All 5 | — | — |
-| Layout: Bottom Dock | A | Yes | — | — | — |
-| Layout: Side Inspector | B | Yes | — | — | — |
-| Layout: Focus Mode | — | Yes | — | — | — |
+| 3. Request Trace Waterfall | Yes | Yes | - | Yes | - |
+| 4. Step-Through Debugger | - | Yes | - | Yes | Yes |
+| 5. Canvas Debug Overlay | - | Yes | - | - | Yes |
+| 6. Request Path Mini-Map | - | Yes | Req-Centric | - | - |
+| 7. Lifecycle Rail | - | - | - | Yes | - |
+| 8. Sequence Diagram | - | - | - | Yes | - |
+| 9. Stack Trace Debugger | - | - | - | Yes | - |
+| 10. Node Intake Lens | - | - | - | - | Yes |
+| 11. Actual vs Expected Diff | - | - | - | - | Yes |
+| 12. State Machine View | - | - | - | - | Yes |
+| 13. Display Variants (5) | C | - | All 5 | - | - |
+| Layout: Bottom Dock | A | Yes | - | - | - |
+| Layout: Side Inspector | B | Yes | - | - | - |
+| Layout: Focus Mode | - | Yes | - | - | - |

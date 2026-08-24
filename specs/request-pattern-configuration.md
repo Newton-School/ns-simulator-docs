@@ -2,7 +2,7 @@
 
 Technical feature specification defining how workload arrival patterns are configured, parameterized, and consumed by the simulation engine.
 
-This spec consolidates the existing `WorkloadProfile` type, the `WorkloadGenerator` class, the 7 implemented arrival patterns, the request distribution model, and the canvas-level `SourceConfig` into a unified description of what request pattern configuration is, how it works internally, and what gaps remain. It exists because the arrival pattern is the single most influential input to any simulation run — it determines the rate, shape, and composition of traffic entering the topology — and downstream specs (throughput calculation, queue depth, rejection behaviour, lifecycle semantics) all assume a well-defined pattern contract. The Environment Definition & Configuration Model spec reserves a `requestPatternId` slot and a pattern override mechanism; this spec defines what those slots point to.
+This spec consolidates the existing `WorkloadProfile` type, the `WorkloadGenerator` class, the 7 implemented arrival patterns, the request distribution model, and the canvas-level `SourceConfig` into a unified description of what request pattern configuration is, how it works internally, and what gaps remain. It exists because the arrival pattern is the single most influential input to any simulation run - it determines the rate, shape, and composition of traffic entering the topology - and downstream specs (throughput calculation, queue depth, rejection behaviour, lifecycle semantics) all assume a well-defined pattern contract. The Environment Definition & Configuration Model spec reserves a `requestPatternId` slot and a pattern override mechanism; this spec defines what those slots point to.
 
 ---
 
@@ -26,7 +26,7 @@ This spec consolidates the existing `WorkloadProfile` type, the `WorkloadGenerat
 
 ### Capability definition
 
-Request Pattern Configuration is the subsystem that converts a declarative workload description (pattern shape, base rate, pattern-specific parameters, request type mix) into a stream of timed `request-generated` events that the simulation engine processes. It is the only traffic source in the simulator — no requests exist unless a pattern configuration produces them.
+Request Pattern Configuration is the subsystem that converts a declarative workload description (pattern shape, base rate, pattern-specific parameters, request type mix) into a stream of timed `request-generated` events that the simulation engine processes. It is the only traffic source in the simulator - no requests exist unless a pattern configuration produces them.
 
 The capability covers three concerns: (1) selecting and parameterizing one of 7 arrival patterns, (2) composing the request type mix via a weighted distribution, and (3) translating the parameterized pattern into concrete inter-arrival times at runtime. It also covers the proposed extension of named pattern presets that the Environment Model can reference by id.
 
@@ -47,8 +47,8 @@ The capability covers three concerns: (1) selecting and parameterizing one of 7 
 | Pattern defaults are hardcoded constants | Engine developers | `src/engine/workload.ts:7-10` defines `DEFAULT_BURST_MULTIPLIER = 5`, `DEFAULT_BURST_DURATION_MS = 5_000`, `DEFAULT_NORMAL_DURATION_MS = 10_000`, `DEFAULT_RAMP_DURATION_MS = 10_000` as module-level constants. These are not configurable from the environment or UI. | Users cannot tune burst/sawtooth cycle timing without modifying source code; changing a default requires a code change in the workload module |
 | No pattern presets | Users, product team | There is no concept of a named pattern configuration. Every workload must be specified from scratch with explicit `pattern`, `baseRps`, and pattern-specific sub-objects. | Users building common scenarios (e.g., "moderate web traffic", "flash sale spike") must manually configure every parameter each time |
 | Pattern validation is schema-only | Engine developers | `validator.ts` validates `WorkloadProfile` via Zod schema (field types, required fields) but does not validate pattern-specific semantics: e.g., `spikeTime + spikeDuration > simulationDuration`, `hourlyMultipliers` containing negative values, `baseRps <= 0` with no spike override | Invalid pattern configurations pass validation and produce silent failures at runtime (infinite inter-arrival times, zero-traffic windows) |
-| Request priority is hardcoded | Users | `workload.ts:164` assigns priority via `this.rng.boolean(0.1) ? 0 : 1` — 10% high priority, 90% normal. This ratio is not configurable. | Priority-sensitive simulations (priority queue disciplines, SLO tiers) cannot model different priority distributions |
-| Canvas source config is disconnected from pattern model | Frontend developers | `SourceConfig` in `src/engine/catalog/nodeSpecTypes.ts:54-57` stores a `defaultWorkload: Omit<WorkloadProfile, 'sourceNodeId' | 'requestDistribution'>` per source node, but this is a canvas concern that the engine never sees directly — it is serialized into `TopologyJSON.workload` by `useTopologySerializer`. | No round-trip: if the engine normalizes or adjusts the pattern, there is no path to reflect that back to the canvas config |
+| Request priority is hardcoded | Users | `workload.ts:164` assigns priority via `this.rng.boolean(0.1) ? 0 : 1` - 10% high priority, 90% normal. This ratio is not configurable. | Priority-sensitive simulations (priority queue disciplines, SLO tiers) cannot model different priority distributions |
+| Canvas source config is disconnected from pattern model | Frontend developers | `SourceConfig` in `src/engine/catalog/nodeSpecTypes.ts:54-57` stores a `defaultWorkload: Omit<WorkloadProfile, 'sourceNodeId' | 'requestDistribution'>` per source node, but this is a canvas concern that the engine never sees directly - it is serialized into `TopologyJSON.workload` by `useTopologySerializer`. | No round-trip: if the engine normalizes or adjusts the pattern, there is no path to reflect that back to the canvas config |
 | Single workload per topology | Users | `TopologyJSON.workload` is a single optional `WorkloadProfile`. There is no support for multiple concurrent workload sources. | Multi-source topologies (e.g., internal traffic + external traffic at different rates) require workarounds |
 
 ### Proposed responsibility boundary
@@ -181,7 +181,7 @@ if (topology.workload) {
 }
 ```
 
-The engine creates exactly one `WorkloadGenerator` from `topology.workload`. If `workload` is undefined, no traffic is generated — the simulation runs with zero requests.
+The engine creates exactly one `WorkloadGenerator` from `topology.workload`. If `workload` is undefined, no traffic is generated - the simulation runs with zero requests.
 
 **Stochastic foundation (`src/engine/stochastic/distribution.ts`)**
 
@@ -213,7 +213,7 @@ Provides 7 distinct arrival patterns that control the rate at which `request-gen
 
 ### Why it exists
 
-The arrival pattern is the fundamental input to every queuing calculation. A constant-rate arrival produces steady-state behaviour where Little's Law applies directly. A Poisson arrival introduces stochastic variation that tests queue absorption. A bursty or spike arrival stresses capacity limits and triggers rejection/timeout cascades. Without configurable patterns, the simulator can only model constant load — useless for capacity planning, failure analysis, or SLO validation.
+The arrival pattern is the fundamental input to every queuing calculation. A constant-rate arrival produces steady-state behaviour where Little's Law applies directly. A Poisson arrival introduces stochastic variation that tests queue absorption. A bursty or spike arrival stresses capacity limits and triggers rejection/timeout cascades. Without configurable patterns, the simulator can only model constant load - useless for capacity planning, failure analysis, or SLO validation.
 
 ### How it works internally
 
@@ -223,15 +223,15 @@ The arrival pattern is the fundamental input to every queuing calculation. A con
 
 | Pattern | Inter-arrival behaviour | Parameters | Stochastic? |
 | --- | --- | --- | --- |
-| `constant` | Fixed interval: `1000 / baseRps` ms | `baseRps` only | No — deterministic |
-| `poisson` | Exponentially distributed: `-ln(1-U) / (baseRps/1000)` where U ~ Uniform(0,1) | `baseRps` only | Yes — memoryless |
-| `bursty` | Alternates between burst and normal phases on a fixed cycle | `baseRps`, `burstRps`, `burstDuration`, `normalDuration` | No — deterministic phase switching |
-| `diurnal` | Scales baseRps by an hourly multiplier array over a 24-hour cycle mapped to simulation duration | `baseRps`, `hourlyMultipliers[24]`, `peakMultiplier` | No — deterministic |
-| `spike` | Fixed interval at `baseRps` except during a defined window where rate jumps to `spikeRps` | `baseRps`, `spikeTime`, `spikeRps`, `spikeDuration` | No — deterministic |
-| `sawtooth` | Linear ramp from `baseRps` to `peakRps` over `rampDuration`, then reset | `baseRps`, `peakRps`, `rampDuration` | No — deterministic |
-| `replay` | Currently identical to `constant` — reserved for future trace replay | `baseRps` only | No — placeholder |
+| `constant` | Fixed interval: `1000 / baseRps` ms | `baseRps` only | No - deterministic |
+| `poisson` | Exponentially distributed: `-ln(1-U) / (baseRps/1000)` where U ~ Uniform(0,1) | `baseRps` only | Yes - memoryless |
+| `bursty` | Alternates between burst and normal phases on a fixed cycle | `baseRps`, `burstRps`, `burstDuration`, `normalDuration` | No - deterministic phase switching |
+| `diurnal` | Scales baseRps by an hourly multiplier array over a 24-hour cycle mapped to simulation duration | `baseRps`, `hourlyMultipliers[24]`, `peakMultiplier` | No - deterministic |
+| `spike` | Fixed interval at `baseRps` except during a defined window where rate jumps to `spikeRps` | `baseRps`, `spikeTime`, `spikeRps`, `spikeDuration` | No - deterministic |
+| `sawtooth` | Linear ramp from `baseRps` to `peakRps` over `rampDuration`, then reset | `baseRps`, `peakRps`, `rampDuration` | No - deterministic |
+| `replay` | Currently identical to `constant` - reserved for future trace replay | `baseRps` only | No - placeholder |
 
-**Processing logic — `nextInterArrivalMs(currentTime)` in `src/engine/workload.ts:78-153`**:
+**Processing logic - `nextInterArrivalMs(currentTime)` in `src/engine/workload.ts:78-153`**:
 
 The method switches on `this.config.pattern` and returns a millisecond interval:
 
@@ -273,7 +273,7 @@ Each `request-generated` event triggers the engine to call `generateNext`, which
 | `DEFAULT_BURST_DURATION_MS` | 5,000 ms | `bursty.burstDuration` not specified | `workload.ts:9` |
 | `DEFAULT_NORMAL_DURATION_MS` | 10,000 ms | `bursty.normalDuration` not specified | `workload.ts:10` |
 | `DEFAULT_RAMP_DURATION_MS` | 10,000 ms | `sawtooth.rampDuration` is 0 or missing | `workload.ts:10` |
-| Priority split | 10% high (0), 90% normal (1) | Always — not configurable | `workload.ts:164` |
+| Priority split | 10% high (0), 90% normal (1) | Always - not configurable | `workload.ts:164` |
 
 ### What components it requires
 
@@ -299,9 +299,9 @@ Real systems serve heterogeneous traffic. An API gateway handles GET reads (smal
 
 ### How it works internally
 
-**Data source**: `WorkloadProfile.requestDistribution` — a required, non-empty array of `{ type: string; weight: number; sizeBytes: number }` entries. Defined in `src/engine/core/types.ts:404-412`.
+**Data source**: `WorkloadProfile.requestDistribution` - a required, non-empty array of `{ type: string; weight: number; sizeBytes: number }` entries. Defined in `src/engine/core/types.ts:404-412`.
 
-**Selection algorithm — `pickRequestDistributionEntry()` in `src/engine/workload.ts:173-195`**:
+**Selection algorithm - `pickRequestDistributionEntry()` in `src/engine/workload.ts:173-195`**:
 
 ```
 1. Sum all entry weights → totalWeight
@@ -313,9 +313,9 @@ Real systems serve heterogeneous traffic. An API gateway handles GET reads (smal
 4. Fallback: return last entry (guards floating-point edge case)
 ```
 
-This is a standard weighted random selection. It does not require weights to sum to 1.0 — the algorithm normalizes by `totalWeight`. However, the JSDoc on `WorkloadProfile.requestDistribution[].weight` states weights are "expected to sum to 1.0", creating a documentation/implementation mismatch.
+This is a standard weighted random selection. It does not require weights to sum to 1.0 - the algorithm normalizes by `totalWeight`. However, the JSDoc on `WorkloadProfile.requestDistribution[].weight` states weights are "expected to sum to 1.0", creating a documentation/implementation mismatch.
 
-**Request creation — `createRequest(currentTime)` in `src/engine/workload.ts:155-171`**:
+**Request creation - `createRequest(currentTime)` in `src/engine/workload.ts:155-171`**:
 
 ```typescript
 const requestType = this.pickRequestDistributionEntry()
@@ -349,7 +349,7 @@ Key properties assigned:
 
 **Canvas-level source of truth**:
 
-`SourceConfig.requestDistribution` (in `CanvasNodeDataV2.source`) stores the per-source-node request mix. This is the value the user configures on the canvas. During serialization, `useTopologySerializer` copies it into `TopologyJSON.workload.requestDistribution`. The scenario panel does not currently override `requestDistribution` — `ScenarioState.workloadOverride` excludes it via `Omit<WorkloadProfile, 'sourceNodeId' | 'requestDistribution'>`.
+`SourceConfig.requestDistribution` (in `CanvasNodeDataV2.source`) stores the per-source-node request mix. This is the value the user configures on the canvas. During serialization, `useTopologySerializer` copies it into `TopologyJSON.workload.requestDistribution`. The scenario panel does not currently override `requestDistribution` - `ScenarioState.workloadOverride` excludes it via `Omit<WorkloadProfile, 'sourceNodeId' | 'requestDistribution'>`.
 
 ### What components it requires
 
@@ -412,7 +412,7 @@ else:
     interArrivalMs = 1000 / baseRps                      // normal phase
 ```
 
-Deterministic within each phase. Produces a square wave pattern alternating between high and low rates. Cycle repeats indefinitely. The transition is instantaneous — no ramp-up or ramp-down between phases.
+Deterministic within each phase. Produces a square wave pattern alternating between high and low rates. Cycle repeats indefinitely. The transition is instantaneous - no ramp-up or ramp-down between phases.
 
 #### Diurnal
 
@@ -427,9 +427,9 @@ multiplier = hourlyMultipliers[hour] ?? 1
 interArrivalMs = 1000 / (baseRps * multiplier)
 ```
 
-Deterministic, step-function. Each "hour" (1/24th of the simulation duration) uses a different multiplier. The pattern maps the simulation duration to a 24-hour day, regardless of actual duration — a 60-second simulation has 2.5-second "hours". If `hourlyMultipliers` is not provided, falls back to constant rate.
+Deterministic, step-function. Each "hour" (1/24th of the simulation duration) uses a different multiplier. The pattern maps the simulation duration to a 24-hour day, regardless of actual duration - a 60-second simulation has 2.5-second "hours". If `hourlyMultipliers` is not provided, falls back to constant rate.
 
-The `peakMultiplier` field on `diurnal` is declared in the type but not used by the generator — only `hourlyMultipliers` is consumed. This is a dead field.
+The `peakMultiplier` field on `diurnal` is declared in the type but not used by the generator - only `hourlyMultipliers` is consumed. This is a dead field.
 
 #### Spike
 
@@ -440,7 +440,7 @@ else:
     interArrivalMs = 1000 / baseRps                      // normal rate
 ```
 
-Deterministic. A single rectangular pulse. Unlike bursty, the spike does not repeat — it fires once at the specified offset. If `spike` config is missing, falls back to constant rate.
+Deterministic. A single rectangular pulse. Unlike bursty, the spike does not repeat - it fires once at the specified offset. If `spike` config is missing, falls back to constant rate.
 
 #### Sawtooth
 
@@ -454,21 +454,21 @@ currentRps = baseRps + (peakRps - baseRps) * t
 interArrivalMs = 1000 / currentRps
 ```
 
-Deterministic, linearly ramping. Rate increases from `baseRps` to `peakRps` over `rampDuration`, then resets instantly to `baseRps` and ramps again. The ramp is strictly linear — `t` maps directly to the interpolation factor.
+Deterministic, linearly ramping. Rate increases from `baseRps` to `peakRps` over `rampDuration`, then resets instantly to `baseRps` and ramps again. The ramp is strictly linear - `t` maps directly to the interpolation factor.
 
-**Scheduling guard — `scheduleNext()` in `src/engine/workload.ts:55-63`**:
+**Scheduling guard - `scheduleNext()` in `src/engine/workload.ts:55-63`**:
 
 ```typescript
 const interArrivalMs = this.nextInterArrivalMs(currentTime)
 if (!Number.isFinite(interArrivalMs) || interArrivalMs < 0) {
-  return  // stops the chain — no more requests
+  return  // stops the chain - no more requests
 }
 const interArrivalUs = BigInt(Math.max(1, Math.round(interArrivalMs * 1000)))
 ```
 
 Safety bounds: if the interval is `Infinity` (from `baseRps <= 0`), `NaN`, or negative, the generator stops producing events. The minimum inter-arrival is 1 microsecond (`Math.max(1, ...)`), preventing zero-interval infinite loops.
 
-**Duration guard — `scheduleRequestGeneratedAt()` in `src/engine/workload.ts:65-76`**:
+**Duration guard - `scheduleRequestGeneratedAt()` in `src/engine/workload.ts:65-76`**:
 
 ```typescript
 if (this.simulationDurationUs !== null) {
@@ -485,7 +485,7 @@ Ensures no `request-generated` events are scheduled beyond the simulation durati
 
 - **Engine-side**: All algorithms are implemented. No changes for current functionality.
 - **Shared layer**: Algorithm constants should be documented in the Environment Model as defaults that can be overridden.
-- **Renderer/frontend-side**: No impact — algorithms are engine-internal.
+- **Renderer/frontend-side**: No impact - algorithms are engine-internal.
 
 ### Explored in
 
@@ -501,7 +501,7 @@ Proposes a named preset system where common workload configurations can be defin
 
 ### Why it exists
 
-The current configuration surface requires users to understand all 7 patterns and their parameters to set up a workload. For common scenarios — moderate web traffic, periodic batch processing, flash sale events — the parameters are well-known and should be available as one-click presets. This also enables the Default-Driven Simplification Layer to offer progressive disclosure: show preset names first, reveal parameters only when users want to customize.
+The current configuration surface requires users to understand all 7 patterns and their parameters to set up a workload. For common scenarios - moderate web traffic, periodic batch processing, flash sale events - the parameters are well-known and should be available as one-click presets. This also enables the Default-Driven Simplification Layer to offer progressive disclosure: show preset names first, reveal parameters only when users want to customize.
 
 ### How it works internally
 
@@ -541,8 +541,8 @@ These types would live in a new file `src/engine/core/patternPresets.ts` or alon
 
 | Preset id | Pattern | baseRps | Key parameters | Scenario |
 | --- | --- | --- | --- | --- |
-| `steady-web-traffic` | `constant` | 100 | — | Baseline web application under normal load |
-| `api-moderate` | `poisson` | 200 | — | API with natural arrival variation |
+| `steady-web-traffic` | `constant` | 100 | - | Baseline web application under normal load |
+| `api-moderate` | `poisson` | 200 | - | API with natural arrival variation |
 | `flash-sale-spike` | `spike` | 50 | spikeTime: 10000, spikeRps: 2000, spikeDuration: 5000 | E-commerce flash sale at 10s mark |
 | `business-hours` | `diurnal` | 100 | hourlyMultipliers: low overnight, peak at hours 9-17 | Office-hours traffic pattern |
 | `microservice-bursty` | `bursty` | 150 | burstRps: 750, burstDuration: 3000, normalDuration: 7000 | Bursty inter-service communication |
@@ -691,11 +691,11 @@ This makes `spike` required when `pattern === 'spike'` and `sawtooth` required w
 | **Request Flow Direction & Topology Rules** | Request type strings (from `requestDistribution`) that conditional edges match on | Edge mode and routing strategy that determine how generated requests traverse the topology | `request.type`, `EdgeDefinition.condition` |
 | **Request Type Model** | Request type strings and `sizeBytes` values as the creation point for typed requests | Type-level properties (SLO tiers, processing weight) that are not yet part of the distribution model | `requestDistribution[].type` |
 | **Edge Properties & Defaults** | Request `sizeBytes` that edge bandwidth calculations consume | Edge latency distribution that affects end-to-end timing | `Request.sizeBytes`, `EdgeDefinition.bandwidth` |
-| **Throughput Calculation** | Effective arrival rate λ(t) derived from pattern parameters | — (throughput is a derived metric, not an input to patterns) | `baseRps`, pattern shape → λ(t) |
+| **Throughput Calculation** | Effective arrival rate λ(t) derived from pattern parameters | - (throughput is a derived metric, not an input to patterns) | `baseRps`, pattern shape → λ(t) |
 | **Queue Depth Calculation** | Arrival process classification (deterministic D vs stochastic M) per pattern | Queue capacity and discipline that determine whether arrivals queue or reject | Arrival process type, `QueueConfig.capacity` |
 | **Arrival, Departure & Request Lifecycle Semantics** | The `request-generated` event that starts each request's lifecycle | Event type definitions and the lifecycle state machine | `request-generated` event, `Request` interface |
 | **Request Rejection Behaviour** | Arrival rate that drives queue saturation and triggers rejection | Rejection reasons and metrics fed back to analysis | `baseRps` → arrival pressure, `request-rejected` events |
-| **Cost Calculation & Budgeting** | Total request volume derived from pattern parameters and simulation duration | — (cost is a derived metric) | `baseRps * simulationDuration` → total expected requests |
+| **Cost Calculation & Budgeting** | Total request volume derived from pattern parameters and simulation duration | - (cost is a derived metric) | `baseRps * simulationDuration` → total expected requests |
 | **Simulation Validation & Pattern Accuracy** | Declared arrival rate and pattern shape as the "expected" baseline | Empirical arrival rate measurements as the "actual" for comparison | `baseRps`, pattern params vs measured inter-arrival stats |
 | **Default-Driven Simplification Layer** | Pattern presets as the highest-level simplification ("pick a preset, not parameters") | Progressive disclosure rules that hide advanced pattern parameters | `RequestPatternPreset`, parameter visibility rules |
 
@@ -721,7 +721,7 @@ This makes `spike` required when `pattern === 'spike'` and `sawtooth` required w
 | --- | --- | --- | --- |
 | Workload Pattern Selection | `workload.ts`, `types.ts:369-413` | `WorkloadProfile` | `nextInterArrivalMs()` |
 | Request Distribution | `workload.ts:155-195`, `events.ts` (Request) | `WorkloadProfile.requestDistribution`, `Request` | `pickRequestDistributionEntry()`, `createRequest()` |
-| Inter-Arrival Algorithms | `workload.ts:78-153`, `distribution.ts:26-31` | — | `intervalForRps()`, `poissonIntervalForRps()`, `Distributions.exponential()` |
+| Inter-Arrival Algorithms | `workload.ts:78-153`, `distribution.ts:26-31` | - | `intervalForRps()`, `poissonIntervalForRps()`, `Distributions.exponential()` |
 | Pattern Presets | Proposed: `patternPresets.ts` | `RequestPatternPreset`, `RequestPatternId` | Proposed: `resolvePatternPreset()` |
 | Pattern Validation | `validator.ts` (existing schema), proposed extension | `PatternDiagnostic`, `PatternValidationResult` | Proposed: `validateWorkloadPattern()` |
 
@@ -734,7 +734,7 @@ This makes `spike` required when `pattern === 'spike'` and `sawtooth` required w
 | 1 | `replay` pattern will eventually support trace-driven replay from recorded traffic | Assumption | If dropped, the pattern literal should be removed from the union to avoid confusion |
 | 2 | The single-workload limitation (`TopologyJSON.workload` is singular) will be addressed in a later spec | Assumption | Multi-source topologies remain blocked on workarounds |
 | 3 | The 10/90 priority split is acceptable for v1 | Assumption | Priority-queue discipline tests may produce unrealistic results |
-| 4 | `diurnal.peakMultiplier` is a dead field — the generator only reads `hourlyMultipliers` | Observation | If it was intended to scale the multipliers, the implementation has a silent bug |
+| 4 | `diurnal.peakMultiplier` is a dead field - the generator only reads `hourlyMultipliers` | Observation | If it was intended to scale the multipliers, the implementation has a silent bug |
 | 5 | Pattern presets are built-in only for v1, with user-defined presets deferred | Assumption | Users who need custom presets must configure `WorkloadProfile` manually |
-| 6 | `requestDistribution` weights do not need to sum to 1.0 despite JSDoc stating otherwise | Observation — the algorithm normalizes by total weight | If validation enforces sum-to-1.0, some existing configurations may break |
+| 6 | `requestDistribution` weights do not need to sum to 1.0 despite JSDoc stating otherwise | Observation - the algorithm normalizes by total weight | If validation enforces sum-to-1.0, some existing configurations may break |
 | 7 | `bursty` and `diurnal` sub-objects remain optional (generator has fallbacks) while `spike` and `sawtooth` should be required when their pattern is selected | Design decision | Affects whether the discriminated union refactor makes `bursty`/`diurnal` required or optional |

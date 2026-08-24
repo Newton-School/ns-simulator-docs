@@ -1,4 +1,4 @@
-# PR #213 — Evaluation Contract & CLI
+# PR #213 - Evaluation Contract & CLI
 
 > **Branch:** `feat/sim-evaluate-contract` · **Merge:** `89fe96e`
 > **Scale:** ~3,600 lines across 20 files
@@ -18,12 +18,12 @@ If #212 answered "what is a question and how do we grade it?", #213 answers
 | Evaluation contract | `src/engine/analysis/evaluationContract.ts` (+739) | Versioned result types, builders, and strict parsers |
 | Frozen fixtures | `src/engine/analysis/fixtures/evaluation-contracts.json` (+636) | Golden snapshots the contract is tested against |
 | Game Playground adapter | `src/engine/analysis/gamePlayground.ts` (+250) | Translate between our contract and the host's payloads |
-| CLI | `src/cli/index.ts` (+565), `questionEvaluate.ts`, `questionBatch.ts`, `exitCodes.ts` | `sim evaluate` — grade single questions and batches from the shell |
+| CLI | `src/cli/index.ts` (+565), `questionEvaluate.ts`, `questionBatch.ts`, `exitCodes.ts` | `sim evaluate` - grade single questions and batches from the shell |
 | Renderer wiring | `questionHostMessaging.ts`, `QuestionPanel.tsx`, `EmbeddedIframeQuestion.tsx` | Send/receive the versioned payloads over the iframe seam |
 
 ---
 
-## 2. The evaluation contract — grading's public API
+## 2. The evaluation contract - grading's public API
 
 The contract is the **stable, serializable shape** of a grading result. Three
 top-level shapes exist:
@@ -47,7 +47,7 @@ interface SuccessfulQuestionEvaluationContract {
   topologySchemaVersion: string
   attemptId?: string
   submissionId?: string
-  evaluatedAt?: string          // optional on purpose — see "deterministic output"
+  evaluatedAt?: string          // optional on purpose - see "deterministic output"
   status: 'passed' | 'failed'
   score: { earned; possible; fraction }
   summary: QuestionEvaluationSummary
@@ -62,7 +62,7 @@ interface SuccessfulQuestionEvaluationContract {
 `FailedQuestionEvaluationContract` with a `status` like `invalid_submission` /
 `evaluation_error` and an `error: { code, message }` instead of a score.
 
-### Concept — why *versioned* contracts
+### Concept - why *versioned* contracts
 
 Every contract carries a `version` **literal** (`QUESTION_EVALUATION_CONTRACT_VERSION`).
 The parser asserts it with `z.literal(...)`. This is the seam that lets the
@@ -74,7 +74,7 @@ downstreams broke silently" failure.
 
 ---
 
-## 3. Builders and parsers — a one-way trust valve
+## 3. Builders and parsers - a one-way trust valve
 
 The module exposes a **builder** and a **parser** for each shape:
 
@@ -87,10 +87,10 @@ Builders are used *inside* the simulator to produce output. Parsers are the
 **only** sanctioned way to accept a contract from anywhere untrusted. This is the
 same trust-boundary pattern as #212's `parseQuestionPackage`, applied to results.
 
-### Concept — `superRefine` and cross-field invariants
+### Concept - `superRefine` and cross-field invariants
 
 A plain Zod schema validates *field shapes*. But a grading contract has
-**cross-field invariants** — facts that must be true *between* fields:
+**cross-field invariants** - facts that must be true *between* fields:
 
 - `summary.passedTests` must equal the number of `tests` whose status is passed.
 - `summary.topologyFailures` must equal the number of failed `topology` tests.
@@ -100,7 +100,7 @@ These are enforced with Zod's `superRefine`, which runs custom logic over the
 whole parsed object and can attach precise, path-addressed errors:
 
 ```ts
-// evaluationContract.ts — validateQuestionSummary
+// evaluationContract.ts - validateQuestionSummary
 if (summary.passedTests !== expected.passedTests) {
   ctx.addIssue({ path: ['summary', 'passedTests'],
     message: 'summary.passedTests must match passed tests.' })
@@ -108,7 +108,7 @@ if (summary.passedTests !== expected.passedTests) {
 ```
 
 Why bother? Because a contract with a `summary` that disagrees with its `tests`
-is **worse than no contract** — a downstream would trust the wrong number. Making
+is **worse than no contract** - a downstream would trust the wrong number. Making
 the parser reject internally-inconsistent contracts means every consumer can
 trust the summary without re-deriving it.
 
@@ -120,7 +120,7 @@ The single most important cross-field rule, and the one that later caught a real
 bug (doc 04):
 
 ```ts
-// evaluationContract.ts:568 — validateHostAlignment
+// evaluationContract.ts:568 - validateHostAlignment
 if (host.tests.length !== tests.length) { /* reject */ }
 for (each index) {
   if (host.tests[i].id     !== tests[i].id)                 /* reject */
@@ -130,17 +130,17 @@ for (each index) {
 ```
 
 **In words:** the thin `host` contract must be an *exact projection* of the full
-`tests` array — same length, same order, matching ids and names, and the boolean
+`tests` array - same length, same order, matching ids and names, and the boolean
 `passed` must agree with the rich `status`.
 
 ### Why this invariant exists
 
 The host contract and the full contract are two views of the same truth. Without
-this rule they can drift — a host might show "3 tests, 2 passed" while the detail
+this rule they can drift - a host might show "3 tests, 2 passed" while the detail
 says otherwise. Because `toHostContract` (from #212) builds the host view from
 the *same* flattening logic, alignment holds by construction in production; the
 invariant is the **tripwire** that fails loudly if any code path ever builds them
-separately. (Exactly what happened during the #214 rebase — see doc 04.)
+separately. (Exactly what happened during the #214 rebase - see doc 04.)
 
 ---
 
@@ -152,7 +152,7 @@ diffable CI all depend on it.
 
 Concretely:
 
-- **Stable ordering** everywhere — tests, cases, and checks come out in a defined
+- **Stable ordering** everywhere - tests, cases, and checks come out in a defined
   order, never hash-map iteration order.
 - **No wall-clock in the payload by default.** `evaluatedAt` is **optional** and
   only included when the caller explicitly passes one:
@@ -161,9 +161,9 @@ Concretely:
   ...(options?.evaluatedAt ? { evaluatedAt: options.evaluatedAt } : {})
   ```
 
-  This is why the tests can freeze fixtures at all — omit `evaluatedAt` and the
+  This is why the tests can freeze fixtures at all - omit `evaluatedAt` and the
   output is a pure function of the inputs.
-- **No incidental fields** — optional fields are omitted entirely rather than
+- **No incidental fields** - optional fields are omitted entirely rather than
   serialized as `undefined`/`null`, so two logically-equal contracts are also
   *textually* equal.
 
@@ -171,7 +171,7 @@ See doc 05 for why determinism was treated as a non-negotiable criterion.
 
 ---
 
-## 6. The CLI — `sim evaluate`
+## 6. The CLI - `sim evaluate`
 
 `src/cli/index.ts` exposes grading to the shell for CI, authoring, and batch
 regrades:
@@ -186,7 +186,7 @@ The contract JSON goes to **stdout**; human-readable progress goes to **stderr**
 That split is deliberate: you can pipe `stdout` into `jq` or a file while still
 seeing progress in your terminal.
 
-### Concept — the exit-code taxonomy
+### Concept - the exit-code taxonomy
 
 The CLI maps *outcome category* → *process exit code*:
 
@@ -200,8 +200,8 @@ CLI_EXIT_EVALUATION_ERROR  = 4   // the grader itself errored
 ```
 
 **Why five distinct codes instead of 0/1?** Because a CI pipeline or grading
-service needs to distinguish *"the student failed"* (code 2 — expected, record
-the grade) from *"we couldn't grade this"* (code 3/4 — infrastructure/authoring
+service needs to distinguish *"the student failed"* (code 2 - expected, record
+the grade) from *"we couldn't grade this"* (code 3/4 - infrastructure/authoring
 problem, alert someone). Collapsing these into a single non-zero code would make
 it impossible to tell a legitimately failing submission from a broken grader. The
 taxonomy encodes an operational decision as a stable interface.
@@ -224,7 +224,7 @@ Batch mode (`questionBatch.ts`) aggregates many results into a
 
 ---
 
-## 7. The Game Playground adapter — an anti-corruption layer
+## 7. The Game Playground adapter - an anti-corruption layer
 
 The Game Playground is an **external host**. It has its own idea of a "launch" and
 a "result." We do *not* want its wire format leaking into our grading engine, nor
@@ -246,14 +246,14 @@ parseGamePlaygroundLaunchPayload(raw)  /  parseGamePlaygroundSubmitPayload(raw, 
 
 - **Collapse, don't leak.** `buildGamePlaygroundResultFromEvaluationContract`
   reduces the rich `QuestionEvaluationContract` to the thin host result by simply
-  projecting `contract.host` — so the host only ever sees the boolean summary,
+  projecting `contract.host` - so the host only ever sees the boolean summary,
   never our internal `graded`/`structural` detail.
 - **Cross-field guards.** The result schema enforces its own invariants, e.g.
   *"`passed` status requires `allPassed === true`"* and *"error statuses must
-  collapse to an empty boolean contract"* — a host can't receive a "passed but
+  collapse to an empty boolean contract"* - a host can't receive a "passed but
   not all passed" contradiction.
 - **Identity checks.** `buildGamePlaygroundLaunchPayload` throws if a
-  `priorAttempt.questionId` doesn't match the question being launched — you can't
+  `priorAttempt.questionId` doesn't match the question being launched - you can't
   accidentally resume attempt A into question B.
 - **Backward compatibility.** `parseGamePlaygroundSubmitPayload` still accepts the
   older `contract` field alongside the new versioned shape, so the host can
@@ -271,7 +271,7 @@ doc 05 for the full rationale and the "where does the boundary sit?" discussion.
 
 ## 8. Frozen fixtures
 
-`fixtures/evaluation-contracts.json` holds **golden snapshots** — the exact
+`fixtures/evaluation-contracts.json` holds **golden snapshots** - the exact
 expected contract for a passed question, a failed question, an invalid
 submission, an evaluation error, a batch, and a scenario. Tests build a contract
 and assert `toEqual(fixture)`, *and* re-parse the fixture to prove the parser
@@ -279,7 +279,7 @@ round-trips it.
 
 ### Why freeze fixtures
 
-- They make the contract's shape **reviewable in a diff** — any change to grading
+- They make the contract's shape **reviewable in a diff** - any change to grading
   output shows up as a fixture change a reviewer must consciously approve.
 - Combined with deterministic output (§5), they turn "did we change the contract?"
   into a mechanical yes/no.
@@ -292,19 +292,19 @@ methodology is the subject of doc 04.
 
 ## 9. What to take away
 
-1. **The contract is grading's public API** — versioned, serializable, and the
+1. **The contract is grading's public API** - versioned, serializable, and the
    only thing consumers should depend on.
 2. **Parsers are one-way trust valves**, and `superRefine` lets them reject
    *internally inconsistent* contracts, not just malformed ones.
-3. **The host-alignment invariant** keeps the thin and full views honest — and is
+3. **The host-alignment invariant** keeps the thin and full views honest - and is
    a tripwire, not just documentation.
-4. **Determinism is engineered, not incidental** — optional timestamps, stable
+4. **Determinism is engineered, not incidental** - optional timestamps, stable
    ordering, omitted-not-null fields.
 5. **The exit-code taxonomy** encodes the operational difference between "student
    failed" and "we couldn't grade."
 6. **The adapter isolates the host**, so neither side's format constrains the
    other.
 
-**Next:** [PR #214 — Rubric Engine Hardening](03-pr214-rubric-engine-hardening.md),
+**Next:** [PR #214 - Rubric Engine Hardening](03-pr214-rubric-engine-hardening.md),
 which makes the grading *inside* this contract deterministic and honest about what
 it did and didn't evaluate.

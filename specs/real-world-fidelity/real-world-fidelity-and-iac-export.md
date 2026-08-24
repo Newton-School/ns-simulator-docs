@@ -1,6 +1,6 @@
 # NS-Simulator: Real-World Fidelity, Telemetry Mapping, and Infrastructure-as-Code Export
 
-> **Purpose:** Make the simulator faithful to how real-world infrastructure actually works — real technologies (Nginx, PostgreSQL, Redis, Kafka), real network physics (propagation delay, TCP overhead, bandwidth limits), real observability formats (OpenTelemetry, Prometheus, structured logs), and real Infrastructure-as-Code export (Terraform HCL for AWS, GCP, and Azure). If a student builds it in the simulator, it should translate accurately to the real world.
+> **Purpose:** Make the simulator faithful to how real-world infrastructure actually works - real technologies (Nginx, PostgreSQL, Redis, Kafka), real network physics (propagation delay, TCP overhead, bandwidth limits), real observability formats (OpenTelemetry, Prometheus, structured logs), and real Infrastructure-as-Code export (Terraform HCL for AWS, GCP, and Azure). If a student builds it in the simulator, it should translate accurately to the real world.
 >
 > **Date:** June 2026
 >
@@ -11,8 +11,8 @@
 ## Table of Contents
 
 1. [The Translation Problem](#1-the-translation-problem)
-2. [Real-World Technology Configs — What Each Node Actually Is](#2-real-world-technology-configs)
-3. [Real-World Network Physics — How Edges Actually Behave](#3-real-world-network-physics)
+2. [Real-World Technology Configs - What Each Node Actually Is](#2-real-world-technology-configs)
+3. [Real-World Network Physics - How Edges Actually Behave](#3-real-world-network-physics)
 4. [Node-to-Cloud Resource Mapping (AWS, GCP, Azure)](#4-node-to-cloud-resource-mapping)
 5. [Edge-to-Cloud Networking Mapping](#5-edge-to-cloud-networking-mapping)
 6. [Simulator Config → Real Config Translation](#6-simulator-config--real-config-translation)
@@ -36,10 +36,10 @@ Client → CDN → L7 LB → [API Server, API Server] → Primary DB
 
 Today, this is a teaching diagram with a simulation engine behind it. The student sees throughput, latency, queue depth. But they can't:
 
-1. **Deploy it** — no way to turn the diagram into real infrastructure (AWS, GCP, Azure, or on-prem)
-2. **Compare telemetry** — simulator metrics don't look like what Grafana, Datadog, or CloudWatch actually show
-3. **Understand real config** — simulator knobs (`workers`, `capacity`, `meanServiceMs`) don't map to real technology parameters (Nginx `worker_processes`, PostgreSQL `max_connections`, Redis `maxmemory`)
-4. **Reason about network behaviour** — edges have abstract latency distributions instead of real physics (propagation delay + serialization delay + TCP handshake + TLS negotiation)
+1. **Deploy it** - no way to turn the diagram into real infrastructure (AWS, GCP, Azure, or on-prem)
+2. **Compare telemetry** - simulator metrics don't look like what Grafana, Datadog, or CloudWatch actually show
+3. **Understand real config** - simulator knobs (`workers`, `capacity`, `meanServiceMs`) don't map to real technology parameters (Nginx `worker_processes`, PostgreSQL `max_connections`, Redis `maxmemory`)
+4. **Reason about network behaviour** - edges have abstract latency distributions instead of real physics (propagation delay + serialization delay + TCP handshake + TLS negotiation)
 
 ### 1.2 The Four Translation Layers
 
@@ -59,9 +59,9 @@ Today, this is a teaching diagram with a simulation engine behind it. The studen
 
 ---
 
-## 2. Real-World Technology Configs — What Each Node Actually Is
+## 2. Real-World Technology Configs - What Each Node Actually Is
 
-> The simulator's nodes represent real technologies. A "Load Balancer L7" isn't an abstract box — it's Nginx, HAProxy, Envoy, or a cloud ALB. This section defines the real configuration parameters for each technology so the simulator can show students what they'd actually configure in production.
+> The simulator's nodes represent real technologies. A "Load Balancer L7" isn't an abstract box - it's Nginx, HAProxy, Envoy, or a cloud ALB. This section defines the real configuration parameters for each technology so the simulator can show students what they'd actually configure in production.
 
 ### 2.1 Load Balancers
 
@@ -77,7 +77,7 @@ keepalive_timeout 65;            # Connection reuse timeout
 client_max_body_size 10m;        # Max request size
 
 upstream api_servers {
-    # Round-robin is default — matches sim routingStrategy: 'round-robin'
+    # Round-robin is default - matches sim routingStrategy: 'round-robin'
     # Alternative: least_conn; ip_hash; random;
     server 10.0.1.10:8080 weight=5;    # sim edge weight
     server 10.0.1.11:8080 weight=3;
@@ -112,9 +112,9 @@ server {
 | Simulator Property | Nginx Config | Real-World Notes |
 |---|---|---|
 | `queue.workers` | `worker_processes` | Typically set to CPU core count. Each worker handles thousands of connections via epoll/kqueue. |
-| `queue.capacity` | `worker_connections * worker_processes` | Nginx uses event-driven I/O — "capacity" is connection count, not queue depth. Default 512-1024 per worker. |
+| `queue.capacity` | `worker_connections * worker_processes` | Nginx uses event-driven I/O - "capacity" is connection count, not queue depth. Default 512-1024 per worker. |
 | `routingStrategy: round-robin` | Default upstream behaviour | Nginx round-robins by default. `least_conn` available. |
-| `routingStrategy: weighted` | `server ... weight=N` | Direct mapping — weight determines traffic proportion. |
+| `routingStrategy: weighted` | `server ... weight=N` | Direct mapping - weight determines traffic proportion. |
 | `processing.timeout` | `proxy_read_timeout` | Time waiting for upstream response. Default 60s. |
 | `resilience.retry` | `proxy_next_upstream_tries` | Number of upstream servers to try on failure. |
 | `resilience.circuitBreaker` | `max_fails` + `fail_timeout` on upstream server | `server 10.0.1.10:8080 max_fails=3 fail_timeout=30s;` |
@@ -158,7 +158,7 @@ backend api_servers
 | Real Config | What It Does | Impact on Simulation |
 |---|---|---|
 | `timeout queue` | Max time a request waits in HAProxy's queue before being rejected | Should map to a queue timeout (separate from processing timeout) |
-| `maxconn` (per server) | Connection limit to each backend — HAProxy queues beyond this | This IS the real-world analog of `queue.capacity` per downstream node |
+| `maxconn` (per server) | Connection limit to each backend - HAProxy queues beyond this | This IS the real-world analog of `queue.capacity` per downstream node |
 | `inter 5s fall 3 rise 2` | Health check every 5s, mark down after 3 failures, up after 2 successes | Health-check timing affects how quickly failed nodes are removed from rotation |
 | `option httpchk` | Active health checking with real HTTP requests | Sim only has failure/recovery events, not health-check probing |
 
@@ -242,8 +242,8 @@ hot_standby = on                         # Allow reads on replicas
 
 | Simulator Property | PostgreSQL Config | Real-World Notes |
 |---|---|---|
-| `queue.workers` | `max_connections` | Not 1:1 — each connection can run 1 query at a time, but Postgres uses a process-per-connection model. Real `max_connections` is typically 100-500. |
-| `queue.capacity` | Connection pool queue (e.g., PgBouncer `default_pool_size`) | Postgres itself doesn't queue — connection pools do (PgBouncer, pgpool-II). |
+| `queue.workers` | `max_connections` | Not 1:1 - each connection can run 1 query at a time, but Postgres uses a process-per-connection model. Real `max_connections` is typically 100-500. |
+| `queue.capacity` | Connection pool queue (e.g., PgBouncer `default_pool_size`) | Postgres itself doesn't queue - connection pools do (PgBouncer, pgpool-II). |
 | `processing.distribution` (mean ~8ms) | Depends on query complexity, data size, indexes | Simple key lookup: ~0.5ms. Complex join: ~50-500ms. Full table scan: seconds. The mean of 8ms is reasonable for indexed OLTP queries. |
 | `processing.timeout` | `statement_timeout` | Direct mapping. Kills queries exceeding this. |
 | `resources.memory` | `shared_buffers` (~25% of RAM) | If sim says 16GB RAM → `shared_buffers = 4GB`, `effective_cache_size = 12GB` |
@@ -309,7 +309,7 @@ cluster-node-timeout 15000
 
 | Simulator Property | Redis Config | Real-World Notes |
 |---|---|---|
-| `queue.workers` | **1** (single-threaded) | Redis processes commands sequentially on a single thread. It achieves 100K+ ops/s through efficient event loop, not parallelism. The sim's `workers: 4` for Redis is **wrong** — should be `workers: 1`. |
+| `queue.workers` | **1** (single-threaded) | Redis processes commands sequentially on a single thread. It achieves 100K+ ops/s through efficient event loop, not parallelism. The sim's `workers: 4` for Redis is **wrong** - should be `workers: 1`. |
 | `queue.capacity` | `maxclients` | Max simultaneous connections. Commands are queued in each connection's buffer. |
 | `processing.distribution` (mean ~0.1ms) | Inherent | Single-threaded in-memory operations: GET ~25µs, SET ~25µs, LPUSH ~30µs. 0.1ms is realistic. |
 | `resources.memory` | `maxmemory` | Direct mapping. When exceeded, eviction policy kicks in. |
@@ -324,7 +324,7 @@ cluster-node-timeout 15000
 | LPUSH / RPOP | 20-40µs | List operations |
 | ZADD (sorted set) | 30-80µs | O(log N) insertion |
 | ZRANGEBYSCORE | 50-500µs | Depends on result set size |
-| KEYS * (pattern scan) | 1-100ms+ | **Dangerous** — scans all keys, blocks single thread |
+| KEYS * (pattern scan) | 1-100ms+ | **Dangerous** - scans all keys, blocks single thread |
 | Network round-trip | 50-200µs | Same-DC. Dominates for simple commands. |
 
 **Critical insight:** For Redis, network round-trip often exceeds command execution time. The sim's `edgeLatency` to a Redis node matters more than `serviceTime`.
@@ -374,8 +374,8 @@ unclean.leader.election.enable=false     # Don't allow out-of-sync replica to be
 | Simulator Property | Kafka Config | Real-World Notes |
 |---|---|---|
 | `queue.workers` | `num.partitions` (topic-level parallelism) | Partitions are the unit of parallelism. Consumers can have at most 1 consumer per partition in a group. |
-| `queue.capacity` | `log.retention.bytes` or `log.retention.hours` | Kafka doesn't have a "queue depth" — it retains by time/size. Unbounded backlog is normal. |
-| `routingStrategy: broadcast` | Topic with multiple consumer groups | Each consumer group gets every message — this IS broadcast. |
+| `queue.capacity` | `log.retention.bytes` or `log.retention.hours` | Kafka doesn't have a "queue depth" - it retains by time/size. Unbounded backlog is normal. |
+| `routingStrategy: broadcast` | Topic with multiple consumer groups | Each consumer group gets every message - this IS broadcast. |
 | `asyncBoundary: true` | Fundamental property | Kafka is always async. Producers don't wait for consumers. |
 | `processing.distribution` (mean ~0.5ms) | Depends on `acks` setting | `acks=all`: 2-10ms. `acks=1`: 1-3ms. `acks=0`: 0.1-0.5ms. |
 
@@ -464,7 +464,7 @@ sub vcl_backend_response {
 #### iptables / nftables (Linux network firewall)
 
 ```bash
-# iptables rules — what the sim's "firewall" actually is
+# iptables rules - what the sim's "firewall" actually is
 iptables -A INPUT -p tcp --dport 443 -j ACCEPT           # Allow HTTPS
 iptables -A INPUT -p tcp --dport 80 -j ACCEPT            # Allow HTTP
 iptables -A INPUT -p tcp --dport 22 -s 10.0.0.0/8 -j ACCEPT  # SSH from private network only
@@ -565,7 +565,7 @@ Key metrics that affect sim `processing.distribution`:
 
 ---
 
-## 3. Real-World Network Physics — How Edges Actually Behave
+## 3. Real-World Network Physics - How Edges Actually Behave
 
 > The simulator currently models edge latency as a single lognormal sample. Real network latency is the SUM of multiple physical delays. This section defines the real physics so edges can behave like real networks.
 
@@ -692,9 +692,9 @@ The simulator has `bandwidth` as an edge property (default 1000 Mbps) but the en
 **Impact on TCP:** Every lost packet triggers retransmission. With 1% packet loss:
 - Single packet request: ~1% chance of +1 RTT delay
 - 100-packet response: ~63% chance of at least 1 retransmission (1 - 0.99^100)
-- This causes tail latency spikes — explains real-world P99 >> P50
+- This causes tail latency spikes - explains real-world P99 >> P50
 
-### 3.4 Connection Pooling — The Hidden Multiplier
+### 3.4 Connection Pooling - The Hidden Multiplier
 
 Real systems don't open a new TCP connection per request. Connection pools are critical:
 
@@ -710,7 +710,7 @@ Real systems don't open a new TCP connection per request. Connection pools are c
 
 **Simulator impact:** The sim should model whether edges use persistent connections. First-request latency ≠ steady-state latency.
 
-### 3.5 DNS Resolution — The Invisible Latency
+### 3.5 DNS Resolution - The Invisible Latency
 
 Every first request to a new hostname requires DNS resolution:
 
@@ -735,7 +735,7 @@ Based on real-world measurements, the simulator's edge defaults should be update
 | Path Type | Current `latencyMu` | Recommended `latencyMu` | Recommended `latencySigma` | Packet Loss | Bandwidth |
 |---|---|---|---|---|---|
 | `same-rack` | (not available) | -2.0 (≈0.14ms mean) | 0.3 | 0.0001% | 25 Gbps |
-| `same-dc` | 2.3 (≈10ms mean — **too high**) | 0.0 (≈1ms mean) | 0.5 | 0.001% | 10 Gbps |
+| `same-dc` | 2.3 (≈10ms mean - **too high**) | 0.0 (≈1ms mean) | 0.5 | 0.001% | 10 Gbps |
 | `cross-zone` | (not available) | 0.7 (≈2ms mean) | 0.4 | 0.01% | 5 Gbps |
 | `cross-region` | (not available) | 4.3 (≈74ms mean) | 0.3 | 0.05% | 1 Gbps |
 | `internet` | (not available) | 4.6 (≈100ms mean) | 0.8 | 0.5% | 100 Mbps |
@@ -815,14 +815,14 @@ resource "aws_ecs_task_definition" "api_server" {
   family                   = "api-server"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = 1024    # 1 vCPU — derived from simulator vCPU seed
-  memory                   = 2048    # 2 GB — derived from simulator ram seed
+  cpu                      = 1024    # 1 vCPU - derived from simulator vCPU seed
+  memory                   = 2048    # 2 GB - derived from simulator ram seed
   execution_role_arn       = aws_iam_role.ecs_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([{
     name      = "api-server"
-    image     = "ECR_IMAGE_URI"         # placeholder — user fills in
+    image     = "ECR_IMAGE_URI"         # placeholder - user fills in
     cpu       = 1024
     memory    = 2048
     essential = true
@@ -907,7 +907,7 @@ resource "aws_lambda_function" "serverless_fn" {
 | **CDN** (`cdn`) | CloudFront Distribution | `aws_cloudfront_distribution` | `origin`, `default_cache_behavior`, `price_class`, `viewer_certificate` | Cache trait → cache policy TTL |
 | **Ingress Controller** (`ingress-controller`) | ALB Ingress Controller on EKS | `aws_lb` + `kubernetes_ingress_v1` | ALB annotations, path-based routing rules | Similar to L7 LB |
 | **Reverse Proxy** (`reverse-proxy`) | Nginx on ECS/EC2 | `aws_ecs_service` with Nginx image | Nginx config, upstream servers | Routing strategy → upstream config |
-| **NAT Gateway** (`nat-gateway`) | NAT Gateway | `aws_nat_gateway` | `allocation_id` (Elastic IP), `subnet_id` | Minimal config — just needs EIP and subnet |
+| **NAT Gateway** (`nat-gateway`) | NAT Gateway | `aws_nat_gateway` | `allocation_id` (Elastic IP), `subnet_id` | Minimal config - just needs EIP and subnet |
 | **VPN Gateway** (`vpn-gateway`) | VPN Gateway | `aws_vpn_gateway` + `aws_vpn_connection` | `type`, `amazon_side_asn`, customer gateway | No direct sim config mapping |
 | **Service Mesh** (`service-mesh`) | AWS App Mesh | `aws_appmesh_mesh` + virtual services/routers/nodes | Mesh name, virtual services, route config | Routing strategy → route action weights |
 | **Edge Router** (`edge-router`) | Transit Gateway | `aws_ec2_transit_gateway` | `auto_accept_shared_attachments`, route tables | Routing config |
@@ -1018,9 +1018,9 @@ resource "aws_lb_target_group" "tcp_backend" {
 | **Read Replica** (`relational-db`, template `read-replica`) | RDS Read Replica | `aws_db_instance` with `replicate_source_db` | `instance_class`, source DB identifier | Same as primary, plus replication config |
 | **Redis Cache** (`in-memory-cache`) | ElastiCache Redis | `aws_elasticache_replication_group` | `node_type`, `num_cache_clusters`, `parameter_group_name` | `workers` → `num_cache_clusters` (node count in cluster) |
 | **NoSQL DB** (`nosql-db`) | DynamoDB | `aws_dynamodb_table` | `billing_mode`, `read_capacity`, `write_capacity`, `hash_key`, `range_key` | `throughput` → provisioned capacity units |
-| **Object Storage** (`object-storage`) | S3 Bucket | `aws_s3_bucket` + policies | `versioning`, `lifecycle_rule`, `server_side_encryption_configuration` | Minimal — S3 has no "workers" concept |
+| **Object Storage** (`object-storage`) | S3 Bucket | `aws_s3_bucket` + policies | `versioning`, `lifecycle_rule`, `server_side_encryption_configuration` | Minimal - S3 has no "workers" concept |
 | **Search Index** (`search-index`) | OpenSearch Service | `aws_opensearch_domain` | `instance_type`, `instance_count`, `ebs_options`, `zone_awareness_config` | `workers` → `instance_count`, `capacity` → EBS volume size |
-| **Time-series DB** (`time-series-db`) | Amazon Timestream | `aws_timestreamwrite_database` + `aws_timestreamwrite_table` | `magnetic_store_retention`, `memory_store_retention` | Limited config mapping — Timestream is serverless |
+| **Time-series DB** (`time-series-db`) | Amazon Timestream | `aws_timestreamwrite_database` + `aws_timestreamwrite_table` | `magnetic_store_retention`, `memory_store_retention` | Limited config mapping - Timestream is serverless |
 | **Graph DB** (`graph-db`) | Amazon Neptune | `aws_neptune_cluster` + `aws_neptune_cluster_instance` | `instance_class`, `cluster_size`, `engine_version` | `workers` → cluster instance count |
 | **Vector DB** (`vector-db`) | OpenSearch with k-NN plugin | `aws_opensearch_domain` with k-NN | Same as OpenSearch + k-NN settings | Same as search index |
 | **Data Warehouse** (`data-warehouse`) | Amazon Redshift | `aws_redshift_cluster` | `node_type`, `number_of_nodes`, `cluster_type` | `workers` → `number_of_nodes` |
@@ -1042,7 +1042,7 @@ resource "aws_db_instance" "primary" {
 
   db_name  = "appdb"
   username = "dbadmin"              # placeholder
-  password = "CHANGE_ME"            # placeholder — should use Secrets Manager
+  password = "CHANGE_ME"            # placeholder - should use Secrets Manager
 
   multi_az               = true
   db_subnet_group_name   = aws_db_subnet_group.main.name
@@ -1206,7 +1206,7 @@ resource "aws_wafv2_web_acl" "main" {
     allow {}
   }
 
-  # Rate-based rule — derived from simulator blockRate
+  # Rate-based rule - derived from simulator blockRate
   rule {
     name     = "rate-limit"
     priority = 1
@@ -1217,7 +1217,7 @@ resource "aws_wafv2_web_acl" "main" {
 
     statement {
       rate_based_statement {
-        limit              = 2000    # requests per 5 min — derived from blockRate
+        limit              = 2000    # requests per 5 min - derived from blockRate
         aggregate_key_type = "IP"
       }
     }
@@ -1229,7 +1229,7 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
-  # AWS Managed Rules — common protections
+  # AWS Managed Rules - common protections
   rule {
     name     = "aws-managed-common"
     priority = 2
@@ -1284,14 +1284,14 @@ resource "aws_wafv2_web_acl" "main" {
 
 ### 5.1 How Edges Translate
 
-Simulator edges represent network connections between nodes. In AWS, these don't have a single Terraform resource — instead they're the *emergent result* of security groups, target groups, VPC routing, and service configurations.
+Simulator edges represent network connections between nodes. In AWS, these don't have a single Terraform resource - instead they're the *emergent result* of security groups, target groups, VPC routing, and service configurations.
 
 | Simulator Edge Property | AWS Equivalent | How It's Configured |
 |---|---|---|
 | `protocol: 'https'` | HTTPS listener on ALB, TLS termination | `aws_lb_listener` protocol, certificate |
 | `protocol: 'tcp'` | TCP listener on NLB, direct TCP connection | `aws_lb_listener` protocol = "TCP" |
 | `protocol: 'grpc'` | gRPC target group on ALB | `aws_lb_target_group` protocol_version = "GRPC" |
-| `protocol: 'amqp'` | SQS/MQ connection, SDK client config | Not a Terraform resource — it's application code |
+| `protocol: 'amqp'` | SQS/MQ connection, SDK client config | Not a Terraform resource - it's application code |
 | `protocol: 'kafka'` | MSK bootstrap broker connection | `aws_msk_cluster` bootstrap brokers output |
 | `mode: 'synchronous'` | Request-response (HTTP, gRPC call) | Default for most connections |
 | `mode: 'asynchronous'` | SQS/SNS/Kinesis publish | Producer SDK config |
@@ -1348,11 +1348,11 @@ This is the core mapping that makes the simulator faithful to real-world infrast
 | `queue.workers` | count | ECS `desired_count`, Lambda `reserved_concurrent_executions`, RDS `max_connections`, Redis `num_cache_clusters` | Direct mapping. Workers = concurrency capacity. |
 | `queue.capacity` | count | ECS + ALB queuing (not directly configurable), SQS `max_receive_count`, Lambda concurrency overflow to SQS | Capacity overflow → queue depth before rejection. AWS uses auto-scaling instead of fixed capacity. |
 | `queue.discipline` | enum | ALB: round-robin (FIFO equivalent), SQS: FIFO queue vs standard queue, priority queues via separate queues | `'fifo'` → SQS FIFO queue or standard ALB. `'priority'` → multiple SQS queues with priority polling. |
-| `processing.distribution` | statistical dist | Average response time. Not configurable — emergent from instance type + code + data. | The simulator's distribution IS the prediction. AWS doesn't let you set "mean response time." |
+| `processing.distribution` | statistical dist | Average response time. Not configurable - emergent from instance type + code + data. | The simulator's distribution IS the prediction. AWS doesn't let you set "mean response time." |
 | `processing.timeout` | ms | ALB `idle_timeout`, Lambda `timeout`, API Gateway `timeout_milliseconds`, SQS `visibility_timeout_seconds` | Direct mapping in seconds. |
 | `nodeErrorRate` | probability [0,1] | Not directly configurable. Emergent from code quality + infra reliability. | Used for Chaos Engineering injection (AWS FIS). |
 | `securityPolicy.blockRate` | probability [0,1] | WAFv2 `rate_based_statement.limit` | `blockRate` → approximate RPS threshold. E.g., 1.2% blockRate at 10K RPS ≈ 120 req/5min rate limit. |
-| `securityPolicy.droppedPackets` | probability [0,1] | Network Firewall drop rules, Security Group deny rules | Maps to deny rule coverage. Not a probability in AWS — it's binary (allow/deny). |
+| `securityPolicy.droppedPackets` | probability [0,1] | Network Firewall drop rules, Security Group deny rules | Maps to deny rule coverage. Not a probability in AWS - it's binary (allow/deny). |
 | `slo.latencyP99` | ms | CloudWatch Alarm threshold | Direct: alarm when p99 > target. |
 | `slo.availabilityTarget` | fraction [0,1] | CloudWatch Alarm + error budget calculation | `availabilityTarget: 0.999` → alarm when error rate > 0.1%. |
 | `resources.cpu` | vCPUs | ECS `cpu`, Lambda `memory_size` (proportional), EC2 `instance_type` | Direct for ECS. Lambda CPU scales with memory. |
@@ -1365,7 +1365,7 @@ The simulator uses `vCPU` and `ram` seed values. These need to map to actual AWS
 
 ```typescript
 function deriveInstanceType(vCPU: number, ramGB: number, nodeType: string): string {
-  // ECS Fargate — discrete CPU/memory combos
+  // ECS Fargate - discrete CPU/memory combos
   if (nodeType === 'microservice' || nodeType === 'auth-service') {
     const fargateConfigs = [
       { cpu: 256, memory: [512, 1024, 2048] },
@@ -1378,7 +1378,7 @@ function deriveInstanceType(vCPU: number, ramGB: number, nodeType: string): stri
     return `${closestCpu} CPU / ${closestMemory} MB`
   }
   
-  // RDS — instance class tiers
+  // RDS - instance class tiers
   if (nodeType === 'relational-db') {
     if (ramGB <= 2) return 'db.t3.small'
     if (ramGB <= 4) return 'db.t3.medium'
@@ -1387,7 +1387,7 @@ function deriveInstanceType(vCPU: number, ramGB: number, nodeType: string): stri
     return 'db.r6g.2xlarge'
   }
   
-  // ElastiCache — node types
+  // ElastiCache - node types
   if (nodeType === 'in-memory-cache') {
     if (ramGB <= 3) return 'cache.t3.medium'
     if (ramGB <= 6) return 'cache.r6g.large'
@@ -1405,8 +1405,8 @@ Some simulator config is simulation-specific and has no AWS equivalent:
 |---|---|---|
 | `processing.distribution` (the statistical distribution itself) | AWS services don't let you configure response time distributions | Show as a comment: `# Expected p99 latency: ~12ms based on simulation` |
 | `packetLossRate` on internal edges | AWS VPC network has near-zero packet loss | Omit from Terraform, note in comment |
-| `errorRate` on edges | Not a configurable parameter — emergent from service health | Map to chaos engineering fault injection via AWS FIS |
-| `queue.discipline: 'lifo'` | AWS services are FIFO (SQS FIFO) or unordered (SQS Standard) | Map LIFO to a comment: `# Note: LIFO discipline used in simulation — SQS doesn't support LIFO` |
+| `errorRate` on edges | Not a configurable parameter - emergent from service health | Map to chaos engineering fault injection via AWS FIS |
+| `queue.discipline: 'lifo'` | AWS services are FIFO (SQS FIFO) or unordered (SQS Standard) | Map LIFO to a comment: `# Note: LIFO discipline used in simulation - SQS doesn't support LIFO` |
 | Exact throughput numbers | Throughput is emergent from instance sizing + code + network | Use as sizing guidance in comments |
 
 ---
@@ -1444,7 +1444,7 @@ interface SimulationOutput {
 }
 ```
 
-**The data is there. The format is wrong.** The simulator already tracks everything needed — it just doesn't output in standards-compliant formats.
+**The data is there. The format is wrong.** The simulator already tracks everything needed - it just doesn't output in standards-compliant formats.
 
 ### 7.2 OpenTelemetry Trace Format
 
@@ -1547,74 +1547,74 @@ Each simulator per-node metric should map to a CloudWatch metric with proper nam
 
 **For ECS/Fargate nodes (microservice, auth-service, etc.):**
 ```
-AWS/ECS/CPUUtilization          — from utilization
-AWS/ECS/MemoryUtilization       — derived from ram utilization  
-AWS/ECS/RunningTaskCount        — from workers (active count)
+AWS/ECS/CPUUtilization          - from utilization
+AWS/ECS/MemoryUtilization       - derived from ram utilization  
+AWS/ECS/RunningTaskCount        - from workers (active count)
 ```
 
 **For ALB nodes (L7 LB):**
 ```
-AWS/ApplicationELB/RequestCount           — from throughput * period
-AWS/ApplicationELB/TargetResponseTime     — from latency percentiles
-AWS/ApplicationELB/HTTPCode_Target_2XX    — from successfulRequests
-AWS/ApplicationELB/HTTPCode_Target_5XX    — from failedRequests
-AWS/ApplicationELB/HealthyHostCount       — from workers - failed workers
-AWS/ApplicationELB/UnHealthyHostCount     — from failed workers count
-AWS/ApplicationELB/ActiveConnectionCount  — from queue length + active workers
+AWS/ApplicationELB/RequestCount           - from throughput * period
+AWS/ApplicationELB/TargetResponseTime     - from latency percentiles
+AWS/ApplicationELB/HTTPCode_Target_2XX    - from successfulRequests
+AWS/ApplicationELB/HTTPCode_Target_5XX    - from failedRequests
+AWS/ApplicationELB/HealthyHostCount       - from workers - failed workers
+AWS/ApplicationELB/UnHealthyHostCount     - from failed workers count
+AWS/ApplicationELB/ActiveConnectionCount  - from queue length + active workers
 ```
 
 **For NLB nodes (L4 LB):**
 ```
-AWS/NetworkELB/ActiveFlowCount       — from active connections
-AWS/NetworkELB/ProcessedBytes        — from throughput * avg request size
-AWS/NetworkELB/TCP_Target_Reset      — from error count
+AWS/NetworkELB/ActiveFlowCount       - from active connections
+AWS/NetworkELB/ProcessedBytes        - from throughput * avg request size
+AWS/NetworkELB/TCP_Target_Reset      - from error count
 ```
 
 **For RDS nodes (relational-db):**
 ```
-AWS/RDS/DatabaseConnections      — from activeWorkers
-AWS/RDS/ReadLatency              — from avgServiceTime (for read replicas)
-AWS/RDS/WriteLatency             — from avgServiceTime (for primary)
-AWS/RDS/CPUUtilization           — from utilization
-AWS/RDS/FreeableMemory           — derived from ram - (utilization * ram)
-AWS/RDS/ReadIOPS                 — derived from throughput (reads)
-AWS/RDS/WriteIOPS                — derived from throughput (writes)
+AWS/RDS/DatabaseConnections      - from activeWorkers
+AWS/RDS/ReadLatency              - from avgServiceTime (for read replicas)
+AWS/RDS/WriteLatency             - from avgServiceTime (for primary)
+AWS/RDS/CPUUtilization           - from utilization
+AWS/RDS/FreeableMemory           - derived from ram - (utilization * ram)
+AWS/RDS/ReadIOPS                 - derived from throughput (reads)
+AWS/RDS/WriteIOPS                - derived from throughput (writes)
 ```
 
 **For ElastiCache Redis nodes (in-memory-cache):**
 ```
-AWS/ElastiCache/CacheHits        — from cache trait hit count (when implemented)
-AWS/ElastiCache/CacheMisses      — from cache trait miss count
-AWS/ElastiCache/CurrConnections  — from activeWorkers
-AWS/ElastiCache/Evictions        — from rejections (capacity exceeded)
-AWS/ElastiCache/ReplicationLag   — from edge latency to read replica
+AWS/ElastiCache/CacheHits        - from cache trait hit count (when implemented)
+AWS/ElastiCache/CacheMisses      - from cache trait miss count
+AWS/ElastiCache/CurrConnections  - from activeWorkers
+AWS/ElastiCache/Evictions        - from rejections (capacity exceeded)
+AWS/ElastiCache/ReplicationLag   - from edge latency to read replica
 ```
 
 **For Lambda nodes (serverless-function):**
 ```
-AWS/Lambda/Invocations           — from totalArrived
-AWS/Lambda/Duration              — from avgServiceTime
-AWS/Lambda/Errors                — from totalRejected + totalTimedOut
-AWS/Lambda/Throttles             — from rejections (capacity exceeded)
-AWS/Lambda/ConcurrentExecutions  — from activeWorkers
+AWS/Lambda/Invocations           - from totalArrived
+AWS/Lambda/Duration              - from avgServiceTime
+AWS/Lambda/Errors                - from totalRejected + totalTimedOut
+AWS/Lambda/Throttles             - from rejections (capacity exceeded)
+AWS/Lambda/ConcurrentExecutions  - from activeWorkers
 ```
 
 **For SQS nodes (queue):**
 ```
-AWS/SQS/ApproximateNumberOfMessagesVisible   — from queueLength
-AWS/SQS/ApproximateAgeOfOldestMessage        — from max queue wait time
-AWS/SQS/NumberOfMessagesSent                  — from totalArrived
-AWS/SQS/NumberOfMessagesReceived              — from totalProcessed
-AWS/SQS/NumberOfMessagesDeleted               — from totalProcessed (successful)
+AWS/SQS/ApproximateNumberOfMessagesVisible   - from queueLength
+AWS/SQS/ApproximateAgeOfOldestMessage        - from max queue wait time
+AWS/SQS/NumberOfMessagesSent                  - from totalArrived
+AWS/SQS/NumberOfMessagesReceived              - from totalProcessed
+AWS/SQS/NumberOfMessagesDeleted               - from totalProcessed (successful)
 ```
 
 **For CloudFront nodes (cdn):**
 ```
-AWS/CloudFront/Requests          — from totalArrived
-AWS/CloudFront/BytesDownloaded   — from throughput * avg response size
-AWS/CloudFront/4xxErrorRate      — from client errors / total
-AWS/CloudFront/5xxErrorRate      — from server errors / total
-AWS/CloudFront/CacheHitRate      — from cache trait (when implemented)
+AWS/CloudFront/Requests          - from totalArrived
+AWS/CloudFront/BytesDownloaded   - from throughput * avg response size
+AWS/CloudFront/4xxErrorRate      - from client errors / total
+AWS/CloudFront/5xxErrorRate      - from server errors / total
+AWS/CloudFront/CacheHitRate      - from cache trait (when implemented)
 ```
 
 ### 7.4 Prometheus Exposition Format
@@ -1800,7 +1800,7 @@ Defer to later phases:
 ### 8.4 Generated Provider and Backend
 
 ```hcl
-# main.tf — generated by NS-Simulator
+# main.tf - generated by NS-Simulator
 # This Terraform configuration was exported from a simulator topology.
 # Review and customize before applying to a real AWS account.
 
@@ -1865,7 +1865,7 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-# Container image URIs — user must fill these in
+# Container image URIs - user must fill these in
 variable "container_images" {
   description = "Map of service name to container image URI"
   type        = map(string)
@@ -1900,10 +1900,10 @@ The export should also generate a `README.md` with:
 | Option | Pros | Cons | Decision |
 |---|---|---|---|
 | **Terraform HCL** | Industry standard. Declarative. **Multi-cloud out of the box** (AWS, GCP, Azure use different providers, same HCL syntax). Huge community. Students will encounter it everywhere. | HCL syntax is specific to Terraform. Requires Terraform CLI. | **Primary export format** |
-| **Pulumi (TypeScript)** | Multi-cloud. Real programming language. Same TS as our codebase. | Smaller community than Terraform. Requires Pulumi CLI. | **Future secondary** — good for TS-native teams |
+| **Pulumi (TypeScript)** | Multi-cloud. Real programming language. Same TS as our codebase. | Smaller community than Terraform. Requires Pulumi CLI. | **Future secondary** - good for TS-native teams |
 | **AWS CDK / GCP CDK / Azure Bicep** | Vendor-native, type-safe, higher-level. | Vendor-locked. Each cloud has different IaC tooling. | Not recommended for multi-cloud teaching |
 | **CloudFormation / Deployment Manager / ARM Templates** | Native to each cloud. No extra tools. | Verbose. Non-portable. | Not recommended |
-| **Docker Compose** | Simple for local dev. | Not cloud infrastructure — just container orchestration. | Separate export for local dev |
+| **Docker Compose** | Simple for local dev. | Not cloud infrastructure - just container orchestration. | Separate export for local dev |
 | **Kubernetes Manifests (YAML)** | Cloud-agnostic if targeting K8s. Runs on EKS/GKE/AKS. | Only covers compute, not managed services (RDS, SQS, etc.). | Separate K8s export |
 
 ### 9.2 Multi-Cloud Terraform Provider Architecture
@@ -2003,8 +2003,8 @@ resource "google_cloud_run_v2_service" "api_server" {
 
       resources {
         limits = {
-          cpu    = "1000m"      # 1 vCPU — from sim resources.cpu
-          memory = "2Gi"        # 2 GB — from sim resources.memory
+          cpu    = "1000m"      # 1 vCPU - from sim resources.cpu
+          memory = "2Gi"        # 2 GB - from sim resources.memory
         }
       }
 
@@ -2035,7 +2035,7 @@ resource "google_sql_database_instance" "primary" {
   region           = var.region
 
   settings {
-    tier              = "db-custom-2-8192"   # 2 vCPU, 8GB RAM — from sim seeds
+    tier              = "db-custom-2-8192"   # 2 vCPU, 8GB RAM - from sim seeds
     availability_type = "REGIONAL"           # Multi-AZ equivalent
     disk_type         = "PD_SSD"
     disk_size         = 100
@@ -2159,7 +2159,7 @@ resource "azurerm_postgresql_flexible_server" "primary" {
   resource_group_name    = azurerm_resource_group.main.name
   location               = var.location
   version                = "16"
-  sku_name               = "GP_Standard_D2ds_v4"   # 2 vCPU, 8GB — from sim seeds
+  sku_name               = "GP_Standard_D2ds_v4"   # 2 vCPU, 8GB - from sim seeds
   storage_mb             = 102400
   zone                   = "1"
   high_availability {
@@ -2284,13 +2284,13 @@ In the UI, add an "Export" dropdown in the toolbar:
 
 ## 10. Implementation Roadmap
 
-### Phase 0: Real-World Config Fidelity (Foundation — Do First)
+### Phase 0: Real-World Config Fidelity (Foundation - Do First)
 
 | Task | Effort | Impact |
 |---|---|---|
 | Add real technology name to each palette template (e.g., `technology: 'nginx'` for L7 LB) | Low | Students see what the node actually is |
-| Fix edge default latencies (current `latencyMu=2.3` gives ~14ms same-DC — should be ~1ms, see Section 3.6) | Low | Massive accuracy improvement |
-| Fix Redis `workers` seed (currently 4, should be 1 — Redis is single-threaded, see Section 2.2) | Low | Correct a factual error |
+| Fix edge default latencies (current `latencyMu=2.3` gives ~14ms same-DC - should be ~1ms, see Section 3.6) | Low | Massive accuracy improvement |
+| Fix Redis `workers` seed (currently 4, should be 1 - Redis is single-threaded, see Section 2.2) | Low | Correct a factual error |
 | Add network physics to edge latency: propagation delay + serialization + protocol overhead (Section 3) | Medium | Edges behave like real networks |
 | Add per-path-type edge defaults with correct latencies, packet loss, bandwidth (Section 3.6) | Low | Accurate defaults |
 
@@ -2298,16 +2298,16 @@ In the UI, add an "Export" dropdown in the toolbar:
 
 | Task | Effort | Files | Impact |
 |---|---|---|---|
-| Add OTEL trace exporter — convert `RequestTrace[]` to OTLP JSON with semantic conventions | Medium | New `src/engine/export/otelExporter.ts` | Students see real trace format |
-| Add Prometheus metrics exporter — convert `PerNodeMetrics` to exposition format with histograms | Low | New `src/engine/export/prometheusExporter.ts` | Students see real metrics format |
-| Add structured JSON log exporter — convert `DebugEvent[]` to JSON logs with traceId correlation | Low | New `src/engine/export/logExporter.ts` | Students see real log format |
+| Add OTEL trace exporter - convert `RequestTrace[]` to OTLP JSON with semantic conventions | Medium | New `src/engine/export/otelExporter.ts` | Students see real trace format |
+| Add Prometheus metrics exporter - convert `PerNodeMetrics` to exposition format with histograms | Low | New `src/engine/export/prometheusExporter.ts` | Students see real metrics format |
+| Add structured JSON log exporter - convert `DebugEvent[]` to JSON logs with traceId correlation | Low | New `src/engine/export/logExporter.ts` | Students see real log format |
 | Add "Export Telemetry" button to ResultsTray | Low | Modify `ResultsTray.tsx`, add `FileService` call | User can download telemetry |
 
 ### Phase 2: Terraform AWS Export (Medium Effort, High Value)
 
 | Task | Effort | Files | Impact |
 |---|---|---|---|
-| Create provider-agnostic resource mapping registry | Medium | New `src/engine/export/terraform/resourceMapping.ts` | Core mapping logic — works for all providers |
+| Create provider-agnostic resource mapping registry | Medium | New `src/engine/export/terraform/resourceMapping.ts` | Core mapping logic - works for all providers |
 | Create HCL code generator | Medium | New `src/engine/export/terraform/hclGenerator.ts` | Generates `.tf` content |
 | Implement AWS compute export (ECS + Lambda) | Medium | New `src/engine/export/terraform/aws/compute.ts` | Most common resource type |
 | Implement AWS networking export (ALB + NLB + target groups) | Medium | New `src/engine/export/terraform/aws/networking.ts` | Critical for LB nodes |
@@ -2331,7 +2331,7 @@ In the UI, add an "Export" dropdown in the toolbar:
 
 | Task | Effort | Impact |
 |---|---|---|
-| Add real config fields to node properties panel — show Nginx/HAProxy/Postgres config alongside sim params | Medium | Students see real technology configs |
+| Add real config fields to node properties panel - show Nginx/HAProxy/Postgres config alongside sim params | Medium | Students see real technology configs |
 | Add instance type derivation from vCPU/RAM seeds (per cloud provider) | Low | Auto-suggest appropriate instance types |
 | Add cost estimation to export (per cloud provider) | Medium | Help students understand cloud costs |
 | Generate monitoring config (CloudWatch alarms / GCP alerts / Azure Monitor) from SLO config | Low | Direct SLO → alerting mapping |

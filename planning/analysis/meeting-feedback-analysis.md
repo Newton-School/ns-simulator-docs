@@ -24,8 +24,8 @@
 Three themes emerged across the meetings:
 
 1. **The simulator is already strong for teaching**, but needs blueprints, accurate node behaviour, and lower setup friction to be classroom-ready.
-2. **Product direction should be incremental** — nail the fundamentals before layering on observability, gamification, or interview prep.
-3. **The load balancer routing-to-dead-servers bug is a blocker** — until core node behaviour is correct, demos will undermine trust in the tool.
+2. **Product direction should be incremental** - nail the fundamentals before layering on observability, gamification, or interview prep.
+3. **The load balancer routing-to-dead-servers bug is a blocker** - until core node behaviour is correct, demos will undermine trust in the tool.
 
 The feedback is well-aligned. The "later thoughts" section essentially says: fix the foundation first, demo it, collect feedback, then build forward. That should be the governing principle for everything below.
 
@@ -43,23 +43,23 @@ Service Mesh, CDN, Ingress Controller, Reverse Proxy, and API Gateway nodes all 
 
 | Component | Palette Status | Teaching-Ready? |
 |---|---|---|
-| L4 Load Balancer | Exists (`load-balancer-l4`) | Yes — distinct from L7 in latency profile |
-| L7 Load Balancer | Exists (`load-balancer-l7`) | Yes — supports content-based routing |
-| Service Mesh | Exists (`service-mesh`) | Partial — node exists but sidecar-proxy injection pattern not automated |
-| CDN | Exists (`cdn`) | Partial — processes requests but no cache hit/miss simulation yet |
-| WAF | Exists (`waf`) | Yes — configurable block rate, security_blocked rejection |
-| API Gateway | Exists (`api-gateway`) | Yes — L7 routing with gateway semantics |
+| L4 Load Balancer | Exists (`load-balancer-l4`) | Yes - distinct from L7 in latency profile |
+| L7 Load Balancer | Exists (`load-balancer-l7`) | Yes - supports content-based routing |
+| Service Mesh | Exists (`service-mesh`) | Partial - node exists but sidecar-proxy injection pattern not automated |
+| CDN | Exists (`cdn`) | Partial - processes requests but no cache hit/miss simulation yet |
+| WAF | Exists (`waf`) | Yes - configurable block rate, security_blocked rejection |
+| API Gateway | Exists (`api-gateway`) | Yes - L7 routing with gateway semantics |
 
 **What's needed to make this classroom-ready:**
 
-- **Cache hit/miss on CDN and Redis nodes** — without this, adding a cache node doesn't meaningfully change downstream traffic, making caching demos hollow. Implementation: add a `cacheHitRate` field (0.0–1.0) to node config; on hit, complete the request immediately without forwarding downstream; on miss, forward to origin. This is a medium-effort change in `GGcKNode` arrival handling and the `RoutingTable`.
-- **Service Mesh sidecar pattern** — currently, students must manually place sidecar proxies beside each service. A "wrap in service mesh" action that auto-inserts sidecars would make the pattern teachable in minutes rather than a 15-minute setup exercise. This is a nice-to-have, not a blocker.
+- **Cache hit/miss on CDN and Redis nodes** - without this, adding a cache node doesn't meaningfully change downstream traffic, making caching demos hollow. Implementation: add a `cacheHitRate` field (0.0-1.0) to node config; on hit, complete the request immediately without forwarding downstream; on miss, forward to origin. This is a medium-effort change in `GGcKNode` arrival handling and the `RoutingTable`.
+- **Service Mesh sidecar pattern** - currently, students must manually place sidecar proxies beside each service. A "wrap in service mesh" action that auto-inserts sidecars would make the pattern teachable in minutes rather than a 15-minute setup exercise. This is a nice-to-have, not a blocker.
 
 **How to go ahead:**
 
 1. CDN/Redis cache hit/miss is the highest-impact teaching feature missing. Implement it as a P0 alongside the load balancer fix (Section 4.1).
 2. For service mesh, the current manual approach is acceptable for now. Document a step-by-step "build a service mesh" tutorial in the scenario library.
-3. L4 vs L7 teaching is ready today — create a pre-built comparison topology (Section 2.3) and it's demo-ready.
+3. L4 vs L7 teaching is ready today - create a pre-built comparison topology (Section 2.3) and it's demo-ready.
 
 ---
 
@@ -71,12 +71,12 @@ The simulator has 67 palette entries across 12 categories. Each node already has
 
 **What's needed:**
 
-- **Component info cards** — a tooltip or expandable panel on each node showing: (a) what this component does in plain English, (b) the real-world AWS/GCP equivalent, (c) when you'd use it. The data for this mostly exists in the canonical catalogue CSVs (`Component taxonomy.csv`, `Provider mapping (quick).csv`), it just needs to surface in the UI.
-- **"Real-world mapping" labels** — optional annotations showing "This is your AWS ALB" or "This is your Cloudflare CDN" alongside the generic component name.
+- **Component info cards** - a tooltip or expandable panel on each node showing: (a) what this component does in plain English, (b) the real-world AWS/GCP equivalent, (c) when you'd use it. The data for this mostly exists in the canonical catalogue CSVs (`Component taxonomy.csv`, `Provider mapping (quick).csv`), it just needs to surface in the UI.
+- **"Real-world mapping" labels** - optional annotations showing "This is your AWS ALB" or "This is your Cloudflare CDN" alongside the generic component name.
 
 **How to go ahead:**
 
-1. Short-term: add a markdown-rendered `description` field to palette templates that shows on hover or in the properties panel. Low effort — it's a UI-only change reading from existing catalogue data.
+1. Short-term: add a markdown-rendered `description` field to palette templates that shows on hover or in the properties panel. Low effort - it's a UI-only change reading from existing catalogue data.
 2. Medium-term: build the "Component Reference" panel as a sidebar tab that students can browse independently of the canvas.
 
 ---
@@ -90,12 +90,12 @@ The simulator already supports save/load of topology JSON files. Pre-built scena
 **What's needed:**
 
 - **A `scenarios/` directory** with `.json` topology files for common teaching use cases.
-- **A "Scenario Library" UI panel** — a browsable list with titles, descriptions, course/week tags, and one-click load. Could be a new tab in the left sidebar alongside the existing node palette.
-- **Starter set of 8–10 scenarios**, prioritized by meeting feedback:
+- **A "Scenario Library" UI panel** - a browsable list with titles, descriptions, course/week tags, and one-click load. Could be a new tab in the left sidebar alongside the existing node palette.
+- **Starter set of 8-10 scenarios**, prioritized by meeting feedback:
 
 | Scenario | Purpose | Priority |
 |---|---|---|
-| Single Server Basics | "What is a server?" — 1 client, 1 server | P0 |
+| Single Server Basics | "What is a server?" - 1 client, 1 server | P0 |
 | Load Balanced Web App | Client → LB → 3 servers → DB | P0 |
 | L4 vs L7 Comparison | Side-by-side topologies showing latency and routing differences | P0 |
 | Caching Impact | Same topology with and without Redis cache | P0 (depends on cache hit/miss) |
@@ -108,7 +108,7 @@ The simulator already supports save/load of topology JSON files. Pre-built scena
 
 **How to go ahead:**
 
-1. Create the JSON topology files first — this can be done by building each topology in the existing UI and saving. No code changes required.
+1. Create the JSON topology files first - this can be done by building each topology in the existing UI and saving. No code changes required.
 2. Build the Scenario Library panel as a lightweight sidebar component that reads from a manifest file listing available scenarios. Medium effort.
 3. Tag each scenario with metadata: course (CN/SESD/FSDE), week, difficulty, concepts covered.
 
@@ -118,13 +118,13 @@ The simulator already supports save/load of topology JSON files. Pre-built scena
 
 **Feasibility: This is already the simulator's core value proposition.**
 
-The simulator runs entirely in the browser as a Vite SPA — no AWS account, no billing, no IAM configuration, no waiting for resource provisioning. Students open a URL and start building.
+The simulator runs entirely in the browser as a Vite SPA - no AWS account, no billing, no IAM configuration, no waiting for resource provisioning. Students open a URL and start building.
 
 **Current advantages over AWS demos:**
 
 | Dimension | AWS Demo | NS-Simulator |
 |---|---|---|
-| Setup time | 20–45 min (IAM, VPC, EC2, ALB config) | 0 min (open browser) |
+| Setup time | 20-45 min (IAM, VPC, EC2, ALB config) | 0 min (open browser) |
 | Cost | Real AWS charges | Free |
 | Risk | Accidental charges, misconfigured security groups | None |
 | Reproducibility | Depends on account state, region, quotas | Deterministic (seeded PRNG) |
@@ -133,14 +133,14 @@ The simulator runs entirely in the browser as a Vite SPA — no AWS account, no 
 
 **What's needed to fully deliver on this promise:**
 
-- **Pre-built scenarios** (Section 2.3) — eliminates the remaining setup: building the topology from scratch.
-- **Guided tutorial for first-time users** — a tooltip-driven walkthrough of "place a node → connect it → configure it → run → read results." Medium effort, but essential for the first class session. Without it, the first 30 minutes of class becomes tool orientation.
-- **Shareable URLs or embed codes** — so instructors can share a topology link rather than a JSON file students must download and load. This requires a backend or URL-encoded state, so it's a later feature.
+- **Pre-built scenarios** (Section 2.3) - eliminates the remaining setup: building the topology from scratch.
+- **Guided tutorial for first-time users** - a tooltip-driven walkthrough of "place a node → connect it → configure it → run → read results." Medium effort, but essential for the first class session. Without it, the first 30 minutes of class becomes tool orientation.
+- **Shareable URLs or embed codes** - so instructors can share a topology link rather than a JSON file students must download and load. This requires a backend or URL-encoded state, so it's a later feature.
 
 **How to go ahead:**
 
 1. Scenarios + tutorial mode are the immediate priorities.
-2. Shareable URLs can wait — JSON file sharing via LMS (Google Classroom, etc.) is good enough for now.
+2. Shareable URLs can wait - JSON file sharing via LMS (Google Classroom, etc.) is good enough for now.
 
 ---
 
@@ -166,7 +166,7 @@ This is the right approach. The simulator is mature enough that a demo with fixe
 
 **How to go ahead:**
 
-1. Fix the load balancer bug (Section 4.1) and build 4 scenarios — that's Demo 1.
+1. Fix the load balancer bug (Section 4.1) and build 4 scenarios - that's Demo 1.
 2. Schedule Demo 1 with instructors and collect structured feedback (what worked, what confused, what's missing).
 3. Use Demo 1 feedback to prioritize Demo 2 features.
 
@@ -182,19 +182,19 @@ This is the right approach. The simulator is mature enough that a demo with fixe
 
 The simulator already captures rich observability data during simulation:
 
-- **Per-node metrics:** throughput, latency percentiles (P50/P90/P95/P99), utilization, queue depth, error rate, availability — displayed in the ResultsTray.
-- **Request tracing:** sampled waterfall traces showing queue wait, service time, and edge latency per hop — displayed in the Traces tab.
-- **Time-series snapshots:** 1-second interval captures of node state (queue length, active workers, utilization) — used for live canvas colouring.
+- **Per-node metrics:** throughput, latency percentiles (P50/P90/P95/P99), utilization, queue depth, error rate, availability - displayed in the ResultsTray.
+- **Request tracing:** sampled waterfall traces showing queue wait, service time, and edge latency per hop - displayed in the Traces tab.
+- **Time-series snapshots:** 1-second interval captures of node state (queue length, active workers, utilization) - used for live canvas colouring.
 - **SLO breach detection:** compares observed metrics against configured targets, flags breaches with severity.
 - **Health checks:** Little's Law verification, conservation checks, warmup adequacy.
-- **Observability pipeline nodes:** Metrics Collector, Log Collector, Centralized Logging, Tracing Collector, Alerting Engine, Health Check Manager — all exist as palette components.
+- **Observability pipeline nodes:** Metrics Collector, Log Collector, Centralized Logging, Tracing Collector, Alerting Engine, Health Check Manager - all exist as palette components.
 
 **What a "Datadog-like experience" would require:**
 
 | Feature | Current State | Gap |
 |---|---|---|
 | Real-time dashboards with custom charts | Time-series data exists but only surfaces as canvas colours and summary stats | Need a dashboard view with configurable line/bar charts per metric per node |
-| Trace waterfall viewer | Exists in Traces tab | Already close to Datadog's trace view — needs filtering and search |
+| Trace waterfall viewer | Exists in Traces tab | Already close to Datadog's trace view - needs filtering and search |
 | Log stream viewer | Debug events captured | Need a formatted log stream panel with severity filtering |
 | Alerting with thresholds | SLO breaches detected post-simulation | Need real-time alerting during simulation (toast/badge when threshold crossed) |
 | Service map with live traffic | Canvas shows nodes with status colours | Need animated traffic flow rates on edges (partially exists via PacketEdge pulse) |
@@ -202,7 +202,7 @@ The simulator already captures rich observability data during simulation:
 
 **How to go ahead:**
 
-1. **Short-term (low effort):** Surface the existing time-series snapshot data in a new "Dashboard" tab in the ResultsTray. Show line charts for utilization, queue depth, and throughput per node over simulation time. This uses data that already exists — it's purely a visualization task.
+1. **Short-term (low effort):** Surface the existing time-series snapshot data in a new "Dashboard" tab in the ResultsTray. Show line charts for utilization, queue depth, and throughput per node over simulation time. This uses data that already exists - it's purely a visualization task.
 2. **Medium-term:** Add real-time SLO breach toasts during simulation (the engine already detects them, just needs to emit them as live events to the UI).
 3. **Long-term:** Build a dedicated "Observability View" mode that presents the same topology but with Datadog-style overlays: per-edge latency labels, per-node error rate badges, and a trace search panel. This is a significant UI effort but would be a differentiating feature.
 
@@ -242,11 +242,11 @@ The simulator's G/G/c/K queueing model is already grounded in real queueing theo
 
 The simulator already has the raw ingredients:
 
-- **Node error rates** — configurable per-node failure injection.
-- **Node failure/recovery events** — nodes can transition to `failed` status.
-- **SLO configuration** — latency P99 targets, availability targets, error budgets.
-- **SLO breach detection** — post-simulation analysis flags violations with severity.
-- **Health check manager node** — exists in the palette.
+- **Node error rates** - configurable per-node failure injection.
+- **Node failure/recovery events** - nodes can transition to `failed` status.
+- **SLO configuration** - latency P99 targets, availability targets, error budgets.
+- **SLO breach detection** - post-simulation analysis flags violations with severity.
+- **Health check manager node** - exists in the palette.
 
 **What "dedicated workflows" means in practice:**
 
@@ -262,9 +262,9 @@ A set of guided scenarios that progressively introduce reliability concepts:
 
 **How to go ahead:**
 
-1. Workflows 1–2 are possible today with pre-built scenarios and instructor narration.
+1. Workflows 1-2 are possible today with pre-built scenarios and instructor narration.
 2. Workflow 3 requires the LB routing fix.
-3. Workflows 4–5 require circuit breaker runtime and error budget tracking — schedule for later.
+3. Workflows 4-5 require circuit breaker runtime and error budget tracking - schedule for later.
 4. Package these as a "Reliability 101" scenario collection in the scenario library.
 
 ---
@@ -273,7 +273,7 @@ A set of guided scenarios that progressively introduce reliability concepts:
 
 **Feasibility: Possible as a long-term direction, not immediate.**
 
-The simulator's topology builder is inherently a system design tool — students drag components, connect them, configure behaviour, and observe the system under load. This maps directly to system design interview questions:
+The simulator's topology builder is inherently a system design tool - students drag components, connect them, configure behaviour, and observe the system under load. This maps directly to system design interview questions:
 
 | Interview Question Type | Simulator Support |
 |---|---|
@@ -285,17 +285,17 @@ The simulator's topology builder is inherently a system design tool — students
 
 **What's needed to make this a dedicated product surface:**
 
-- **Interview question templates** — pre-built starting points and target architectures for common questions.
-- **Constraints mode** — "design a system that handles 10,000 RPS with P99 < 200ms" with automated validation.
-- **Scoring rubric** — did the student include caching? Load balancing? Database scaling? Observability? Score based on architectural completeness and SLO compliance.
-- **Time pressure** — optional timer for interview simulation.
+- **Interview question templates** - pre-built starting points and target architectures for common questions.
+- **Constraints mode** - "design a system that handles 10,000 RPS with P99 < 200ms" with automated validation.
+- **Scoring rubric** - did the student include caching? Load balancing? Database scaling? Observability? Score based on architectural completeness and SLO compliance.
+- **Time pressure** - optional timer for interview simulation.
 
 **How to go ahead:**
 
 1. This is a natural extension of the scenario library + assignment validation features.
 2. Don't build a separate "interview prep" mode. Instead, make the core product good enough for teaching, and interview prep falls out naturally.
-3. Once the scenario library, SLO validation, and assignment mode exist, create an "Interview Prep" scenario collection with 10–15 common system design questions.
-4. This is a Phase 3 initiative — after the classroom use case is solid.
+3. Once the scenario library, SLO validation, and assignment mode exist, create an "Interview Prep" scenario collection with 10-15 common system design questions.
+4. This is a Phase 3 initiative - after the classroom use case is solid.
 
 ---
 
@@ -306,15 +306,15 @@ The simulator's topology builder is inherently a system design tool — students
 The Terraform repository likely provides structured, progressive labs with clear instructions and expected outcomes. The analogous pattern for the simulator:
 
 - **Each scenario = one "lab"** with a title, objective, pre-built starting topology (or empty canvas with instructions), and expected outcome (SLO targets to hit, specific metrics to observe).
-- **Progressive difficulty** — labs build on each other: Lab 1 teaches single server, Lab 2 adds a load balancer, Lab 3 introduces caching, etc.
-- **Self-contained** — each lab includes all instructions and doesn't require external documentation.
+- **Progressive difficulty** - labs build on each other: Lab 1 teaches single server, Lab 2 adds a load balancer, Lab 3 introduces caching, etc.
+- **Self-contained** - each lab includes all instructions and doesn't require external documentation.
 
 **How to go ahead:**
 
 1. Review the Terraform repo structure to understand the lab format (number of labs, progression, instruction style).
 2. Map the lab structure to simulator scenarios: each lab = one JSON topology + one markdown instruction file.
-3. Build 5–6 progressive labs as a proof of concept for one course (CN is the highest alignment).
-4. This aligns with the scenario library work (Section 2.3) — labs are scenarios with added instructional metadata.
+3. Build 5-6 progressive labs as a proof of concept for one course (CN is the highest alignment).
+4. This aligns with the scenario library work (Section 2.3) - labs are scenarios with added instructional metadata.
 
 ---
 
@@ -328,11 +328,11 @@ The simulator currently has no gamification. Adding it requires defining what "s
 
 | Gamification Element | Implementation Approach | Effort |
 |---|---|---|
-| **Score per scenario** | Points based on: SLO compliance, cost efficiency, component count (fewer = better) | Medium — scoring function over existing metrics |
-| **Achievements / badges** | "First SLO breach resolved", "Survived a traffic spike", "Zero rejections under 5000 RPS" | Medium — event-driven badge system |
-| **Leaderboard** | Rank students by score on a shared scenario | High — requires backend for score submission |
-| **Progressive challenges** | Unlock harder scenarios by completing easier ones | Low — metadata on scenario library |
-| **Star rating per scenario** | 1–3 stars based on how well SLOs were met | Low — threshold-based on existing metrics |
+| **Score per scenario** | Points based on: SLO compliance, cost efficiency, component count (fewer = better) | Medium - scoring function over existing metrics |
+| **Achievements / badges** | "First SLO breach resolved", "Survived a traffic spike", "Zero rejections under 5000 RPS" | Medium - event-driven badge system |
+| **Leaderboard** | Rank students by score on a shared scenario | High - requires backend for score submission |
+| **Progressive challenges** | Unlock harder scenarios by completing easier ones | Low - metadata on scenario library |
+| **Star rating per scenario** | 1-3 stars based on how well SLOs were met | Low - threshold-based on existing metrics |
 
 The Python farming game reference suggests the team values visual feedback loops where actions have immediate, visible consequences. The simulator already provides this through canvas colouring (green → yellow → red), animated edges, and real-time metrics. Areas to improve:
 
@@ -346,11 +346,11 @@ The Python farming game reference suggests the team values visual feedback loops
 
 **How to go ahead:**
 
-1. **Immediate:** Star rating per scenario is low-effort and high-engagement. Show 1–3 stars on the results screen based on SLO compliance, throughput efficiency, and cost.
+1. **Immediate:** Star rating per scenario is low-effort and high-engagement. Show 1-3 stars on the results screen based on SLO compliance, throughput efficiency, and cost.
 2. **Short-term:** Progressive challenges via scenario library ordering (complete Scenario 1 to unlock Scenario 2).
 3. **Medium-term:** Scoring function that combines SLO compliance, cost efficiency, and architecture quality.
 4. **Long-term:** Leaderboard requires a backend. Defer until the classroom pilot validates that gamification drives engagement.
-5. **Visualisation improvements** can be sprinkled in incrementally — each one is a small, independent UI change.
+5. **Visualisation improvements** can be sprinkled in incrementally - each one is a small, independent UI change.
 
 ---
 
@@ -393,7 +393,7 @@ The simulator already has a large surface area (67 node types, 12 distributions,
 **Implementation approach:**
 
 1. In `RoutingTable.resolve()`, filter candidate edges to exclude those whose target node has `status === 'failed'`.
-2. This requires the routing table to have access to node state — either by passing a `nodeHealth` map at resolution time, or by registering a health callback when building the routing table.
+2. This requires the routing table to have access to node state - either by passing a `nodeHealth` map at resolution time, or by registering a health callback when building the routing table.
 3. If all targets are unhealthy, the request should be rejected with reason `no_healthy_targets` rather than silently failing.
 4. Optional: add a configurable `healthCheckInterval` on router-type nodes to control how quickly they detect failures (instant vs delayed detection adds realism).
 
@@ -456,10 +456,10 @@ This is the iteration model proposed in the meetings. Translating it into a conc
 
 **After each demo:**
 
-1. **Structured feedback form** — 5 questions: (a) What concept did you try to teach? (b) Did the simulator behave as expected? (c) What confused you or your students? (d) What was missing? (e) What would you show in the next demo?
-2. **Bug triage** — any behaviour that contradicted real-world expectations goes into a "realism fix" backlog.
-3. **Feature requests** — ranked by how many instructors/students asked for the same thing.
-4. **Next demo gate** — address top 3 bugs and top 1 feature request before the next demo.
+1. **Structured feedback form** - 5 questions: (a) What concept did you try to teach? (b) Did the simulator behave as expected? (c) What confused you or your students? (d) What was missing? (e) What would you show in the next demo?
+2. **Bug triage** - any behaviour that contradicted real-world expectations goes into a "realism fix" backlog.
+3. **Feature requests** - ranked by how many instructors/students asked for the same thing.
+4. **Next demo gate** - address top 3 bugs and top 1 feature request before the next demo.
 
 ---
 
@@ -473,13 +473,13 @@ Based on all the feedback, here is the recommended phased approach:
 
 | # | Task | Type | Effort | Depends On |
 |---|---|---|---|---|
-| 1 | Fix LB routing to skip failed nodes | Bug fix | Low | — |
-| 2 | Add queueing theory validation tests | Testing | Medium | — |
+| 1 | Fix LB routing to skip failed nodes | Bug fix | Low | - |
+| 2 | Add queueing theory validation tests | Testing | Medium | - |
 | 3 | Build 4 core scenarios (Single Server, LB Web App, L4 vs L7, Security Layers) | Content | Low | #1 |
-| 4 | Add component description tooltips from catalogue data | UI | Low | — |
-| 5 | Run Demo 1 with instructors, collect feedback | Process | — | #1–4 |
+| 4 | Add component description tooltips from catalogue data | UI | Low | - |
+| 5 | Run Demo 1 with instructors, collect feedback | Process | - | #1-4 |
 
-**Timeline estimate:** 1–2 weeks of focused work for tasks 1–4.
+**Timeline estimate:** 1-2 weeks of focused work for tasks 1-4.
 
 ### Phase 2: Classroom Ready (Target: Demo 2 with Students)
 
@@ -487,14 +487,14 @@ Based on all the feedback, here is the recommended phased approach:
 
 | # | Task | Type | Effort | Depends On |
 |---|---|---|---|---|
-| 6 | Implement cache hit/miss simulation | Engine | Medium | — |
+| 6 | Implement cache hit/miss simulation | Engine | Medium | - |
 | 7 | Build 4 more scenarios (Caching, Pub/Sub, Observability, Scale from Zero) | Content | Low | #6 |
-| 8 | Build guided tutorial (first-time user walkthrough) | UI | Medium | — |
-| 9 | Add time-series dashboard tab in ResultsTray | UI | Medium | — |
-| 10 | Add star rating per scenario | UI | Low | — |
-| 11 | Run Demo 2 with one CN section, collect feedback | Process | — | #6–10 |
+| 8 | Build guided tutorial (first-time user walkthrough) | UI | Medium | - |
+| 9 | Add time-series dashboard tab in ResultsTray | UI | Medium | - |
+| 10 | Add star rating per scenario | UI | Low | - |
+| 11 | Run Demo 2 with one CN section, collect feedback | Process | - | #6-10 |
 
-**Timeline estimate:** 2–3 weeks of focused work for tasks 6–10.
+**Timeline estimate:** 2-3 weeks of focused work for tasks 6-10.
 
 ### Phase 3: Depth and Breadth (Target: Multi-Course Integration)
 
@@ -502,16 +502,16 @@ Based on all the feedback, here is the recommended phased approach:
 
 | # | Task | Type | Effort | Depends On |
 |---|---|---|---|---|
-| 12 | Implement auto-scaling runtime | Engine | High | — |
-| 13 | Implement circuit breaker state machine | Engine | Medium | — |
-| 14 | Implement rate limiter (token bucket) | Engine | Low | — |
+| 12 | Implement auto-scaling runtime | Engine | High | - |
+| 13 | Implement circuit breaker state machine | Engine | Medium | - |
+| 14 | Implement rate limiter (token bucket) | Engine | Low | - |
 | 15 | Build reliability workflow scenarios | Content | Medium | #12, #13 |
-| 16 | Build assignment validation mode | Engine + UI | High | — |
+| 16 | Build assignment validation mode | Engine + UI | High | - |
 | 17 | Build interview prep scenario collection | Content | Medium | #16 |
-| 18 | Add scoring function (SLO + cost + architecture quality) | Engine | Medium | — |
-| 19 | Explore real-time alerting during simulation | UI | Medium | — |
+| 18 | Add scoring function (SLO + cost + architecture quality) | Engine | Medium | - |
+| 19 | Explore real-time alerting during simulation | UI | Medium | - |
 
-**Timeline estimate:** 4–6 weeks, can be parallelised across team members.
+**Timeline estimate:** 4-6 weeks, can be parallelised across team members.
 
 ### Phase 4: Polish and Scale (Future)
 

@@ -1,4 +1,4 @@
-# State Management — Zustand + XState
+# State Management - Zustand + XState
 
 > Decision: use Zustand for data stores, XState v5 for the simulation runner state machine. No other state libraries.
 
@@ -10,19 +10,19 @@ The application has two fundamentally different state problems that require diff
 
 The first is covered in `adr-no-custom-change-detection.md`: the BUILD phase (topology editing) and the SIMULATE phase (engine → UI via Web Worker). That document resolves the reactivity question correctly.
 
-This document resolves a more specific question: within the SIMULATE phase, what manages the lifecycle of the simulation runner itself — the state machine that governs idle → validating → running → paused → complete/error?
+This document resolves a more specific question: within the SIMULATE phase, what manages the lifecycle of the simulation runner itself - the state machine that governs idle → validating → running → paused → complete/error?
 
 ---
 
 ## The Two State Problems
 
-### Problem A — Data State (stores)
+### Problem A - Data State (stores)
 
 Topology nodes, edges, workload config, file metadata, panel visibility, theme. This is CRUD data with derived values. The shape is stable, the mutations are explicit, and components subscribe selectively.
 
 **Zustand is the right tool for this.**
 
-### Problem B — Process State (simulation runner lifecycle)
+### Problem B - Process State (simulation runner lifecycle)
 
 The simulation runner has a finite set of states and a finite set of valid transitions between them:
 
@@ -34,7 +34,7 @@ idle
 validating
   ├── VALID ─────────────────► running
   ├── INVALID ───────────────► error
-  └── (can't PAUSE, can't STOP — not started yet)
+  └── (can't PAUSE, can't STOP - not started yet)
 
 running
   ├── PAUSE ─────────────────► paused
@@ -45,15 +45,15 @@ running
 paused
   ├── RESUME ────────────────► running
   ├── STOP ──────────────────► idle
-  └── (can't RUN — already ran)
+  └── (can't RUN - already ran)
 
 complete
   ├── RUN ──────────────────► validating   (run again)
-  └── (can't PAUSE — nothing running)
+  └── (can't PAUSE - nothing running)
 
 error
   ├── RUN ──────────────────► validating   (retry)
-  └── (can't PAUSE — nothing running)
+  └── (can't PAUSE - nothing running)
 ```
 
 The Web Worker is created when entering `running`, and terminated when entering `idle`, `complete`, or `error`. This is a resource that is owned by a specific state.
@@ -73,7 +73,7 @@ const useSimulationStore = create((set, get) => ({
 
   run: (topology) => {
     const { status } = get()
-    // Manual guard — nothing enforces this structurally
+    // Manual guard - nothing enforces this structurally
     if (status !== 'idle' && status !== 'complete' && status !== 'error') return
     set({ status: 'validating' })
     // Async validation...
@@ -113,7 +113,7 @@ The problems with this approach:
 
 ## Why XState for the Simulation Runner
 
-XState models the simulation runner as an explicit state machine. Impossible transitions are structurally impossible — not guards you write, but transitions that don't exist in the config.
+XState models the simulation runner as an explicit state machine. Impossible transitions are structurally impossible - not guards you write, but transitions that don't exist in the config.
 
 ```ts
 import { createMachine, assign, fromPromise } from 'xstate'
@@ -141,12 +141,12 @@ const simulationMachine = createMachine({
         onDone:   { target: 'running' },
         onError:  { target: 'error', actions: assign({ error: ({ event }) => event.error.message }) }
       }
-      // No PAUSE, no STOP — these transitions don't exist here
+      // No PAUSE, no STOP - these transitions don't exist here
     },
 
     running: {
       entry: 'spawnWorker',   // Worker created on entry
-      exit:  'terminateWorker', // Worker terminated on exit — always, automatically
+      exit:  'terminateWorker', // Worker terminated on exit - always, automatically
 
       on: {
         PAUSE:    'paused',
@@ -163,7 +163,7 @@ const simulationMachine = createMachine({
       on: {
         RESUME: { target: 'running', actions: ({ context }) => context.worker?.postMessage({ type: 'RESUME' }) },
         STOP:   'idle'
-        // No RUN — can't start a new run while paused
+        // No RUN - can't start a new run while paused
       }
     },
 
@@ -196,7 +196,7 @@ This is the only place XState is used. The three data stores remain Zustand:
 | `useTopologyStore` | Zustand | CRUD data, stable shape, selective subscriptions |
 | `useCanvasStore` | Zustand | Derived data (RF nodes/edges), frequent updates |
 | `useAppStore` | Zustand | Simple key-value (theme, filePath, panels) |
-| `useSimulationResultsStore` | Zustand | Time-series snapshots, final output — data, not process |
+| `useSimulationResultsStore` | Zustand | Time-series snapshots, final output - data, not process |
 | Simulation runner lifecycle | **XState v5** | Genuine state machine with guarded transitions and resource ownership |
 
 The machine interacts with Zustand:
@@ -284,7 +284,7 @@ function SimulationControls() {
 npm install xstate @xstate/react
 ```
 
-Zustand is already installed. No other state libraries are needed or appropriate. The combined bundle cost of XState v5 + `@xstate/react` is ~15kB gzipped — acceptable for the value it provides.
+Zustand is already installed. No other state libraries are needed or appropriate. The combined bundle cost of XState v5 + `@xstate/react` is ~15kB gzipped - acceptable for the value it provides.
 
 ---
 
@@ -292,4 +292,4 @@ Zustand is already installed. No other state libraries are needed or appropriate
 
 - **Zustand** for all data stores (`useTopologyStore`, `useCanvasStore`, `useAppStore`, `useSimulationResultsStore`)
 - **XState v5** for the simulation runner lifecycle machine only
-- **No Redux, Valtio, Jotai, or React Context** for application state — each adds complexity without solving problems this project actually has
+- **No Redux, Valtio, Jotai, or React Context** for application state - each adds complexity without solving problems this project actually has

@@ -2,7 +2,7 @@
 
 Technical feature specification defining how queue depth is modeled, measured, and reported: the G/G/c/K queue model, admission control, queue disciplines, capacity limits, and the metrics that describe queue behaviour over time.
 
-This spec consolidates the `GGcKNode` class, the `QueueConfig` type, the four queue disciplines (FIFO, LIFO, priority, WFQ), the admission control logic, and the queue-related metrics in `PerNodeMetrics` into a single reference for how queues work in the simulator. It exists because every node in the topology is a queue — the queue is the fundamental unit of simulation — and downstream specs (throughput, rejection, lifecycle) all depend on understanding how requests enter, wait in, and exit queues.
+This spec consolidates the `GGcKNode` class, the `QueueConfig` type, the four queue disciplines (FIFO, LIFO, priority, WFQ), the admission control logic, and the queue-related metrics in `PerNodeMetrics` into a single reference for how queues work in the simulator. It exists because every node in the topology is a queue - the queue is the fundamental unit of simulation - and downstream specs (throughput, rejection, lifecycle) all depend on understanding how requests enter, wait in, and exit queues.
 
 ---
 
@@ -99,7 +99,7 @@ Models each simulation node as a finite-capacity multi-server queue. Requests ar
 
 ### Why it exists
 
-The G/G/c/K model is the most general finite-capacity multi-server queue. It makes no assumptions about arrival or service distributions — any of the 14 supported distributions can be used. This generality is essential because real systems have diverse processing characteristics: a CDN might have constant 0.1ms service time, while a database might have log-normal 8ms service time with heavy right-tail variance.
+The G/G/c/K model is the most general finite-capacity multi-server queue. It makes no assumptions about arrival or service distributions - any of the 14 supported distributions can be used. This generality is essential because real systems have diverse processing characteristics: a CDN might have constant 0.1ms service time, while a database might have log-normal 8ms service time with heavy right-tail variance.
 
 ### How it works internally
 
@@ -214,10 +214,10 @@ Different systems have different scheduling requirements. A web server processes
 
 | Discipline | Algorithm | Complexity | Fairness |
 | --- | --- | --- | --- |
-| `fifo` | `queue.shift()` — remove first element | O(n) (array shift) | Fair: requests served in arrival order |
-| `lifo` | `queue.pop()` — remove last element | O(1) | Unfair: early arrivals may starve indefinitely |
+| `fifo` | `queue.shift()` - remove first element | O(n) (array shift) | Fair: requests served in arrival order |
+| `lifo` | `queue.pop()` - remove last element | O(1) | Unfair: early arrivals may starve indefinitely |
 | `priority` | Linear scan for minimum `request.priority`, then `splice` | O(n) per dequeue | Priority-fair: highest priority served first; same-priority is FIFO-ish (first found) |
-| `wfq` | `queue.shift()` — **identical to FIFO** | O(n) | Not implemented: WFQ should weight by some per-request or per-class attribute |
+| `wfq` | `queue.shift()` - **identical to FIFO** | O(n) | Not implemented: WFQ should weight by some per-request or per-class attribute |
 
 ```typescript
 private dequeue(): Request | undefined {
@@ -246,7 +246,7 @@ private dequeue(): Request | undefined {
 - Lower numeric priority = higher precedence (0 > 1 > 2)
 - Linear scan finds the first element with the minimum priority value
 - If multiple requests share the minimum priority, the first one found (closest to array start = earliest arrival among same-priority) is selected
-- `splice(bestIdx, 1)` removes and returns the selected element — O(n)
+- `splice(bestIdx, 1)` removes and returns the selected element - O(n)
 
 **WFQ gap**:
 
@@ -277,7 +277,7 @@ Determines whether an arriving request is admitted to the node (queued or immedi
 
 ### Why it exists
 
-Finite capacity is the defining characteristic of the G/G/c/K model (the K). Without admission control, queues would grow without bound under overload, producing unrealistic results. Admission control is the mechanism that triggers rejection behaviour — the most visible consequence of capacity limits.
+Finite capacity is the defining characteristic of the G/G/c/K model (the K). Without admission control, queues would grow without bound under overload, producing unrealistic results. Admission control is the mechanism that triggers rejection behaviour - the most visible consequence of capacity limits.
 
 ### How it works internally
 
@@ -448,11 +448,11 @@ High utilization (> 85%) causes exponential queue growth for stochastic arrivals
 | **Environment Definition & Configuration Model** | Queue config (workers, capacity, discipline) as environment defaults/overrides | Default queue config values | `QueueConfig`, `EnvironmentNodeDefaults` |
 | **Request Pattern Configuration** | Arrival process classification (D vs M) for queue theory analysis | Arrival rate λ that drives queue occupancy | `WorkloadProfile.pattern` → arrival process type |
 | **Request Type Model** | Priority field consumed by priority discipline | Processing weight that affects service time → queue occupancy | `Request.priority`, `processingWeight` |
-| **Edge Properties & Defaults** | — | Edge latency that adds to total time in system | Edge latency → total latency |
+| **Edge Properties & Defaults** | - | Edge latency that adds to total time in system | Edge latency → total latency |
 | **Throughput Calculation** | Queue occupancy as indicator of congestion | Throughput derived from processing rate | `PerNodeMetrics.throughput`, `avgInSystem` |
 | **Arrival, Departure & Request Lifecycle Semantics** | Queue admission/rejection as lifecycle transitions | `request-arrival` → `handleArrival` → admit or reject | `ArrivalResult` |
 | **Request Rejection Behaviour** | Admission control decisions (capacity_exceeded, node_failed) | Rejection reasons and metrics | `ArrivalResult.reason` |
-| **Cost Calculation & Budgeting** | Queue depth × time as a resource consumption metric | — | `avgQueueLength`, `avgTimeInSystem` |
+| **Cost Calculation & Budgeting** | Queue depth × time as a resource consumption metric | - | `avgQueueLength`, `avgTimeInSystem` |
 | **Simulation Validation & Pattern Accuracy** | Little's Law (L = λW) using queue metrics | Validation thresholds | `postWarmupAvgInSystem`, `postWarmupAvgTimeInSystem` |
 | **Default-Driven Simplification Layer** | Default queue config as the baseline | Progressive disclosure of queue parameters | `{ workers: 1, capacity: 100, discipline: 'fifo' }` |
 

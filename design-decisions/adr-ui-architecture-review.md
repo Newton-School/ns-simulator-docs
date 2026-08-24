@@ -1,4 +1,4 @@
-# UI Architecture Review — NS-Simulator
+# UI Architecture Review - NS-Simulator
 
 > A comprehensive review of the current renderer codebase: what's working, what the component hierarchy looks like, and the design decisions that should be locked in before the rebuild.
 
@@ -20,7 +20,7 @@ This review covers the UI layer only (`src/renderer/`). The engine layer (`src/e
 
 ---
 
-## What Is Good — Lock These In
+## What Is Good - Lock These In
 
 These patterns are correct and should be preserved in the rebuild without modification.
 
@@ -29,11 +29,11 @@ These patterns are correct and should be preserved in the rebuild without modifi
 The component tree follows atomic design correctly:
 
 ```
-atoms/          — no state, pure display (Button, Input, Select, Slider, Badge)
-molecules/      — compose atoms, internal interaction state only (FormField, NodeHeader)
-organisms/      — feature-level, connect to stores (Header, LibrarySidebar, FlowCanvas)
-templates/      — layout only (WorkspaceLayout)
-features/       — canvas-specific nodes and canvas hooks
+atoms/          - no state, pure display (Button, Input, Select, Slider, Badge)
+molecules/      - compose atoms, internal interaction state only (FormField, NodeHeader)
+organisms/      - feature-level, connect to stores (Header, LibrarySidebar, FlowCanvas)
+templates/      - layout only (WorkspaceLayout)
+features/       - canvas-specific nodes and canvas hooks
 ```
 
 This is the right vocabulary. Every contributor immediately knows where a new component goes and what it's allowed to do.
@@ -53,7 +53,7 @@ The theming approach is correct:
 colors: { nss: { primary: 'rgb(var(--nss-primary) / <alpha-value>)' } }
 ```
 
-Two themes, one variable namespace, Tailwind opacity modifiers work (`bg-nss-primary/20`). This is the right pattern — no runtime cost, no JS theme injection.
+Two themes, one variable namespace, Tailwind opacity modifiers work (`bg-nss-primary/20`). This is the right pattern - no runtime cost, no JS theme injection.
 
 ### 3. `nodeTransformers.ts` as a Pure Utility
 
@@ -64,7 +64,7 @@ convertNestedToFlat(nestedNodes): Node[]
 convertFlatToNested(flatNodes): NestedNode[]
 ```
 
-No React imports, no store access — pure functions. This is exactly where this logic belongs.
+No React imports, no store access - pure functions. This is exactly where this logic belongs.
 
 ### 4. IPC Security in the Preload
 
@@ -98,7 +98,7 @@ Animated edges using SVG `animateMotion` are performant and self-contained:
 <animateMotion dur={speed} repeatCount="indefinite" path={svgPath} />
 ```
 
-The animation runs in the browser's compositor thread — no JavaScript animation loop.
+The animation runs in the browser's compositor thread - no JavaScript animation loop.
 
 ### 7. `useFlowDnD` + `canvasUtils`
 
@@ -114,14 +114,14 @@ This is the contract each layer must respect in the rebuild.
 
 - No store access
 - No hooks except `useMemo` for derived styles
-- All props explicitly typed — no `data: any`, no spreading unknown objects
+- All props explicitly typed - no `data: any`, no spreading unknown objects
 - Export a `Props` type from every atom file
 
 ### Molecules
 
 - Can hold `useState` for internal interaction (hover, menu open/closed)
-- Receive all data via props — no direct store reads
-- No business logic — transform and display only
+- Receive all data via props - no direct store reads
+- No business logic - transform and display only
 
 ### Organisms
 
@@ -133,7 +133,7 @@ This is the contract each layer must respect in the rebuild.
 ### Features (canvas nodes)
 
 - Receive only display data through the `data` prop from React Flow
-- The canvas adapter populates `data` — the component renders it
+- The canvas adapter populates `data` - the component renders it
 - No store subscriptions inside node components
 
 ---
@@ -160,7 +160,7 @@ interface NodeTypeDefinition {
   // Domain
   defaultNodeData: () => Partial<ComponentNode>
 
-  // Form — drives PropertiesForm, no hardcoded type checks in the form
+  // Form - drives PropertiesForm, no hardcoded type checks in the form
   fields: FieldDefinition[]
   fieldGroups: Record<string, string[]>
 }
@@ -170,7 +170,7 @@ Adding a new node type = one new entry in `NODE_REGISTRY`. No other file changes
 
 ---
 
-## File Structure — Renderer
+## File Structure - Renderer
 
 ```
 src/renderer/src/
@@ -219,6 +219,6 @@ src/renderer/src/
 
 The current atomic design hierarchy, theming approach, IPC security model, and utility isolation patterns are correct and should be preserved in the rebuild.
 
-The renderer's component structure does not need to be redesigned — it needs to be reconnected to the domain model (see `adr-critical-problems.md`) and have its state management properly separated (see `adr-state-management.md`).
+The renderer's component structure does not need to be redesigned - it needs to be reconnected to the domain model (see `adr-critical-problems.md`) and have its state management properly separated (see `adr-state-management.md`).
 
 The node registry must be unified into a single `NodeTypeDefinition` interface. All per-type knowledge (icon, theme, fields, default data) lives in one record. This is the highest-leverage structural change available.

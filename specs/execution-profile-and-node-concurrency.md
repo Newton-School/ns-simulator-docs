@@ -1,7 +1,7 @@
 # Execution Profiles & Node Concurrency (cpu-bound vs io-bound)
 
 > **Scope.** The canonical explainer for a node's **execution profile**
-> (`workloadKind: cpu-bound | io-bound`) and why it — not a free-typed number —
+> (`workloadKind: cpu-bound | io-bound`) and why it - not a free-typed number -
 > decides how many concurrent workers a node's hardware yields. This is the
 > reference answer to *"why does my database show 128 workers / connections when a
 > service shows only 2?"*
@@ -31,12 +31,12 @@ wildly different worker counts:
 | Primary DB (`relational-db`) | `m5.xlarge` (4 vCPU) | **128 connections** |
 | Redis Cache (`in-memory-cache`) | `r5.large` (2 vCPU) | **64 ops** |
 | Load Balancer | `m5.large` (2 vCPU) | **64 connections** |
-| Message Queue | — | **64 consumers** |
+| Message Queue | - | **64 consumers** |
 
 **This is by design, not a bug.** The counts follow directly from each node's
 execution profile.
 
-## 2. Design principle — the execution profile is *per-tier*, not universally cpu-bound
+## 2. Design principle - the execution profile is *per-tier*, not universally cpu-bound
 
 A node is **not** cpu-bound by default. Every component type carries a default
 **execution profile** that reflects what that component actually does with a CPU
@@ -51,14 +51,14 @@ effectiveC (parallel servers) = vCPU × instanceCount × workersPerVcpu
 
 | Profile | Rule | Reasoning |
 |---------|------|-----------|
-| **cpu-bound** | **1 worker / vCPU** | A compute service *occupies* the core computing. Real parallelism ≈ number of cores — claiming 1000 workers on 4 vCPU just time-slices 4 cores across 1000 half-done requests (contention), it doesn't add throughput. |
+| **cpu-bound** | **1 worker / vCPU** | A compute service *occupies* the core computing. Real parallelism ≈ number of cores - claiming 1000 workers on 4 vCPU just time-slices 4 cores across 1000 half-done requests (contention), it doesn't add throughput. |
 | **io-bound** | **32 / vCPU** | A datastore, cache, load balancer, broker, or queue spends almost all its time *waiting* on disk / network, not using the CPU. One core legitimately juggles many concurrent in-flight requests. |
 
 Real-world anchors for the io-bound multiplier: a Postgres box serves **hundreds of
-connections per core**; Redis, a message broker, and a load balancer are the same —
+connections per core**; Redis, a message broker, and a load balancer are the same -
 they're bound by I/O and connection handling, not computation. The `32` is a fixed,
 tier-wide constant (`IO_WORKERS_PER_VCPU`), generous but firmly tethered to the paid
-hardware — never infinite.
+hardware - never infinite.
 
 ## 3. Per-type default profiles
 
@@ -72,13 +72,13 @@ Unknown / unmapped types fall back to **io-bound**. (Source: `RESOURCE_DEFAULTS`
 
 ## 4. Worked numbers (the table in §1, derived)
 
-- API Server — `c5.large` (2 vCPU) × 1 × **cpu-bound (1)** = **2**
-- Primary DB — `m5.xlarge` (4 vCPU) × 1 × **io-bound (32)** = **128**
-- Redis Cache — `r5.large` (2 vCPU) × 1 × **io-bound (32)** = **64**
-- Load Balancer — `m5.large` (2 vCPU) × 1 × **io-bound (32)** = **64**
+- API Server - `c5.large` (2 vCPU) × 1 × **cpu-bound (1)** = **2**
+- Primary DB - `m5.xlarge` (4 vCPU) × 1 × **io-bound (32)** = **128**
+- Redis Cache - `r5.large` (2 vCPU) × 1 × **io-bound (32)** = **64**
+- Load Balancer - `m5.large` (2 vCPU) × 1 × **io-bound (32)** = **64**
 
 So a store reading "128 connections" or a broker reading "64 consumers" is exactly
-`vCPU × 32` — correct, not inflated.
+`vCPU × 32` - correct, not inflated.
 
 ## 5. One number, many labels
 
@@ -94,19 +94,19 @@ The canvas shows the same underlying `effectiveC` under **per-type vocabulary**:
 They are all the one derived quantity `c = vCPU × instanceCount × workersPerVcpu`.
 The label is cosmetic; the physics is identical.
 
-## 6. The bottleneck lever — flip a store to `cpu-bound`
+## 6. The bottleneck lever - flip a store to `cpu-bound`
 
 Because io-bound stores get 32×/vCPU, a default datastore has *lots* of headroom and
-rarely saturates at the suites' ~2–3k RPS. When a question needs a store to be the
+rarely saturates at the suites' ~2-3k RPS. When a question needs a store to be the
 **deliberate bottleneck** (e.g. "reads collapse the DB without a cache"), the author
 flips that node's execution profile to **cpu-bound on a small instance**:
 
-- `cache-placement` reference DB — `t3.small` (2 vCPU) **cpu-bound** = **2 servers**.
+- `cache-placement` reference DB - `t3.small` (2 vCPU) **cpu-bound** = **2 servers**.
   At the read-heavy load it saturates, p99 collapses, and the cache becomes
   mandatory. That is the entire lesson, and it is created by the execution profile,
   not by hand-typing a worker count.
 
-This is a per-node modelling choice, never a global default — the compute tier is
+This is a per-node modelling choice, never a global default - the compute tier is
 cpu-bound, the store tier is io-bound, and an author opts a specific store into
 cpu-bound only to make it bite.
 
@@ -117,7 +117,7 @@ cpu-bound only to make it bite.
 - **Editing policy (environment profile):** whether a *student* can change a node's
   execution profile is gated by the **`canEditExecutionProfile`** capability
   (`environmentProfile.capabilities`). It is `true` in AUTHOR, `false` in ASSIGNMENT
-  and PRACTICE by default — so a graded student cannot dodge a cpu-bound bottleneck
+  and PRACTICE by default - so a graded student cannot dodge a cpu-bound bottleneck
   by flipping it to io-bound. A `cost`-domain question unlocks resource editing
   (which includes the profile) when allocation *is* the lesson.
 - The profile is surfaced read-only in the node's RESOURCES note as part of the
@@ -127,7 +127,7 @@ cpu-bound only to make it bite.
 
 - **Service time.** How long one request takes is the node's own
   `processing.distribution`, adjusted by the instance's `perfFactor` (io-bound work
-  is damped — a faster core barely helps a request blocked on I/O). Concurrency
+  is damped - a faster core barely helps a request blocked on I/O). Concurrency
   (`c`) and service time are orthogonal knobs.
 - **Admission ceiling (`K`).** `effectiveK = max(effectiveC, memCeiling)` where
   `memCeiling = totalRAM ÷ perRequestMemMb`. RAM, not the execution profile, sets how

@@ -4,7 +4,7 @@
 
 ---
 
-## Chapter 26: DEVS — Discrete Event System Specification
+## Chapter 26: DEVS - Discrete Event System Specification
 
 ### 26.1 What Is DEVS?
 
@@ -37,7 +37,7 @@
     5. INTEROPERABILITY     - Standard interface between models
 ```
 
-### 26.2 Atomic DEVS — The Basic Building Block
+### 26.2 Atomic DEVS - The Basic Building Block
 
 An **Atomic DEVS** model is the smallest unit of simulation. It corresponds to a single node in our system.
 
@@ -218,7 +218,7 @@ class ServerAtomicDEVS {
 }
 ```
 
-### 26.5 Coupled DEVS — Composing Models
+### 26.5 Coupled DEVS - Composing Models
 
 **Coupled DEVS** allows connecting multiple atomic models into larger systems.
 
@@ -337,7 +337,7 @@ class DEVSSimulator {
 
 ---
 
-## Chapter 27: Chaos Engineering — Systematic Resilience Testing
+## Chapter 27: Chaos Engineering - Systematic Resilience Testing
 
 ### 27.1 What Is Chaos Engineering?
 
@@ -560,7 +560,7 @@ const ChaosExperimentCatalog = {
 
 ---
 
-## Chapter 28: Output Analysis — Understanding Results
+## Chapter 28: Output Analysis - Understanding Results
 
 ### 28.1 Metrics Collection
 
@@ -852,7 +852,7 @@ class CausalAnalyzer {
 
 ---
 
-## Chapter 29: Summary — Part 5 Key Takeaways
+## Chapter 29: Summary - Part 5 Key Takeaways
 
 ```
     PART 5 KEY TAKEAWAYS
@@ -993,4 +993,4 @@ class CausalAnalyzer {
 
 ---
 
-*End of Part 5 — End of Complete Teaching Guide*
+*End of Part 5 - End of Complete Teaching Guide*

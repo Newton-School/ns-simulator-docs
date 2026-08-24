@@ -1,7 +1,7 @@
 # Production Embed Runtime & Origin Security
 
 > **Theme:** Turn the iframe embed seam from a *preview/demo* handshake into a
-> **host-controlled, origin-secured runtime** — so a real host (the Game
+> **host-controlled, origin-secured runtime** - so a real host (the Game
 > Playground) can launch a question into the simulator and receive graded
 > submissions without the simulator leaking data to, or trusting instructions
 > from, any other page that happens to frame it.
@@ -24,11 +24,11 @@ follow-up from [doc 05](05-design-decisions-and-tradeoffs.md) (**D13**).
 
 An embedded question is a conversation between two windows over `postMessage`:
 
-- **Host side** — `EmbeddedIframeQuestionPreview` (the embedder). It was already
+- **Host side** - `EmbeddedIframeQuestionPreview` (the embedder). It was already
   production-grade: it validates every inbound `event.origin` against the
   question's `allowedOrigins`, and it targets the iframe precisely when sending
   the launch context. Nothing needed to change here.
-- **Iframe-app side** — `WorkspaceLayout` + `questionHostMessaging` (the
+- **Iframe-app side** - `WorkspaceLayout` + `questionHostMessaging` (the
   simulator running inside the frame). This was the weak half and is what this
   work hardens.
 
@@ -50,8 +50,8 @@ sequenceDiagram
    origin, or **`'*'`** when the referrer was unknown. Because `submit` carries
    the full grade (score, contract, attempt), a `'*'` target would broadcast a
    student's graded submission to *any* page framing the simulator.
-2. **No inbound origin check.** `WorkspaceLayout` accepted a `launch-context` —
-   i.e. an arbitrary `QuestionPackage` to load and grade — from **any** origin.
+2. **No inbound origin check.** `WorkspaceLayout` accepted a `launch-context` -
+   i.e. an arbitrary `QuestionPackage` to load and grade - from **any** origin.
    Any page could inject content into the framed simulator.
 3. **No notion of "who my host is."** The app never recorded the legitimate host,
    so it could not target replies or reject impostors.
@@ -76,13 +76,13 @@ origin can neither hijack the trust nor receive replies.
 
 ---
 
-## 5. Origin trust policy — configured allowlist, else trust-on-first-use
+## 5. Origin trust policy - configured allowlist, else trust-on-first-use
 
 How does the iframe decide which parent origin is a legitimate host? A **hybrid**
 policy (the pure logic lives in `isHostOriginAllowed`):
 
 - **Configured allowlist (strict).** If the host sets `?hostOrigin=<origin(s)>`
-  on the iframe `src` (comma-separated), only those origins are ever accepted —
+  on the iframe `src` (comma-separated), only those origins are ever accepted -
   a previously trusted origin cannot override it. This is the production posture.
 - **Trust-on-first-use (fallback).** With no configuration, the origin of the
   first valid `launch-context` is trusted and locked; afterwards only that origin
@@ -102,12 +102,12 @@ The target for each outbound message is computed by the pure
 
 | Message | Carries data? | Target |
 |---------|---------------|--------|
-| `submit` | **Yes** (grade + attempt) | Trusted origin **only** — dropped (with a warning) if none is established |
+| `submit` | **Yes** (grade + attempt) | Trusted origin **only** - dropped (with a warning) if none is established |
 | `error` | Some (a message string) | Trusted origin **only** |
 | `ready` | No (content-less bootstrap) | Trusted → single configured → referrer → `'*'` |
 
 The crucial rule: **sensitive messages are never broadcast.** `'*'` survives
-*only* for the `ready` bootstrap, which contains nothing but a handshake signal —
+*only* for the `ready` bootstrap, which contains nothing but a handshake signal -
 and even then only as the last resort so the initial connection can form. In
 practice `submit`/`error` always follow a `launch-context`, so the trusted origin
 is already set by the time they fire.
@@ -119,7 +119,7 @@ is already set by the time they fire.
 `isHostOriginAllowed` and `computeHostTargetOrigin` take their inputs
 (`configured`, `trusted`, `referrer`) as plain arguments rather than reading
 `window`/`document` directly. That makes the security-critical decisions **unit
-testable without a DOM** — the tests assert the allowlist/TOFU matrix and the
+testable without a DOM** - the tests assert the allowlist/TOFU matrix and the
 targeting matrix directly. The thin runtime wrappers (`isAllowedHostOrigin`,
 `postQuestionHostMessage`) just gather the window state and delegate. Same
 "push side effects to the edge, keep the decision pure" principle used elsewhere
@@ -129,7 +129,7 @@ in the platform.
 
 ## 8. What is intentionally *not* done yet
 
-- ~~**Host-driven lifecycle commands.**~~ ✅ **Added** — the host can drive the
+- ~~**Host-driven lifecycle commands.**~~ ✅ **Added** - the host can drive the
   attempt mid-session with an origin-validated `ns-simulator:command`
   (`reset`/`lock`/`reveal`); see
   [doc 08 §6.6](08-environment-profile-presentation-layer.md).
@@ -144,7 +144,7 @@ in the platform.
 
 ## 9. Design decisions & trade-offs
 
-Logged in [doc 05](05-design-decisions-and-tradeoffs.md) as **D20–D22**.
+Logged in [doc 05](05-design-decisions-and-tradeoffs.md) as **D20-D22**.
 
 | # | Decision | Criteria | Trade-off |
 |---|----------|----------|-----------|
@@ -156,7 +156,7 @@ Logged in [doc 05](05-design-decisions-and-tradeoffs.md) as **D20–D22**.
 
 ## 10. What to take away
 
-1. **A framed app must know, and verify, who its host is** — before accepting
+1. **A framed app must know, and verify, who its host is** - before accepting
    instructions or sending data.
 2. **`postMessage` `targetOrigin` is a security control, not a formality.** `'*'`
    on a message that carries data is a data leak.
@@ -165,6 +165,6 @@ Logged in [doc 05](05-design-decisions-and-tradeoffs.md) as **D20–D22**.
 4. **Keep security decisions pure and tested.** The allow/target matrices are
    plain functions with exhaustive unit tests.
 
-**Related:** [doc 05 — Design Decisions](05-design-decisions-and-tradeoffs.md)
-(D13, D20–D22), and [doc 01 §7](01-pr212-question-platform-foundation.md) for the
+**Related:** [doc 05 - Design Decisions](05-design-decisions-and-tradeoffs.md)
+(D13, D20-D22), and [doc 01 §7](01-pr212-question-platform-foundation.md) for the
 original embed seam.

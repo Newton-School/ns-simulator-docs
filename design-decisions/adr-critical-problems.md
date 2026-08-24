@@ -1,4 +1,4 @@
-# Critical Problems — NS-Simulator UI Layer
+# Critical Problems - NS-Simulator UI Layer
 
 > A precise catalogue of the structural defects in the current renderer codebase. Each problem is stated, its consequence explained, and the fix described.
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-The codebase has the right component hierarchy and the right libraries. The problems are in the connections between layers — specifically how the domain model, the state, and the components are wired together. None of these require rewriting the UI; they require reconnecting it correctly.
+The codebase has the right component hierarchy and the right libraries. The problems are in the connections between layers - specifically how the domain model, the state, and the components are wired together. None of these require rewriting the UI; they require reconnecting it correctly.
 
 ---
 
@@ -17,10 +17,10 @@ The codebase has the right component hierarchy and the right libraries. The prob
 `src/engine/` defines a complete domain model:
 
 ```
-types.ts      — ComponentNode, EdgeDefinition, TopologyDocument, DistributionConfig, ...
-validator.ts  — Zod schemas + validateTopology()
-events.ts     — SimulationEvent, Request, RequestSpan
-time.ts       — BigInt microsecond utilities
+types.ts      - ComponentNode, EdgeDefinition, TopologyDocument, DistributionConfig, ...
+validator.ts  - Zod schemas + validateTopology()
+events.ts     - SimulationEvent, Request, RequestSpan
+time.ts       - BigInt microsecond utilities
 ```
 
 None of this is imported by the renderer. The renderer maintains its own parallel, informal type system in `src/renderer/src/types/ui.ts`:
@@ -41,7 +41,7 @@ These are view types, not domain types. There is no code that:
 - Add `@engine` path alias in `electron.vite.config.ts`
 - Store a `TopologyDocument | null` as the canonical model in `useTopologyStore`
 - Write `canvas/adapters.ts` with typed conversions between `TopologyDocument` and React Flow `Node[]`/`Edge[]`
-- Add `_uiPosition: { x: number; y: number }` to `ComponentNode` — the only UI field allowed in the domain model
+- Add `_uiPosition: { x: number; y: number }` to `ComponentNode` - the only UI field allowed in the domain model
 - Delete `types/ui.ts` informal types once the adapter is in place
 
 ---
@@ -91,9 +91,9 @@ Each of these changes for different reasons. The keyboard shortcut logic should 
 **Consequence:** Every format change requires touching a hook that also owns UI keyboard bindings. Every keyboard change touches serialization logic.
 
 **Fix:**
-- `useKeyboardShortcuts.ts` — registers shortcuts globally
-- `useFilePersistence.ts` — save/load with validation and UI error feedback
-- `engine/serialization.ts` — `serializeTopology()` and `deserializeTopology()` as pure functions
+- `useKeyboardShortcuts.ts` - registers shortcuts globally
+- `useFilePersistence.ts` - save/load with validation and UI error feedback
+- `engine/serialization.ts` - `serializeTopology()` and `deserializeTopology()` as pure functions
 
 ---
 
@@ -107,7 +107,7 @@ Each of these changes for different reasons. The keyboard shortcut logic should 
 - Runs BFS connectivity analysis
 - Returns structured `{ errors[], warnings[] }` with path-specific messages
 
-It is never called from the renderer. The user can create an edge to a non-existent node, configure an impossible distribution (sigma: -1), or build a completely disconnected topology — and receive no feedback.
+It is never called from the renderer. The user can create an edge to a non-existent node, configure an impossible distribution (sigma: -1), or build a completely disconnected topology - and receive no feedback.
 
 **Consequence:** Users discover topology errors only when the simulation crashes, not during design.
 
@@ -248,11 +248,11 @@ A render component is doing structural layout queries against the full node list
 
 Fixing in this order maximizes unblocking:
 
-1. **Problem 1** (engine-renderer connection) — everything else depends on having a real domain model in the store
-2. **Problem 2** (store split) — needed before fixing validation and type safety
-3. **Problem 4** (validation feedback) — immediately visible user value, unlocks safe file I/O
-4. **Problem 5** (type safety at boundaries) — prevents silent data corruption
-5. **Problem 3** (hook decomposition) — refactor, unblocks testability
-6. **Problems 6–8** (registry, form, theme) — architectural improvements, parallel workstreams
-7. **Problem 9** (VPC store subscription) — performance, noticeable only at scale
-8. **Problem 10** (dead code) — housekeeping, do any time
+1. **Problem 1** (engine-renderer connection) - everything else depends on having a real domain model in the store
+2. **Problem 2** (store split) - needed before fixing validation and type safety
+3. **Problem 4** (validation feedback) - immediately visible user value, unlocks safe file I/O
+4. **Problem 5** (type safety at boundaries) - prevents silent data corruption
+5. **Problem 3** (hook decomposition) - refactor, unblocks testability
+6. **Problems 6-8** (registry, form, theme) - architectural improvements, parallel workstreams
+7. **Problem 9** (VPC store subscription) - performance, noticeable only at scale
+8. **Problem 10** (dead code) - housekeeping, do any time

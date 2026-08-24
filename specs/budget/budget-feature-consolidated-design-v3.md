@@ -1,14 +1,14 @@
-# Budget Feature — Consolidated Design (V3)
+# Budget Feature - Consolidated Design (V3)
 
 > **What this is.** A single, decision-ready design that merges the V1 "why it's
-> broken" analysis, the V2 "how to fix it" plan, and the second-order review — then
+> broken" analysis, the V2 "how to fix it" plan, and the second-order review - then
 > hardens all three against how infrastructure cost is *actually* calculated in the
 > real world. It supersedes nothing structurally (the V1 decision and V2 direction
 > both stand); it tightens the cost model, adds the network dimension both prior docs
 > under-weighted, and turns the loose recommendations into concrete, testable numbers.
 >
 > **Status.** V1 decision = shipped (budget removed from `async-sla` / `sensor-store`,
-> meter auto-hides). Everything below is the V2/V3 build plan — **plan only**.
+> meter auto-hides). Everything below is the V2/V3 build plan - **plan only**.
 >
 > **Companions (authoritative for detail).** This is the *design*. The code-level
 > translation lives in `budget-feature-implementation-v3.md` and the finalized cost
@@ -22,15 +22,15 @@
 
 ## 0. TL;DR
 
-2. **V1 decision was right — keep it.** A budget that a correct 5-node design uses 5%
+2. **V1 decision was right - keep it.** A budget that a correct 5-node design uses 5%
    of is a graded test that can't fail. It taught nothing and gave false confidence.
    It's already removed. Don't second-guess this.
-3. **The real fix is not "make the cap tighter" — it's "make cost depend on the
+3. **The real fix is not "make the cap tighter" - it's "make cost depend on the
    architectural *choice*."** A budget only teaches when a correct-but-expensive design
    *fails* while a correct-and-cheap design *passes*. That requires per-type base costs
    plus cap-last calibration. Both prior docs got this right.
-4. **The one thing both docs under-model is network/data-transfer cost** — which in the
-   real world is the single biggest source of surprise overruns (~10–15% of cloud
+4. **The one thing both docs under-model is network/data-transfer cost** - which in the
+   real world is the single biggest source of surprise overruns (~10-15% of cloud
    bills, and the classic way junior architects blow budget). V3 promotes the edge from
    a flat `1` to a **traffic-weighted cost**, because that's where the richest "chatty
    architecture is expensive" lessons live.
@@ -58,7 +58,7 @@ questions:
 Three independent failures, each fatal on its own:
 
 - **The cap can't bite.** A correct design uses ~5% of the cap. Reaching the cap needs
-  ~150 nodes. On a 4–6 node question that never happens → the row **always passes**.
+  ~150 nodes. On a 4-6 node question that never happens → the row **always passes**.
 - **It points the wrong way.** The *gamed* design is *cheaper* than the reference
   (fewer nodes), so budget separates good from gamed in the **opposite** direction from
   every other grading axis. It's not just useless, it's anti-correlated.
@@ -67,7 +67,7 @@ Three independent failures, each fatal on its own:
   cost/tradeoff question, so no cap value could make budget the point.
 
 The root cause is not the cap number. It's that **every node costs the same**, so
-"choose the cheaper architecture" is a meaningless instruction — there is no cheaper
+"choose the cheaper architecture" is a meaningless instruction - there is no cheaper
 architecture, only a smaller one. And "smaller" already fights the structural rules
 that *require* specific components. That is why a flat-cost budget can only ever be
 noise on these questions.
@@ -89,8 +89,8 @@ budget. This is the single test that gates everything else. It reframes budget f
 
 Concretely, a budget question always ships as a **pair**:
 
-- **Reference** — minimal, correct, *and* affordable. Cost `C_ref`.
-- **Foil** — correct on every *other* axis, but takes the expensive route
+- **Reference** - minimal, correct, *and* affordable. Cost `C_ref`.
+- **Foil** - correct on every *other* axis, but takes the expensive route
   (kitchen-sink, or brute-force replicas/workers/DB). Cost `C_foil`.
 
 The budget is meaningful iff `C_ref < cap < C_foil`. That inequality is the feature.
@@ -104,36 +104,36 @@ sharpens the *magnitudes*, which is what makes the pedagogical model feel authen
 instead of arbitrary. Real cloud bills decompose into **compute, storage, and
 network/data-transfer**, and each maps cleanly onto a simulator lever:
 
-**Compute — scales with instances and instance class.** Billed per second by CPU/RAM.
+**Compute - scales with instances and instance class.** Billed per second by CPU/RAM.
 Scaling out is linear (5 instances = 5× base); scaling up is roughly linear in
 resource. The key pedagogical fact: a **managed, stateful** service (a managed
-relational DB) carries a real premium over raw stateless compute — commonly cited at
-~20–30% per compute-hour, and far more for premium engines (Aurora runs ~70% over a
+relational DB) carries a real premium over raw stateless compute - commonly cited at
+~20-30% per compute-hour, and far more for premium engines (Aurora runs ~70% over a
 plain instance), because the provider is absorbing backups, patching, failover, and
 replication. → **This is exactly what a per-type base cost encodes.** A relational DB
 *should* cost several times a stateless worker.
 
-**Storage — tiered, and the tiers span ~20×.** Hot SSD block storage (what a
+**Storage - tiered, and the tiers span ~20×.** Hot SSD block storage (what a
 transactional DB sits on) is expensive; object storage is cheap; archive/cold storage
 is nearly free (GCS Standard ≈ $0.02/GB-mo vs Archive ≈ $0.0012/GB-mo). And
-**replicas multiply storage** — 3 replicas store the data three times. → **This is the
+**replicas multiply storage** - 3 replicas store the data three times. → **This is the
 `BASE[type] × replicas` term.** The replica multiplier is not a fudge; it mirrors both
 the compute standby cost and the triplicated storage.
 
-**Network / data transfer — the hidden killer.** Ingress is usually free; **egress and
-cross-AZ traffic are billed per GB and are where budgets actually blow up** — Gartner
-puts egress at ~10–15% of total spend, and a single chatty cross-AZ Kafka stream can
+**Network / data transfer - the hidden killer.** Ingress is usually free; **egress and
+cross-AZ traffic are billed per GB and are where budgets actually blow up** - Gartner
+puts egress at ~10-15% of total spend, and a single chatty cross-AZ Kafka stream can
 run into five or six figures a year in network fees alone. Crucially, network cost
 scales with **traffic volume on the link**, not with the number of links. → **This is
 the strongest lesson neither prior doc fully captured.** A flat `+1 per edge` says
 "fewer connections are cheaper," which is a weak and sometimes wrong lesson. A
 **traffic-weighted edge** says "a chatty, high-throughput, large-payload link is
-expensive" — which pushes students toward caching, batching, payload trimming, and
+expensive" - which pushes students toward caching, batching, payload trimming, and
 locality, i.e. the actual craft of cost-aware design.
 
 The takeaway the model must embody: **cost is driven by *what you choose* (type),
 *how much you replicate it* (multiplier), and *how much data you push over each link*
-(traffic) — not by raw node/edge count.** Count is a proxy the V1 model mistook for
+(traffic) - not by raw node/edge count.** Count is a proxy the V1 model mistook for
 the real thing.
 
 ---
@@ -148,7 +148,7 @@ total          = Σ nodeCost + Σ edgeCost
 ```
 
 > **Operator = `floor`, not `ceil`.** The scaling terms must contribute **0 below one
-> full unit** — otherwise every node with ≥1 worker and every edge with any traffic gains
+> full unit** - otherwise every node with ≥1 worker and every edge with any traffic gains
 > a spurious +1, contradicting §4b's own "a 1 KB/s link adds 0" and making a "thin edge"
 > or a default-sized node impossible to price at base. (Corrected from the original draft;
 > see the worked examples in `budget-cost-model-math.md`, which foot only under `floor`.)
@@ -163,7 +163,7 @@ and flat `EDGE_COST * edges`:
 3. **Traffic-weighted edges.** The edge term reads the simulated `throughputMBps` on
    the link, so a 100 MB/s link costs far more than a 1 KB/s link. This is the network
    dimension promoted to a first-class lever.
-4. **Everything else is V2, kept.** `BASE[type] × replicas` is unchanged in spirit —
+4. **Everything else is V2, kept.** `BASE[type] × replicas` is unchanged in spirit -
    it was the correct core insight.
 
 ### 4a. Base cost by role (the managed-service premium)
@@ -194,7 +194,7 @@ the research confirms. It's what makes "cache vs replicas" a real fork:
 | `CAPACITY_UNIT` (stateless) | 100   | Throughput scaling is a minor, coarse cost on cheap compute.                   |
 | `CAPACITY_UNIT` (stateful)  | 25    | Connections/IOPS on a DB are ~4× more costly per unit than on a worker.        |
 | `EDGE_BASE`                 | 1     | Every link has a small fixed cost (a hop exists).                              |
-| `NETWORK_UNIT`              | 50    | MB/s per unit of network cost — a 100 MB/s link adds +2, a 1 KB/s link adds 0. |
+| `NETWORK_UNIT`              | 50    | MB/s per unit of network cost - a 100 MB/s link adds +2, a 1 KB/s link adds 0. |
 
 > **Backward compatibility.** If a `type` is absent from `BASE`, default to the V2/V1
 > behavior (base 1). If an edge has no simulated throughput, `edgeCost = EDGE_BASE`
@@ -202,7 +202,7 @@ the research confirms. It's what makes "cache vs replicas" a real fork:
 
 ---
 
-## 5. Unit strategy — three tools, matched to three lessons
+## 5. Unit strategy - three tools, matched to three lessons
 
 | Unit             | Lesson it teaches                         | When to use it                                                              |
 | ---------------- | ----------------------------------------- | --------------------------------------------------------------------------- |
@@ -210,7 +210,7 @@ the research confirms. It's what makes "cache vs replicas" a real fork:
 | `cost` (§4)      | "Choose the cheaper architecture."        | Cost/performance tradeoffs (cache vs replicas, right-store vs brute-force). |
 | `cost` + traffic | "Chatty, heavy links are expensive."      | Locality / batching / caching lessons where the network is the bottleneck.  |
 
-`nodes` is not a lesser `cost` — it's a *different lesson* and often the right one. Use
+`nodes` is not a lesser `cost` - it's a *different lesson* and often the right one. Use
 a hard `constraints.maxNodeCount = 8` when the only goal is to stop drag-50-nodes-on-the-
 canvas behavior; reserve the cost model for genuine tradeoffs. Both ship; questions
 pick the one that matches their lesson.
@@ -220,23 +220,23 @@ pick the one that matches their lesson.
 ## 6. Cap-last authoring procedure (the only correct order)
 
 A cap is **derived, never guessed**. The V1 caps (600/500) were round numbers picked
-before any design existed — that's the whole bug.
+before any design existed - that's the whole bug.
 
 2. **Confirm the lesson is cost/tradeoff.** If you can't name a reference and a foil
-   that both pass every other axis, *stop — no budget on this question.*
+   that both pass every other axis, *stop - no budget on this question.*
 
 3. **Build the reference** (minimal, correct, affordable). Measure `C_ref`.
 
 4. **Build the foil** (correct on other axes, expensive route). Measure `C_foil`.
 
-5. **Set the cap in the gap:** `cap = round(C_ref × 1.15)` — reference just fits,
+5. **Set the cap in the gap:** `cap = round(C_ref × 1.15)` - reference just fits,
    ~15% slack. Verify `C_ref ≤ cap < C_foil`.
 
 6. **Validate both through the harness** (`validate-question-dir.ts`):
 
    - reference → within budget **and** passing all axes;
    - foil → **over budget** (ideally *also* failing perf, so the affordable design is
-     also the correct one — the strongest version of the lesson).
+     also the correct one - the strongest version of the lesson).
 
 7. **Assert the discrimination:** `C_foil > cap` **and** `C_ref < C_foil`. If the foil
    is cheaper than the reference, the budget is meaningless. This assertion is exactly
@@ -267,7 +267,7 @@ before any design existed — that's the whole bug.
 - **Foil:** `client → svc → relational-db(6 × 3 = 18)` → `C_foil ≈ 20`, over budget;
   with `storageProfile`, the relational write path *also fails throughput*.
 - **Lesson:** the right storage engine is cheaper **and** faster. This is the single
-  best budget question — but it **depends on the `storageProfile` trait** to make the
+  best budget question - but it **depends on the `storageProfile` trait** to make the
   wrong store physically slower, not merely pricier.
 
 ### 7c. *(New, V3)* `chatty-services` → "Cut the network bill" *(needs traffic-weighted edges)*
@@ -281,15 +281,15 @@ before any design existed — that's the whole bug.
   term alone pushes `C_foil ≈ 12` over the cap. Two valid integer caps in the gap
   (`10`, `11`). (Worked table + integer-gap check in `budget-cost-model-math.md` §8b.)
 - **Precondition:** the fat link must be **fast enough to pass the SLA** while **too
-  expensive to afford** — if removing the cache also blows p99, the foil fails perf and
+  expensive to afford** - if removing the cache also blows p99, the foil fails perf and
   collapses back into a gamed topology, not a clean "affordable-vs-not" fork.
-- **Lesson:** chatty, heavy links cost real money — cache/batch to cut egress. This is
+- **Lesson:** chatty, heavy links cost real money - cache/batch to cut egress. This is
   the question the flat `+1 per edge` model *could never express*, and the reason to
   build traffic-weighted edges.
 
 ---
 
-## 8. Guardrail — the non-binding-budget detector
+## 8. Guardrail - the non-binding-budget detector
 
 Add to `authoringValidator.ts` so the V1 class of bug is **unshippable**. Given a
 budget question with reference + foil topologies, fail the build (or warn hard) when:
@@ -297,7 +297,7 @@ budget question with reference + foil topologies, fail the build (or warn hard) 
 | Check                | Condition                               | Meaning                                                |
 | -------------------- | --------------------------------------- | ------------------------------------------------------ |
 | `budget.non_binding` | `C_ref / cap < 0.6`                     | Cap too loose to ever bite (the V1 5% case).           |
-| `budget.misaligned`  | `C_foil ≤ C_ref`                        | The "wrong" design isn't more expensive — anti-signal. |
+| `budget.misaligned`  | `C_foil ≤ C_ref`                        | The "wrong" design isn't more expensive - anti-signal. |
 | `budget.no_foil`     | no foil supplied                        | Discrimination can't be demonstrated at all.           |
 | `budget.wrong_unit`  | `unit: cost` but all types share a base | Cost can't separate designs; use `nodes`.              |
 
@@ -329,13 +329,13 @@ per-type differentiation that gives it meaning.
 3. **Cost model V3 core** (§4a + `BASE × replicas` + type-aware `CAPACITY_UNIT`) in
    `budget.ts` + `budgetBreakdown`. Backward-compatible defaults.
 4. **`storageProfile` trait.** Prerequisite for the strong `sensor-store` question
-   (§7b) — makes the wrong store physically slower.
+   (§7b) - makes the wrong store physically slower.
 5. **Traffic-weighted edges** (§4 edge term). Unlocks `chatty-services` (§7c).
 6. **Validator guardrail** (§8) + calibration UI (§9).
 7. **Re-attach budgets** to the redesigned questions via the cap-last procedure (§6),
    and validate end-to-end.
 
-Phases 1–2 deliver a working, meaningful budget. 3–4 deepen it. 5 makes regressions
+Phases 1-2 deliver a working, meaningful budget. 3-4 deepen it. 5 makes regressions
 impossible. Nothing here blocks V1 shipping without any budget at all.
 
 ---
@@ -346,7 +346,7 @@ impossible. Nothing here blocks V1 shipping without any budget at all.
   capacity units; traffic-weighted edges; a foil always costs more than its reference.
 - **Authoring (`authoringValidator.test.ts`):** all four §8 checks fire on
   non-binding / misaligned / no-foil / wrong-unit budgets.
-- **E2E (`validate-question-dir.ts`):** for each redesigned question — reference within
+- **E2E (`validate-question-dir.ts`):** for each redesigned question - reference within
   budget + passing all axes; foil over budget (+ failing perf where applicable).
 - **Regression:** replay the V1 `async-sla` 36/600 and `sensor-store` 22/500 configs
   through the validator and assert they now **fail** authoring.
@@ -358,7 +358,7 @@ impossible. Nothing here blocks V1 shipping without any budget at all.
 2. Cost model V3 shipped + tested: per-type base, replica multiplier, type-aware
    capacity units, traffic-weighted edges.
 3. At least one **real** budget question where the reference fits and a correct-but-
-   expensive foil exceeds — proven by the harness, not by eye.
+   expensive foil exceeds - proven by the harness, not by eye.
 4. The non-binding-budget validator is active and blocks a decorative budget from
    shipping (regression test on the old V1 configs passes = they now fail authoring).
 5. Meter + breakdown show per-type and per-edge cost contributions.

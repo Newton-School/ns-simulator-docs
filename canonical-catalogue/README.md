@@ -1,6 +1,6 @@
 # DSDS Canonical Catalogue
 
-A reference specification for the Distributed System Design Simulator (DSDS). This catalogue defines every component type, failure mode, pattern, and scenario the simulator can model — serving as the single source of truth for building and validating distributed system architectures.
+A reference specification for the Distributed System Design Simulator (DSDS). This catalogue defines every component type, failure mode, pattern, and scenario the simulator can model - serving as the single source of truth for building and validating distributed system architectures.
 
 ## What's in here
 
@@ -80,10 +80,10 @@ Critical failure patterns to model: cascading failures, backpressure, resource e
 ### Example choreographies
 
 Four pre-built scenarios with failure injection:
-1. **Payment flow** — API through auth, orders DB, payment gateway, notifications
-2. **Media upload & encoding** — Client through CDN, queue, transcoder, object store
-3. **Live call (WebRTC SFU)** — Signaling, SFU, TURN relays with NAT exhaustion
-4. **DB failover** — Primary crash, replica promotion, replication lag handling
+1. **Payment flow** - API through auth, orders DB, payment gateway, notifications
+2. **Media upload & encoding** - Client through CDN, queue, transcoder, object store
+3. **Live call (WebRTC SFU)** - Signaling, SFU, TURN relays with NAT exhaustion
+4. **DB failover** - Primary crash, replica promotion, replication lag handling
 
 ### Metrics & SLIs
 
@@ -102,7 +102,7 @@ Default metrics to track in every simulation: latency percentiles (P50/P95/P99),
 
 ### Provider mapping
 
-Cloud equivalents for multi-cloud simulation across AWS, GCP, and Azure — covering compute, databases, storage, messaging, orchestration, secrets, monitoring, and CDN.
+Cloud equivalents for multi-cloud simulation across AWS, GCP, and Azure - covering compute, databases, storage, messaging, orchestration, secrets, monitoring, and CDN.
 
 ## How to use this catalogue
 

@@ -1,10 +1,10 @@
-# Budget Cost Model — All the Math (mapped to real-world cost)
+# Budget Cost Model - All the Math (mapped to real-world cost)
 
 > Every formula, constant, and term used to compute a design's cost, laid out as
 > tables and mapped to the three dimensions of a real cloud bill. Companion to
 > `budget-feature-consolidated-design-v3.md` (the design) and
 > `budget-feature-implementation-v3.md` (the code). All numbers are the V3 **starting**
-> values — relative order is the lesson; absolutes are tuned at implementation.
+> values - relative order is the lesson; absolutes are tuned at implementation.
 
 ---
 
@@ -20,11 +20,11 @@ total = Σ nodeCost(all nodes) + Σ edgeCost(all edges)
 Two terms per node, two per edge. That's the whole model.
 
 > **Operator = `⌊⌋` (floor), not `⌈⌉`.** The scaling terms use **floor** so that a
-> *sub-unit* value contributes **0** — you pay only for each **full unit** of capacity
+> *sub-unit* value contributes **0** - you pay only for each **full unit** of capacity
 > or traffic you provision. This is required for the model to behave as the design's own
 > constants state ("a 1 KB/s link adds 0", "adding 50 workers to a stateless service is
 > cheap"). With `ceil`, every node with ≥1 worker and every edge with any traffic would
-> cost a spurious +1, and a "thin edge" or a default-sized node could never be free —
+> cost a spurious +1, and a "thin edge" or a default-sized node could never be free -
 > which contradicts every worked example below. (The V3 design draft wrote `ceil`; treat
 > that as a typo superseded by its own constant descriptions and by this doc.)
 
@@ -45,7 +45,7 @@ Your list is **3 real cost dimensions** implemented by **3 model levers**. The m
 | **Edges Represent Data Transfer (Network Cost)** | lever | `EDGE_BASE + ⌊throughputMBps/NETWORK_UNIT⌋` | the whole `edgeCost` |
 
 > **Correction to note:** there is **no separate "storage" term**. Storage cost is
-> folded into two places — a store's **high `BASE`** (a managed DB's base already prices
+> folded into two places - a store's **high `BASE`** (a managed DB's base already prices
 > its hot SSD + backups) and the **`× replicas` multiplier** (3 replicas store the data 3×
 > and stand up 3 compute standbys). So "Storage (The Data)" = `BASE[store] × replicas`,
 > not a term of its own.
@@ -57,9 +57,9 @@ Your list is **3 real cost dimensions** implemented by **3 model levers**. The m
 | # | Term | Formula | Dimension | What it charges | The lesson it teaches |
 |---|------|---------|-----------|-----------------|-----------------------|
 | 1 | Node base | `BASE[type] × replicas` | Compute + Storage | the managed-service premium of the component *type*, multiplied by how many copies you run | "a DB costs several times a stateless worker; each replica pays again" |
-| 2 | Node capacity | `⌊ workers / CAPACITY_UNIT(type) ⌋` | Compute | scaling a node's concurrency (worker/connection pool) — **0 below one full unit** | "cranking DB connections is far pricier than cranking worker threads" |
+| 2 | Node capacity | `⌊ workers / CAPACITY_UNIT(type) ⌋` | Compute | scaling a node's concurrency (worker/connection pool) - **0 below one full unit** | "cranking DB connections is far pricier than cranking worker threads" |
 | 3 | Edge base | `EDGE_BASE` | Network | that a link exists at all | "every hop has a small fixed cost" |
-| 4 | Edge traffic | `⌊ throughputMBps / NETWORK_UNIT ⌋` | Network | how much **data** flows over the link — **0 below one full unit** | "chatty, heavy links are expensive — cache/batch/trim payloads" |
+| 4 | Edge traffic | `⌊ throughputMBps / NETWORK_UNIT ⌋` | Network | how much **data** flows over the link - **0 below one full unit** | "chatty, heavy links are expensive - cache/batch/trim payloads" |
 
 ---
 
@@ -78,7 +78,7 @@ Your list is **3 real cost dimensions** implemented by **3 model levers**. The m
 
 ---
 
-## 4. "Managed Service" Premium — the `BASE[type]` table
+## 4. "Managed Service" Premium - the `BASE[type]` table
 
 Ordering follows the real-world stateless → stateful → premium-managed cost curve.
 
@@ -90,13 +90,13 @@ Ordering follows the real-world stateless → stateful → premium-managed cost 
 | 4 | Managed distributed stores | `message-broker`, `nosql-db`, `time-series-db`, `search-index`, `distributed-lock` | managed distributed systems (patching, replication, failover) |
 | 5 | Heavy managed / append-only | `event-sourcing-store` | durable ordered log |
 | 6 | Premium managed ACID | `relational-db` | the ACID + hot-SSD + backup + failover premium (Aurora runs ~70% over a raw instance) |
-| 1 | *(fallback)* any unlisted type | — | `DEFAULT_BASE`, keeps back-compat |
+| 1 | *(fallback)* any unlisted type | - | `DEFAULT_BASE`, keeps back-compat |
 
 **Why the spread matters:** `relational-db (6)` vs `in-memory-cache (2)` **is** the
 managed-ACID premium. It's what makes "cache vs replicas" a real fork (see §7).
 
 > **Known compression:** `object-storage` is priced at base **2**, identical to
-> `in-memory-cache` — even though §9 says storage tiers span ~20× and object storage is
+> `in-memory-cache` - even though §9 says storage tiers span ~20× and object storage is
 > the *cheap* tier while a cache is a *compute*-tier thing. They collapse to the same
 > base in V3 for model simplicity; the tradeoff isn't wrong for any current question, but
 > a future "cache vs object-store" lesson would read as "same price," which it isn't.
@@ -104,7 +104,7 @@ managed-ACID premium. It's what makes "cache vs replicas" a real fork (see §7).
 
 ---
 
-## 5. Workers / Capacity Hurt More — the type-aware capacity term
+## 5. Workers / Capacity Hurt More - the type-aware capacity term
 
 ```
 capacityCost(node) = ⌊ workers / CAPACITY_UNIT(type) ⌋
@@ -114,7 +114,7 @@ CAPACITY_UNIT(type) = 25  if type is stateful   (storage-and-data,
 ```
 
 Same 200 workers cost very differently by type; and a **default-sized** node (below one
-unit) costs **0** on this term — keeping the initial state clean:
+unit) costs **0** on this term - keeping the initial state clean:
 
 | Node | workers | CAPACITY_UNIT | capacity cost `⌊w/unit⌋` |
 |------|--------:|--------------:|-------------------------:|
@@ -129,13 +129,13 @@ until you cross a full unit.
 
 ---
 
-## 6. Edges Represent Data Transfer — the network term
+## 6. Edges Represent Data Transfer - the network term
 
 ```
 edgeCost(edge) = EDGE_BASE + ⌊ throughputMBps(edge) / NETWORK_UNIT ⌋
 ```
 
-`throughputMBps` is **not a stored field** — it's **derived at grade time** from the
+`throughputMBps` is **not a stored field** - it's **derived at grade time** from the
 simulated per-edge transit count and the workload's payload size:
 
 ```
@@ -150,7 +150,7 @@ durationSec     = global.simulationDuration / 1000
 |----------------------|---------------------|
 | `totalSuccessfulTransits(edge)` | `SimulationOutput.perEdge[edge.id]` (seeded run) |
 | `avgPayloadBytes` | weighted mean of `suite.cases[].workload.requestDistribution[].sizeBytes` |
-| `durationSec` | `topology.global.simulationDuration / 1000` — **must cover the same window as the `totalSuccessfulTransits` count** (if the metric excludes warm-up, subtract `warmupDuration`); on a constant source the two cancel (see §8) so the choice only matters for transient-heavy workloads |
+| `durationSec` | `topology.global.simulationDuration / 1000` - **must cover the same window as the `totalSuccessfulTransits` count** (if the metric excludes warm-up, subtract `warmupDuration`); on a constant source the two cancel (see §8) so the choice only matters for transient-heavy workloads |
 
 > ⚠️ **Coarse proxy:** one workload-wide mean payload is applied to *every* edge (ignores
 > per-edge byte differences, request↔response asymmetry, cache hit-rate). Relative order
@@ -172,7 +172,7 @@ Note the design intent "a 100 MB/s link adds +2" holds at the unit boundary
 
 ---
 
-## 7. Worked example — the core lesson ("cache vs 3 replicas")
+## 7. Worked example - the core lesson ("cache vs 3 replicas")
 
 Fixing a read-latency SLA two ways; assume default workers (capacity term ≈ 0) and thin
 edges (cost 1 each) so the *architecture choice* is isolated:
@@ -182,20 +182,20 @@ edges (cost 1 each) so the *architecture choice* is isolated:
 | **Add a cache** | `in-memory-cache` = `2×1` = 2 | +1 edge | **+3** |
 | **Add 3 read replicas** | `relational-db` = `6×3` = 18 | +3 edges | **+21** |
 
-With a cap set cap-last just above the cache design, the replica design **blows it** — so
+With a cap set cap-last just above the cache design, the replica design **blows it** - so
 the student is forced to discover caching instead of brute-forcing with replicas. That
 fork exists *only* because `BASE` is type-aware.
 
 ---
 
-## 8. Worked example — full grade-time cost (V3 `async-sla` reference)
+## 8. Worked example - full grade-time cost (V3 `async-sla` reference)
 
 `client → svc → queue → worker → relational-db`. This is computed as the **full
-grade-time cost** the cap is built from (§1c) — capacity and traffic terms shown
+grade-time cost** the cap is built from (§1c) - capacity and traffic terms shown
 **explicitly**, even where they floor to 0, so the number is right for the right reason
 (not the meter's base-only shortcut).
 
-**Nodes** — the reference is deliberately sized **below each type's capacity unit**, so
+**Nodes** - the reference is deliberately sized **below each type's capacity unit**, so
 the capacity term is `0` on every row (a clean initial state) and the table foots to the
 total. The `unit` column shows each type's `CAPACITY_UNIT`: `microservice`/`batch-worker`
 are stateless (100); **`queue` and `relational-db` are stateful (25)**.
@@ -209,13 +209,13 @@ are stateless (100); **`queue` and `relational-db` are stateful (25)**.
 | `relational-db` (stateful) | `6×1` = 6 | 20 → `⌊20/25⌋` = 0 **(25)** | **6** |
 | | | **nodes subtotal** | **12** |
 
-> To scale a node *past* its unit you add the term — e.g. a `relational-db` at 60 workers
+> To scale a node *past* its unit you add the term - e.g. a `relational-db` at 60 workers
 > costs `6×1 + ⌊60/25⌋ = 6 + 2 = 8`, and a `queue` at 300 costs `2 + ⌊300/25⌋ = 14`. The
 > reference above avoids that on purpose; the foil below leans into it.
 
-**Edges** — grade-time traffic from the suite (`baseRps 3000`, write payload 512 B). On a
+**Edges** - grade-time traffic from the suite (`baseRps 3000`, write payload 512 B). On a
 linear path each request traverses each edge once, so
-`throughputMBps ≈ (baseRps × avgPayloadBytes) / 1e6` — **the run duration cancels**
+`throughputMBps ≈ (baseRps × avgPayloadBytes) / 1e6` - **the run duration cancels**
 (transits ∝ duration), so warm-up windowing doesn't change the estimate as long as the
 transit count and `durationSec` (§6) cover the same window:
 
@@ -225,7 +225,7 @@ transit count and `durationSec` (§6) cover the same window:
 |-------|----------:|-------------:|----------:|
 | 4 linear edges | `4×1` = 4 | `4×0` = 0 | **4** |
 
-**Total:** `C_ref = 12 (nodes) + 4 (edges) = 16` — the **full** grade-time cost (§1c), not
+**Total:** `C_ref = 12 (nodes) + 4 (edges) = 16` - the **full** grade-time cost (§1c), not
 a base-only shortcut: the traffic term was computed (~1.54 MB/s) and genuinely floors to 0
 because async-sla's write path is far under the 50 MB/s network unit.
 
@@ -234,11 +234,11 @@ Cap-last: `cap = round(16 × 1.15)` = **18**. Foil (sync `client→svc→relatio
 
 ---
 
-## 8b. Worked example — the network lesson (`chatty-services`, Phase 3)
+## 8b. Worked example - the network lesson (`chatty-services`, Phase 3)
 
 The riskiest question to calibrate, because its whole cost is the **traffic term**, so it
 must be shown before Phase 3. Throughput values below are **placeholders** pending the
-§4d real-fixture measurement — the purpose here is to prove a shippable **integer cap gap
+§4d real-fixture measurement - the purpose here is to prove a shippable **integer cap gap
 exists**.
 
 **Reference** `client → svc-a → cache → svc-b` (cache absorbs the chatter → thin edges):
@@ -261,17 +261,17 @@ exists**.
 **Cap-last:** `cap = round(9 × 1.15)` = round(10.35) = **10**.
 
 **Integer-gap check** (the calibration test §4d does *not* do):
-`C_ref (9) ≤ cap (10) < C_foil (12)` ✓ — and there are **two** valid integer caps in the
+`C_ref (9) ≤ cap (10) < C_foil (12)` ✓ - and there are **two** valid integer caps in the
 gap (`10`, `11`), so `⌊⌋`-rounding hasn't squeezed out the cap. `non_binding`: `9/10 = 0.9`
-(> 0.6) ✓. The foil is *more expensive with fewer nodes* — the whole network lesson: **a
+(> 0.6) ✓. The foil is *more expensive with fewer nodes* - the whole network lesson: **a
 fat link costs more than an extra cache node.**
 
-> **Precondition — the foil must PASS the perf axis.** The guardrail's premise (§1b) is
+> **Precondition - the foil must PASS the perf axis.** The guardrail's premise (§1b) is
 > that the foil is *correct on every other axis but expensive*. So the fat `svc-a→svc-b`
 > link must be provisioned to **meet the latency/SLA** (fast enough) while being **too
 > expensive to afford** (over the cap on the traffic term). If dropping the cache also
 > blows p99, the foil *fails perf too* and collapses back into the gamed topology §1b
-> separated out — no longer a clean "affordable-vs-not" fork. This is a real constraint on
+> separated out - no longer a clean "affordable-vs-not" fork. This is a real constraint on
 > the throughput/payload numbers §4d measures: it must find a **fast-but-unaffordable**
 > link, not merely a heavy one. State it as an authoring precondition, not just `C_foil > cap`.
 
@@ -283,14 +283,14 @@ traffic-weighted edges.
 
 ## 9. Real-world anchoring (why these magnitudes)
 
-The relative sizes aren't arbitrary — they mirror how cloud bills actually decompose:
+The relative sizes aren't arbitrary - they mirror how cloud bills actually decompose:
 
 | Dimension | Model lever | Real-world fact it encodes |
 |-----------|-------------|-----------------------------|
 | Compute | `BASE` (stateless=2) + capacity | billed per CPU/RAM-second; scaling out is ~linear |
-| Managed premium | `BASE` gap (DB 6 vs worker 2) | managed stateful services carry ~20–30% premium (Aurora ~70%) for backups/patching/failover |
+| Managed premium | `BASE` gap (DB 6 vs worker 2) | managed stateful services carry ~20-30% premium (Aurora ~70%) for backups/patching/failover |
 | Storage | high store `BASE` **× replicas** | hot SSD ≫ object ≫ archive (tiers span ~20×); replicas store data N× |
-| Network | edge traffic term | egress/cross-AZ is ~10–15% of spend and scales with **GB moved**, not link count |
+| Network | edge traffic term | egress/cross-AZ is ~10-15% of spend and scales with **GB moved**, not link count |
 
 ---
 

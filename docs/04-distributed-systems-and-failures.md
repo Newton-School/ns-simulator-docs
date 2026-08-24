@@ -230,7 +230,7 @@ class DependencyAwareNode {
 
 ---
 
-## Chapter 21: Network Physics — Realistic Latency Modeling
+## Chapter 21: Network Physics - Realistic Latency Modeling
 
 ### 21.1 The Anatomy of Network Latency
 
@@ -668,7 +668,7 @@ class NetworkEdge {
 
 ---
 
-## Chapter 22: Failure Modes — What Can Go Wrong
+## Chapter 22: Failure Modes - What Can Go Wrong
 
 ### 22.1 Taxonomy of Failures
 
@@ -1143,7 +1143,7 @@ const FailureScenarios = {
 
 ---
 
-## Chapter 23: Failure Propagation — The Domino Effect
+## Chapter 23: Failure Propagation - The Domino Effect
 
 ### 23.1 How Failures Cascade
 
@@ -1577,7 +1577,7 @@ propagationEngine.addPropagationRule({
 
 ---
 
-## Chapter 24: Resilience Patterns — Preventing Cascade Failures
+## Chapter 24: Resilience Patterns - Preventing Cascade Failures
 
 ### 24.1 Circuit Breaker Pattern
 
@@ -2059,7 +2059,7 @@ class RateLimiter {
 
 ---
 
-## Chapter 25: Summary — Part 4 Key Takeaways
+## Chapter 25: Summary - Part 4 Key Takeaways
 
 ```
     PART 4 KEY TAKEAWAYS

@@ -1,4 +1,4 @@
-# Question Bank — `initial_game_state` for 12 archetypes
+# Question Bank - `initial_game_state` for 12 archetypes
 
 > Ready-to-paste **`QuestionPackage` JSON** for each canonical question. Paste one
 > into a GAME question's **`initial_game_state`** field (see
@@ -9,20 +9,20 @@
 > **Authoring notes (read once):**
 > - **Metric keys are real verdict paths:** `summary.latency.p99`,
 >   `summary.errorRate`, `summary.throughput`, `invariantViolations.count`,
->   `perNode.<id>.utilization`. (NOT `summary.latencyP99Ms` — that never resolves.)
+>   `perNode.<id>.utilization`. (NOT `summary.latencyP99Ms` - that never resolves.)
 > - **Tractable RPS.** `prompt.scale` shows the *real-world* target (e.g. 200000);
 >   `suite.workload.baseRps` uses a **representative** load the browser can run
->   (~2–5K rps) that still stresses the design. Size nodes + thresholds together.
+>   (~2-5K rps) that still stresses the design. Size nodes + thresholds together.
 > - **Read/write matters only when injected as typed traffic AND routed on type**
 >   (`requestDistribution` + `condition: request.type === "read"`). A read-heavy
 >   prompt with no typed routing does not exercise the cache.
 > - **Performance vs correctness:** put a `simulation` rubric check only on things
 >   the sim measures (latency/throughput/util). Correctness (exactly-once,
 >   no-double-book, dedup) is graded by `structuralRules`/`semanticCriteria` +
->   `justify` — never a `simulation` check.
+>   `justify` - never a `simulation` check.
 > - **`guardedPath` is for ALL-traffic guards** (rate-limiter→shared-cache,
 >   payment→idempotency-store). It does *not* fit "reads-but-not-writes through a
->   cache" — that's a **simulation** obligation (the store saturates without it).
+>   cache" - that's a **simulation** obligation (the store saturates without it).
 
 **Dimension legend** (per grading-model §3): FR · NFR(lat/thru/consistency/durability) ·
 Scale · StorageFit · R:W · Fanout · Placement · Direction · Tradeoffs · Omission ·
@@ -30,7 +30,7 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 1. URL Shortener — read-heavy, point-lookup
+## 1. URL Shortener - read-heavy, point-lookup
 **Covers:** FR · NFR-latency · Scale · StorageFit · R:W. **Graded by:** Σ (p99 under injected 99:1) + S (storageFit) + J. **Sim helps:** yes (proven, alignment §9).
 
 ```json
@@ -58,7 +58,7 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 2. Feed / News — read-heavy, fan-out-on-write
+## 2. Feed / News - read-heavy, fan-out-on-write
 **Covers:** FR · NFR-latency · Scale · R:W · Fanout · Hot/Cold. **Graded by:** Σ (read p99) + T (fanout to timelines) + S (cache) + J.
 
 ```json
@@ -78,7 +78,7 @@ Hot/Cold · Async/Sync · Cost.
     {"id":"fanout-timelines","kind":"fanout","description":"A broker fans posts out to independent timeline builders","broker":"message-broker","minConsumers":2,"forbiddenBroker":"queue","points":3,"hardFail":false},
     {"id":"feed-store-fit","kind":"storageFit","description":"Timeline reads are point-lookups by user","accessPattern":"point-lookup","accept":["kv-store","nosql-db"],"partial":["in-memory-cache"],"antiPattern":["relational-db"],"points":2}
   ],
-  "justify": [{"id":"why-fanout","decision":"Fan-out on write vs read — why, given a 50:1 read ratio?","boundTo":{"componentType":"message-broker"},"requires":{"choice":true,"number":true,"tradeoff":true}}],
+  "justify": [{"id":"why-fanout","decision":"Fan-out on write vs read - why, given a 50:1 read ratio?","boundTo":{"componentType":"message-broker"},"requires":{"choice":true,"number":true,"tradeoff":true}}],
   "suite": {"name":"feed-suite","visibleToStudent":false,"cases":[{"id":"peak","description":"Read-heavy feed peak","workload":{"baseRps":3000,"requestDistribution":[{"type":"read","weight":0.98,"sizeBytes":512},{"type":"write","weight":0.02,"sizeBytes":1024}]}}]},
   "rubric": {"id":"feed-rubric","passThreshold":1,"checks":[
     {"id":"p99","kind":"simulation","description":"feed p99 under 200ms","metric":"summary.latency.p99","op":"<","value":200,"points":3},
@@ -89,7 +89,7 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 3. Sensor store (Lab 4) — write-heavy, time-series
+## 3. Sensor store (Lab 4) - write-heavy, time-series
 **Covers:** NFR-durability · Scale · StorageFit(hardFail) · R:W(write) · Tradeoffs · Cost. **Graded by:** S (storageFit; SQL = hard fail) + J + $ ; Σ only for write throughput.
 
 ```json
@@ -118,7 +118,7 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 4. Cache placement (Lab 2) — read-heavy, placement
+## 4. Cache placement (Lab 2) - read-heavy, placement
 **Covers:** Placement/Ordering · R:W · NFR-latency. **Graded by:** T (placement: cache between service & DB, not before LB) + Σ (p99).
 
 ```json
@@ -126,7 +126,7 @@ Hot/Cold · Async/Sync · Cost.
   "version": "1.0", "id": "cache-placement", "title": "Place the cache correctly",
   "difficulty": "beginner", "type": "open-build", "workloadCategory": "read-heavy",
   "prompt": {
-    "text": "Reads dominate ~20:1. Place a cache so it accelerates reads to the database — between the app service and the DB, never in front of the load balancer.",
+    "text": "Reads dominate ~20:1. Place a cache so it accelerates reads to the database - between the app service and the DB, never in front of the load balancer.",
     "functionalRequirements": ["Serve reads via a cache between the service and the DB", "Route all traffic through the load balancer first"],
     "nonFunctionalRequirements": [{"metric":"latency_p99","operator":"<","value":120,"unit":"ms","description":"p99 read under 120ms"}],
     "scale": {"peakRps":20000,"readWriteRatio":95}
@@ -148,7 +148,7 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 5. Messaging fan-out (Lab 3) — connection/event, topology
+## 5. Messaging fan-out (Lab 3) - connection/event, topology
 **Covers:** Fanout/Messaging · Direction. **Graded by:** T only (a broker must fan out to N; a queue→N is a hard fail). Sim does not help.
 
 ```json
@@ -156,7 +156,7 @@ Hot/Cold · Async/Sync · Cost.
   "version": "1.0", "id": "messaging-fanout", "title": "Fan out events to N consumers",
   "difficulty": "beginner", "type": "open-build", "workloadCategory": "connection-heavy",
   "prompt": {
-    "text": "One producer must deliver each event to 3 independent consumers. Use a broadcast broker (pub/sub) — a work-queue only delivers each message to ONE consumer.",
+    "text": "One producer must deliver each event to 3 independent consumers. Use a broadcast broker (pub/sub) - a work-queue only delivers each message to ONE consumer.",
     "functionalRequirements": ["Publish events once", "Each of 3 consumers receives every event"],
     "nonFunctionalRequirements": [],
     "scale": {"peakRps":5000}
@@ -177,12 +177,12 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 6. Cargo-cult CDN (Lab 5) — omission, anti-cargo-cult
+## 6. Cargo-cult CDN (Lab 5) - omission, anti-cargo-cult
 **Covers:** Omission · Tradeoffs. **Graded by:** T+J (a CDN must be ABSENT, or present *and* defended by a valid justification). Sim does not help.
 
 ```json
 {
-  "version": "1.0", "id": "cargo-cult-cdn", "title": "Justify omission — the CDN trap",
+  "version": "1.0", "id": "cargo-cult-cdn", "title": "Justify omission - the CDN trap",
   "difficulty": "intermediate", "type": "open-build", "workloadCategory": "read-heavy",
   "prompt": {
     "text": "This service serves dynamic, per-user API responses (not cacheable static assets). Adding a CDN here is cargo-cult. Either omit it, or defend it with a real reason.",
@@ -203,7 +203,7 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 7. Ride / track / pay (Exam 1) — mixed, hot/cold
+## 7. Ride / track / pay (Exam 1) - mixed, hot/cold
 **Covers:** FR · NFR-consistency · Placement · Hot/Cold · StorageFit · Direction. **Graded by:** Σ (match latency) + S (pay path = SQL) + T (hot/cold split) + J.
 
 ```json
@@ -237,15 +237,15 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 8. Rate limiter (Exam 2) — correctness, shared state
-**Covers:** Direction/Data-flow · Correctness · Tradeoffs. **Graded by:** T (rate-limiter → SHARED cache edge) + J (algorithm; cache-not-DB). **Sim does NOT help** (contention isn't modeled) — no `simulation` check.
+## 8. Rate limiter (Exam 2) - correctness, shared state
+**Covers:** Direction/Data-flow · Correctness · Tradeoffs. **Graded by:** T (rate-limiter → SHARED cache edge) + J (algorithm; cache-not-DB). **Sim does NOT help** (contention isn't modeled) - no `simulation` check.
 
 ```json
 {
   "version": "1.0", "id": "rate-limiter", "title": "Distributed rate limiter",
   "difficulty": "advanced", "type": "open-build", "workloadCategory": "correctness-heavy",
   "prompt": {
-    "text": "Build a rate limiter that is correct across many app instances. Counters must live in a SHARED store (e.g. Redis) — per-instance in-memory counters let a user exceed the limit by hitting different instances.",
+    "text": "Build a rate limiter that is correct across many app instances. Counters must live in a SHARED store (e.g. Redis) - per-instance in-memory counters let a user exceed the limit by hitting different instances.",
     "functionalRequirements": ["Rate-limit requests before they reach the service", "Share counter state across all instances (no per-instance counters)"],
     "nonFunctionalRequirements": [{"metric":"latency_p99","operator":"<","value":10,"unit":"ms","description":"Counter check adds <10ms"}],
     "scale": {"peakRps":100000}
@@ -271,7 +271,7 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 9. Async SLA (Exam 3) — async vs sync, cost
+## 9. Async SLA (Exam 3) - async vs sync, cost
 **Covers:** Async/Sync · NFR-throughput · Autoscaling/Cost · FR. **Graded by:** Σ (sync violates SLA at load) + T (queue + workers present) + $ + J.
 
 ```json
@@ -279,7 +279,7 @@ Hot/Cold · Async/Sync · Cost.
   "version": "1.0", "id": "async-sla", "title": "Async pipeline for a 15s SLA",
   "difficulty": "advanced", "type": "open-build", "workloadCategory": "write-heavy",
   "prompt": {
-    "text": "Process 50K jobs/min within a 15s SLA. A synchronous request path collapses under spikes — decouple with a queue and scalable workers.",
+    "text": "Process 50K jobs/min within a 15s SLA. A synchronous request path collapses under spikes - decouple with a queue and scalable workers.",
     "functionalRequirements": ["Accept jobs quickly", "Process each within the 15s SLA via an async queue + workers"],
     "nonFunctionalRequirements": [{"metric":"latency_p99","operator":"<","value":15000,"unit":"ms","description":"p99 job completion under 15s"}],
     "scale": {"peakRps":3000}
@@ -304,7 +304,7 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 10. Ticketmaster — correctness-under-contention
+## 10. Ticketmaster - correctness-under-contention
 **Covers:** Correctness · StorageFit · Direction · FR. **Graded by:** T (booking→lock; waiting queue) + S (SQL + search-index) + J (no-double-book). **Sim** only for waiting-queue latency.
 
 ```json
@@ -340,7 +340,7 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 11. Web Crawler — batch / throughput, async pipeline
+## 11. Web Crawler - batch / throughput, async pipeline
 **Covers:** Batch/Throughput · Async pipeline (ordered) · Fanout · Direction(dedup). **Graded by:** T (frontier→fetch→process ordered pipeline; enqueue→dedup guard; fanout to fetchers) + Σ (aggregate throughput).
 
 ```json
@@ -375,7 +375,7 @@ Hot/Cold · Async/Sync · Cost.
 
 ---
 
-## 12. Payment — exactly-once + auditability
+## 12. Payment - exactly-once + auditability
 **Covers:** Correctness(exactly-once) · NFR-durability · StorageFit(ledger) · Direction. **Graded by:** T (write→idempotency guard) + S (append-only ledger) + J. **Sim does NOT help** (exactly-once/immutability aren't simulatable).
 
 ```json
@@ -428,9 +428,9 @@ Hot/Cold · Async/Sync · Cost.
 `●!` = hard-fail / defining check. `lat/thru/con/dur` = the NFR flavor.
 
 > **Reminder (alignment §1/§9):** questions 5, 6, 8, 10, 12 are **correctness- or
-> topology-graded** — the `simulation` checks are minimal (just the invariant
+> topology-graded** - the `simulation` checks are minimal (just the invariant
 > guard) and the real credit is `structural` + `semantic` + `justify`. Questions
-> 1–4, 7, 9, 11 lean on the simulation for latency/throughput. Author accordingly:
+> 1-4, 7, 9, 11 lean on the simulation for latency/throughput. Author accordingly:
 > never put a `simulation` check on a property the sim can't measure.
 
 ---
@@ -439,7 +439,7 @@ Hot/Cold · Async/Sync · Cost.
 
 All 12 packages pass `parseQuestionPackage` (schema). Eight were additionally
 **graded through `sim evaluate question`** with a correct reference topology and a
-deliberately-gamed one — each reference **passed**, each gamed **failed on its
+deliberately-gamed one - each reference **passed**, each gamed **failed on its
 defining check**:
 
 | # | Question | Defining check exercised | Gamed failure message |

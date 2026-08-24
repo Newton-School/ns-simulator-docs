@@ -1,8 +1,8 @@
-# The Presentation Layer — EnvironmentProfile
+# The Presentation Layer - EnvironmentProfile
 
 > **Theme:** The fourth layer of the platform. An **EnvironmentProfile** is a
 > *visibility + capability lens* applied over one shared `QuestionPackage`, so the
-> same question runs — unchanged, graded by the same pipeline — as a full
+> same question runs - unchanged, graded by the same pipeline - as a full
 > authoring surface, a locked-down graded contest, or a relaxed learning
 > exercise.
 
@@ -17,7 +17,7 @@ Recall the governing invariant: **`QuestionPackage` = WHAT**, **`AttemptState` =
 the student's work**, and now **`EnvironmentProfile` = HOW MUCH IS SHOWN**. The
 grading pipeline is shared by all of them. A question about a URL shortener is one
 piece of content; whether the student sees the rubric live, gets three test runs,
-or edits the scaffold is *presentation*, not content — and must not require
+or edits the scaffold is *presentation*, not content - and must not require
 forking the question or the grader.
 
 ```
@@ -54,8 +54,8 @@ interface EnvironmentProfile {
 }
 ```
 
-Two axes — **visibility** (what the student can *see*) and **capabilities** (what
-they can *do*) — plus `graded` and `chromeDensity`.
+Two axes - **visibility** (what the student can *see*) and **capabilities** (what
+they can *do*) - plus `graded` and `chromeDensity`.
 
 ---
 
@@ -77,11 +77,11 @@ want. This is a deliberate, documented deviation.
 
 ---
 
-## 4. Resolving a profile — total and safe
+## 4. Resolving a profile - total and safe
 
 Hosts send either a mode string (`"ASSIGNMENT"`) or a partial override
 (`{ mode: 'ASSIGNMENT', capabilities: { maxTestRuns: 1 } }`). `resolveEnvironmentProfile`
-turns *anything* — including `unknown` / malformed input — into a complete
+turns *anything* - including `unknown` / malformed input - into a complete
 profile:
 
 ```ts
@@ -119,10 +119,10 @@ flowchart LR
 
 Two pure helpers make the decisions (unit-tested, DOM-free):
 
-- `shouldShowRubricResults(profile, { hasSubmittedGrade })` — HIDDEN → never;
+- `shouldShowRubricResults(profile, { hasSubmittedGrade })` - HIDDEN → never;
   LIVE_DURING_BUILD → always; POST_SUBMIT_ONLY → only once a *submitted* grade
   exists.
-- `canTriggerTestRun(profile, { testRunCount })` — false if disabled, or once
+- `canTriggerTestRun(profile, { testRunCount })` - false if disabled, or once
   `testRunCount` reaches `maxTestRuns`.
 
 Applied in `QuestionPanel`:
@@ -131,15 +131,15 @@ Applied in `QuestionPanel`:
 |------|-----------|
 | **Rubric timing** | In ASSIGNMENT the checklist + summary are masked ("revealed after you submit") until a submission exists; HIDDEN hides them entirely; LIVE shows them as before. |
 | **Test-run limit** | The Test button disables at the cap and shows "N left"; unlimited modes show no suffix. |
-| **Graded submit** | The Submit button only renders when `graded` — PRACTICE has no submit-for-grade, and only graded modes seal + archive an envelope. |
+| **Graded submit** | The Submit button only renders when `graded` - PRACTICE has no submit-for-grade, and only graded modes seal + archive an envelope. |
 | **Prompt visibility** | When `visibility.prompt` is false the Brief tab and its content are hidden and the panel shows Tests only. |
 | **Palette allowlist** | `capabilities.editPaletteList` filters the component library (`LibrarySidebar`) to the allowed node types/ids; `null` = all. Curates the palette for ASSIGNMENT. |
 | **Chrome density** | `chromeDensity: 'minimal'` drops the authoring file operations (Open/Save/Auto-Layout + file status) from the header for a cleaner ASSIGNMENT/PRACTICE surface. |
-| **Scaffold lock** | `capabilities.canEditScaffoldNodes: false` locks the question's scaffold nodes — the store drops their deletions and no-ops their edits (unbypassable); `visibility.scaffoldSourceNodes` badges them. See §6.5. |
+| **Scaffold lock** | `capabilities.canEditScaffoldNodes: false` locks the question's scaffold nodes - the store drops their deletions and no-ops their edits (unbypassable); `visibility.scaffoldSourceNodes` badges them. See §6.5. |
 | **Live metrics** | `visibility.liveMetrics: false` suppresses the runtime metric overlays via one chokepoint (`useNodeMetrics` reports no runtime) and hides the metric-lens switcher/legend. |
 | **Grading-suite details** | `visibility.gradingSuiteDetails` (AND the author's `suite.visibleToStudent`) reveals a compact list of the suite cases + their condition overrides in the brief; hidden in ASSIGNMENT. |
 
-### 6.5 Scaffold lock — provenance + unbypassable enforcement
+### 6.5 Scaffold lock - provenance + unbypassable enforcement
 
 `canEditScaffoldNodes` and `scaffoldSourceNodes` needed a **node-provenance**
 mechanism first: a node is "scaffold-provided" iff its id is in the active
@@ -158,10 +158,10 @@ A node is *locked* when it is a scaffold node **and** the profile's
 locked nodes (and a subtler "scaffold" badge when `scaffoldSourceNodes` is on but
 editing is allowed), and the properties panel shows a **locked banner**.
 
-Dragging a locked node is left free — position is cosmetic and doesn't affect
+Dragging a locked node is left free - position is cosmetic and doesn't affect
 grading.
 
-### 6.6 Host lifecycle commands — `reset` / `lock` / `reveal`
+### 6.6 Host lifecycle commands - `reset` / `lock` / `reveal`
 
 The profile decides the *initial* posture; the host can drive the attempt
 mid-session with a single origin-validated inbound message
@@ -169,14 +169,14 @@ mid-session with a single origin-validated inbound message
 `parseQuestionCommandMessage` and handled in `WorkspaceLayout` **only after the
 launch handshake locked a trusted origin** (doc 07):
 
-- **`reveal`** — force rubric results visible regardless of the profile's timing
+- **`reveal`** - force rubric results visible regardless of the profile's timing
   (a store `resultsRevealed` flag OR-ed into `shouldShowRubricResults`). Used to
   release results after a contest ends.
-- **`lock`** — freeze the attempt (`lockAttempt` → status `LOCKED`). Test/Submit
-  disable, autosave stops, and the **whole canvas freezes** — the same store
+- **`lock`** - freeze the attempt (`lockAttempt` → status `LOCKED`). Test/Submit
+  disable, autosave stops, and the **whole canvas freezes** - the same store
   chokepoints that enforce the scaffold lock (§6.5) also block *all*
   delete/edit/add while `LOCKED`. Used at "time's up."
-- **`reset`** — reload the scaffold topology and start a fresh, unlocked `DRAFT`
+- **`reset`** - reload the scaffold topology and start a fresh, unlocked `DRAFT`
   attempt (clearing reveal). Used to let a student start over.
 
 `reset` and `reveal` clear on the next launch and on question close, so a reused
@@ -184,7 +184,7 @@ frame never carries stale lifecycle state.
 
 ---
 
-## 7. Coverage — every field is now applied
+## 7. Coverage - every field is now applied
 
 The layer started as a typed contract with only the highest-signal gates wired
 (§6); the rest were applied in follow-up slices. **All `EnvironmentProfile` fields
@@ -210,7 +210,7 @@ scaffold-node *dragging*), but no field is unwired.
 
 ## 8. Design decisions & trade-offs
 
-Logged in [doc 05](05-design-decisions-and-tradeoffs.md) as **D23–D25**.
+Logged in [doc 05](05-design-decisions-and-tradeoffs.md) as **D23-D25**.
 
 | # | Decision | Criteria | Trade-off |
 |---|----------|----------|-----------|
@@ -223,14 +223,14 @@ Logged in [doc 05](05-design-decisions-and-tradeoffs.md) as **D23–D25**.
 ## 9. What to take away
 
 1. **Presentation is a lens, not a fork.** One question, one grader, three
-   experiences — selected by a profile.
-2. **Resolve untrusted config totally and safely** — a bad profile must never
+   experiences - selected by a profile.
+2. **Resolve untrusted config totally and safely** - a bad profile must never
    break the student's session.
 3. **Keep the gate decisions pure** (`shouldShowRubricResults`,
    `canTriggerTestRun`) so they're testable away from the UI.
-4. **A complete contract lets you ship gates incrementally** — the unapplied
+4. **A complete contract lets you ship gates incrementally** - the unapplied
    fields are follow-ups, not blockers.
 
-**Related:** [doc 05 — Design Decisions](05-design-decisions-and-tradeoffs.md)
-(D23–D25), [doc 06](06-grading-safe-persistence-and-the-evaluation-envelope.md)
+**Related:** [doc 05 - Design Decisions](05-design-decisions-and-tradeoffs.md)
+(D23-D25), [doc 06](06-grading-safe-persistence-and-the-evaluation-envelope.md)
 (the graded path AUTHOR exercises), and the architecture spec's Layer 3.

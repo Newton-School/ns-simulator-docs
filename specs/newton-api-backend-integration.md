@@ -1,4 +1,4 @@
-# System Design Simulator — newton-api Integration (Game Playground)
+# System Design Simulator - newton-api Integration (Game Playground)
 
 > Purpose: define how the ns-simulator should integrate with `newton-api` and
 > the generic Newton Game Playground host.

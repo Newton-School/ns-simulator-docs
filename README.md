@@ -4,7 +4,7 @@ A comprehensive guide to building discrete event simulation engines for modeling
 
 ## Overview
 
-This repository provides everything needed to understand and build a **Discrete Event Simulation (DES) engine** for distributed system architecture. It walks through the theory, data structures, and implementation details required to simulate system behavior — letting you discover bottlenecks, test scaling strategies, and validate designs before writing production code.
+This repository provides everything needed to understand and build a **Discrete Event Simulation (DES) engine** for distributed system architecture. It walks through the theory, data structures, and implementation details required to simulate system behavior - letting you discover bottlenecks, test scaling strategies, and validate designs before writing production code.
 
 ## Repository Structure
 
@@ -19,7 +19,7 @@ hld-simulator-docs/
 │   ├── 03-data-structures-and-mechanics.md  # Part 3: Min-heap, PRNG, distributions, G/G/c/K
 │   ├── 04-distributed-systems-and-failures.md # Part 4: Network physics, failure propagation
 │   ├── 05-devs-chaos-and-analysis.md # Part 5: DEVS formalism, chaos engineering, output analysis
-│   └── question-platform-hardening/  # Implementation guide: the question & grading platform (PRs #212–#214 + follow-ups)
+│   └── question-platform-hardening/  # Implementation guide: the question & grading platform (PRs #212-#214 + follow-ups)
 ├── schema/
 │   ├── complete_simulator_schema.ts # Full TypeScript type definitions (2300+ lines)
 │   └── README.md                    # Schema documentation
@@ -42,18 +42,18 @@ The single source of truth for understanding the simulator end-to-end. Covers ho
 
 ### [Theoretical Foundations](docs/theoretical-foundations.md)
 
-Maps academic theory to simulator features — queueing theory (G/G/c/K, Little's Law), DEVS formalism, probability distributions, reliability theory, graph theory, and control theory.
+Maps academic theory to simulator features - queueing theory (G/G/c/K, Little's Law), DEVS formalism, probability distributions, reliability theory, graph theory, and control theory.
 
-### [Part 1 — System Diagrams](docs/01-system-diagrams.md)
+### [Part 1 - System Diagrams](docs/01-system-diagrams.md)
 
 Covers the building blocks of any system diagram:
 
-- **Nodes** — source, processing, storage, routing, sink, and composite nodes with their properties (capacity, processing speed, availability)
-- **Edges** — synchronous, asynchronous, streaming, conditional, and weighted connections with failure modes
-- **Patterns** — sequence, fork, join, branch, loop, and parallel composition
+- **Nodes** - source, processing, storage, routing, sink, and composite nodes with their properties (capacity, processing speed, availability)
+- **Edges** - synchronous, asynchronous, streaming, conditional, and weighted connections with failure modes
+- **Patterns** - sequence, fork, join, branch, loop, and parallel composition
 - Real-world examples across domains (hospitals, factories, e-commerce, web systems)
 
-### [Part 2 — Simulation Fundamentals](docs/02-simulation-fundamentals.md)
+### [Part 2 - Simulation Fundamentals](docs/02-simulation-fundamentals.md)
 
 Introduces core simulation concepts:
 
@@ -63,33 +63,33 @@ Introduces core simulation concepts:
 - Queues, overflow strategies, and Little's Law
 - Randomness, distributions (exponential, log-normal, Poisson), and deterministic replay via seeded PRNGs
 
-### [Part 3 — Data Structures & Mechanics](docs/03-data-structures-and-mechanics.md)
+### [Part 3 - Data Structures & Mechanics](docs/03-data-structures-and-mechanics.md)
 
 Covers implementation in depth with working code:
 
-- **Min-heap** — O(log n) event queue with full JavaScript implementation
-- **Precision & determinism** — BigInt timestamps, SFC32 PRNG, distribution generators
-- **G/G/c/K queueing model** — formalizing node behavior with Kendall's notation
-- **Workload generation** — constant, Poisson, bursty, diurnal, and spike traffic patterns
-- **Simulation engine** — complete implementation with event handlers, latency percentiles (P50/P90/P95/P99), and Little's Law verification
+- **Min-heap** - O(log n) event queue with full JavaScript implementation
+- **Precision & determinism** - BigInt timestamps, SFC32 PRNG, distribution generators
+- **G/G/c/K queueing model** - formalizing node behavior with Kendall's notation
+- **Workload generation** - constant, Poisson, bursty, diurnal, and spike traffic patterns
+- **Simulation engine** - complete implementation with event handlers, latency percentiles (P50/P90/P95/P99), and Little's Law verification
 
-### [Part 4 — Distributed Systems & Failures](docs/04-distributed-systems-and-failures.md)
+### [Part 4 - Distributed Systems & Failures](docs/04-distributed-systems-and-failures.md)
 
 Models real-world distributed system complexity:
 
-- **Distributed systems** — dependency graphs, critical vs optional dependencies, fallback behavior
-- **Network physics** — latency decomposition (propagation + transmission + processing + queuing + jitter), congestion modeling
-- **Failure modes** — crash, omission, timing, response, Byzantine; resource exhaustion taxonomy
-- **Failure propagation** — timeout cascades, retry amplification, resource starvation, thundering herd, cache stampede
-- **Resilience patterns** — circuit breaker, bulkhead, retry with backoff, backpressure, rate limiting, load shedding
+- **Distributed systems** - dependency graphs, critical vs optional dependencies, fallback behavior
+- **Network physics** - latency decomposition (propagation + transmission + processing + queuing + jitter), congestion modeling
+- **Failure modes** - crash, omission, timing, response, Byzantine; resource exhaustion taxonomy
+- **Failure propagation** - timeout cascades, retry amplification, resource starvation, thundering herd, cache stampede
+- **Resilience patterns** - circuit breaker, bulkhead, retry with backoff, backpressure, rate limiting, load shedding
 
-### [Part 5 — DEVS, Chaos Engineering & Output Analysis](docs/05-devs-chaos-and-analysis.md)
+### [Part 5 - DEVS, Chaos Engineering & Output Analysis](docs/05-devs-chaos-and-analysis.md)
 
 Formalizes the simulator and adds validation:
 
-- **DEVS formalism** — atomic and coupled DEVS models, time advance functions, hierarchical composition
-- **Chaos engineering** — structured experiment workflow, fault injection catalog, pre-built experiments
-- **Output analysis** — metrics collection, waterfall traces, heatmaps, causal failure graphs, bottleneck identification
+- **DEVS formalism** - atomic and coupled DEVS models, time advance functions, hierarchical composition
+- **Chaos engineering** - structured experiment workflow, fault injection catalog, pre-built experiments
+- **Output analysis** - metrics collection, waterfall traces, heatmaps, causal failure graphs, bottleneck identification
 
 ### [Question & Grading Platform Hardening](docs/question-platform-hardening/README.md)
 
@@ -99,29 +99,29 @@ deterministic **question and grading platform**. It is the learning companion to
 the spec is the blueprint; this guide is the field notes on what was built and
 why. Each document follows **What → How → Why → Trade-offs**.
 
-- **[01 — Question Platform Foundation](docs/question-platform-hardening/01-pr212-question-platform-foundation.md)** — `QuestionPackage`, `AttemptState` lifecycle, structural & invariant checks, iframe-embed security
-- **[02 — Evaluation Contract & CLI](docs/question-platform-hardening/02-pr213-evaluation-contract-and-cli.md)** — versioned contract, parser invariants, exit-code taxonomy, Game Playground adapter
-- **[03 — Rubric Engine Hardening](docs/question-platform-hardening/03-pr214-rubric-engine-hardening.md)** — check kinds & statuses, execution rows, short-circuit skip semantics, hashed test IDs
-- **[04 — Rebase & Contract Reconciliation](docs/question-platform-hardening/04-rebase-and-contract-reconciliation.md)** — restacking overlapping PRs and regenerating frozen fixtures safely
-- **[05 — Design Decisions & Trade-offs](docs/question-platform-hardening/05-design-decisions-and-tradeoffs.md)** — a consolidated decision log (D1–D19) with the criteria behind each choice
-- **[06 — Grading-Safe Persistence & the Evaluation Envelope](docs/question-platform-hardening/06-grading-safe-persistence-and-the-evaluation-envelope.md)** — the immutable, tamper-evident submission record: integrity checksum, replay digest, append-only archive
-- **[07 — Production Embed Runtime & Origin Security](docs/question-platform-hardening/07-production-embed-runtime-and-origin-security.md)** — hardening the iframe seam: trusted-origin handshake, configured-allowlist-vs-TOFU, no wildcard for sensitive messages
-- **[08 — The Presentation Layer: EnvironmentProfile](docs/question-platform-hardening/08-environment-profile-presentation-layer.md)** — the visibility + capability lens (AUTHOR/ASSIGNMENT/PRACTICE) over one QuestionPackage: presets, safe resolver, applied gates
+- **[01 - Question Platform Foundation](docs/question-platform-hardening/01-pr212-question-platform-foundation.md)** - `QuestionPackage`, `AttemptState` lifecycle, structural & invariant checks, iframe-embed security
+- **[02 - Evaluation Contract & CLI](docs/question-platform-hardening/02-pr213-evaluation-contract-and-cli.md)** - versioned contract, parser invariants, exit-code taxonomy, Game Playground adapter
+- **[03 - Rubric Engine Hardening](docs/question-platform-hardening/03-pr214-rubric-engine-hardening.md)** - check kinds & statuses, execution rows, short-circuit skip semantics, hashed test IDs
+- **[04 - Rebase & Contract Reconciliation](docs/question-platform-hardening/04-rebase-and-contract-reconciliation.md)** - restacking overlapping PRs and regenerating frozen fixtures safely
+- **[05 - Design Decisions & Trade-offs](docs/question-platform-hardening/05-design-decisions-and-tradeoffs.md)** - a consolidated decision log (D1-D19) with the criteria behind each choice
+- **[06 - Grading-Safe Persistence & the Evaluation Envelope](docs/question-platform-hardening/06-grading-safe-persistence-and-the-evaluation-envelope.md)** - the immutable, tamper-evident submission record: integrity checksum, replay digest, append-only archive
+- **[07 - Production Embed Runtime & Origin Security](docs/question-platform-hardening/07-production-embed-runtime-and-origin-security.md)** - hardening the iframe seam: trusted-origin handshake, configured-allowlist-vs-TOFU, no wildcard for sensitive messages
+- **[08 - The Presentation Layer: EnvironmentProfile](docs/question-platform-hardening/08-environment-profile-presentation-layer.md)** - the visibility + capability lens (AUTHOR/ASSIGNMENT/PRACTICE) over one QuestionPackage: presets, safe resolver, applied gates
 
 ## Canonical Catalogue
 
 The [`canonical-catalogue/`](canonical-catalogue/) directory contains 17 CSV reference files covering:
 
-- **Component taxonomy** — ~110+ component types across 13 categories (compute, network, storage, messaging, orchestration, security, observability, DevOps, data infra, real-time, integration, consensus, DNS)
-- **Component specification** — YAML schema template and uniform attributes every component must support
-- **Simulation primitives** — event types, workload profiles (spike, steady-state, diurnal, bursty), and fault injection modes
-- **Failure modes** — cascading failures, backpressure, split-brain, thundering herd, resource exhaustion, and propagation rules
-- **Patterns & anti-patterns** — 23 architectural patterns (CQRS, Saga, Circuit Breaker, etc.) and 8 anti-patterns to detect
-- **Metrics & SLIs** — latency percentiles, throughput, availability, saturation, cost, and recovery time
-- **Policies & invariants** — idempotency, causal ordering, consistency, and security checks
-- **Pre-built scenarios** — 7 deterministic test scenarios (cache stampede, DB failover, network partition, auth outage, traffic spike, and more)
-- **Provider mapping** — AWS / GCP / Azure equivalents for multi-cloud simulation
-- **Implementation guidance** — architecture recommendations, utility components, and a completeness checklist
+- **Component taxonomy** - ~110+ component types across 13 categories (compute, network, storage, messaging, orchestration, security, observability, DevOps, data infra, real-time, integration, consensus, DNS)
+- **Component specification** - YAML schema template and uniform attributes every component must support
+- **Simulation primitives** - event types, workload profiles (spike, steady-state, diurnal, bursty), and fault injection modes
+- **Failure modes** - cascading failures, backpressure, split-brain, thundering herd, resource exhaustion, and propagation rules
+- **Patterns & anti-patterns** - 23 architectural patterns (CQRS, Saga, Circuit Breaker, etc.) and 8 anti-patterns to detect
+- **Metrics & SLIs** - latency percentiles, throughput, availability, saturation, cost, and recovery time
+- **Policies & invariants** - idempotency, causal ordering, consistency, and security checks
+- **Pre-built scenarios** - 7 deterministic test scenarios (cache stampede, DB failover, network partition, auth outage, traffic spike, and more)
+- **Provider mapping** - AWS / GCP / Azure equivalents for multi-cloud simulation
+- **Implementation guidance** - architecture recommendations, utility components, and a completeness checklist
 
 See [`canonical-catalogue/README.md`](canonical-catalogue/README.md) for detailed descriptions of each file.
 
@@ -129,19 +129,19 @@ See [`canonical-catalogue/README.md`](canonical-catalogue/README.md) for detaile
 
 [`schema/complete_simulator_schema.ts`](schema/complete_simulator_schema.ts) consolidates the full type system for the simulator (2300+ lines), incorporating definitions from both the documentation and the canonical catalogue. It is organized into 17 parts:
 
-- **Component types** — union types for all ~110+ component types plus a unified `ComponentType`
-- **Component specification** — `ComponentDefinition` with identity, resources, lifecycle, dependencies, health checks, telemetry, SLOs, fault injection, scaling, and security
-- **Simulation events** — `SimulationEvent` with 50+ event types and typed `EventData` variants
-- **Failure propagation** — `FailurePropagation` with conditions and cascading effects
-- **Workload profiles** — 8 traffic pattern types (steady-state, spike, diurnal, sawtooth, bursty, long-tail, replay, custom)
-- **Fault injection** — `FaultInjection` with 14 fault types and deterministic/probabilistic/conditional timing
-- **Metrics & outputs** — `MetricsDefinition`, `SimulationOutput` with traces, heatmaps, causal graphs, and reproducibility specs
-- **Scaling & invariants** — horizontal/vertical scaling simulation, shard rebalancing, and invariant checks
-- **Provider configs** — cloud-specific latency, quotas, and cost profiles (includes pre-built `AWS_PROFILE`)
-- **Utilities** — `ScenarioComposer`, `CostCalculator`, `ImpactCalculator`, `ReplayEngine`, `DesignComparator`
-- **Built-in scenarios** — 5 pre-configured `BUILT_IN_SCENARIOS` (cache stampede, DB crash, network partition, auth outage, traffic spike)
-- **Distribution configs** — 12 statistical distributions (normal, log-normal, exponential, Poisson, Weibull, gamma, beta, Pareto, empirical, mixture, etc.)
-- **Component configs** — type-specific configurations for APIs, databases, caches, queues, streams, serverless functions, CDNs, SFUs, and gateways
+- **Component types** - union types for all ~110+ component types plus a unified `ComponentType`
+- **Component specification** - `ComponentDefinition` with identity, resources, lifecycle, dependencies, health checks, telemetry, SLOs, fault injection, scaling, and security
+- **Simulation events** - `SimulationEvent` with 50+ event types and typed `EventData` variants
+- **Failure propagation** - `FailurePropagation` with conditions and cascading effects
+- **Workload profiles** - 8 traffic pattern types (steady-state, spike, diurnal, sawtooth, bursty, long-tail, replay, custom)
+- **Fault injection** - `FaultInjection` with 14 fault types and deterministic/probabilistic/conditional timing
+- **Metrics & outputs** - `MetricsDefinition`, `SimulationOutput` with traces, heatmaps, causal graphs, and reproducibility specs
+- **Scaling & invariants** - horizontal/vertical scaling simulation, shard rebalancing, and invariant checks
+- **Provider configs** - cloud-specific latency, quotas, and cost profiles (includes pre-built `AWS_PROFILE`)
+- **Utilities** - `ScenarioComposer`, `CostCalculator`, `ImpactCalculator`, `ReplayEngine`, `DesignComparator`
+- **Built-in scenarios** - 5 pre-configured `BUILT_IN_SCENARIOS` (cache stampede, DB crash, network partition, auth outage, traffic spike)
+- **Distribution configs** - 12 statistical distributions (normal, log-normal, exponential, Poisson, Weibull, gamma, beta, Pareto, empirical, mixture, etc.)
+- **Component configs** - type-specific configurations for APIs, databases, caches, queues, streams, serverless functions, CDNs, SFUs, and gateways
 
 See [`schema/README.md`](schema/README.md) for the full breakdown.
 
@@ -149,16 +149,16 @@ See [`schema/README.md`](schema/README.md) for the full breakdown.
 
 The [`planning/`](planning/) directory contains the implementation roadmap:
 
-- [**Implementation Plan**](planning/IMPLEMENTATION_PLAN.md) — 10-phase build plan covering topology JSON format, core primitives, simulation engine, network modeling, failure injection, resilience patterns, metrics/output, chaos scenarios, UI integration, and advanced features. Includes dependency graph, file structure, and the critical path for an MVP.
+- [**Implementation Plan**](planning/IMPLEMENTATION_PLAN.md) - 10-phase build plan covering topology JSON format, core primitives, simulation engine, network modeling, failure injection, resilience patterns, metrics/output, chaos scenarios, UI integration, and advanced features. Includes dependency graph, file structure, and the critical path for an MVP.
 
-- [**Tickets**](planning/TICKETS.md) — 46 self-contained engineering tickets with detailed specs, acceptance criteria, dependency chains, and size estimates. Organized into 12 phases covering the core engine, UI components, topology state management, CLI, and more.
+- [**Tickets**](planning/TICKETS.md) - 46 self-contained engineering tickets with detailed specs, acceptance criteria, dependency chains, and size estimates. Organized into 12 phases covering the core engine, UI components, topology state management, CLI, and more.
 
 ## Design Decisions
 
 The [`design-decisions/`](design-decisions/) directory contains architecture decision records (ADRs):
 
-- [**Internal Modularity Over Plugin System**](design-decisions/adr-internal-modularity-over-plugin-system.md) — Why the engine uses internal module boundaries instead of a runtime plugin system. The core DES loop is domain-agnostic; domain logic (queueing, network, failures) is structured as modules with clean interfaces, but ships as one package.
+- [**Internal Modularity Over Plugin System**](design-decisions/adr-internal-modularity-over-plugin-system.md) - Why the engine uses internal module boundaries instead of a runtime plugin system. The core DES loop is domain-agnostic; domain logic (queueing, network, failures) is structured as modules with clean interfaces, but ships as one package.
 
-- [**No Custom Change Detection**](design-decisions/adr-no-custom-change-detection.md) — Why no mutation observer or custom reactivity is needed. BUILD-phase state uses Zustand selector subscriptions. SIMULATE-phase data uses Web Worker `postMessage`. Both feed into React's standard re-render cycle.
+- [**No Custom Change Detection**](design-decisions/adr-no-custom-change-detection.md) - Why no mutation observer or custom reactivity is needed. BUILD-phase state uses Zustand selector subscriptions. SIMULATE-phase data uses Web Worker `postMessage`. Both feed into React's standard re-render cycle.
 
-- [**Canonical Node Architecture Refactor**](design-decisions/adr-canonical-node-architecture-refactor.md) — Engine-first node modeling plus production-grade semantic naming and domain-first folder structure standards (Component vs Node vocabulary, typed boundaries, workspace persistence contract, and migration path from legacy React Flow saves).
+- [**Canonical Node Architecture Refactor**](design-decisions/adr-canonical-node-architecture-refactor.md) - Engine-first node modeling plus production-grade semantic naming and domain-first folder structure standards (Component vs Node vocabulary, typed boundaries, workspace persistence contract, and migration path from legacy React Flow saves).

@@ -2,7 +2,7 @@
 
 Technical feature specification defining how the simulator should compute infrastructure cost estimates from resource configurations, service times, and throughput data, and how error budgets should gate SLO compliance decisions. This spec bridges the gap between the existing type definitions (`ResourceConfig`, `SLOConfig.errorBudget`) and the missing runtime logic that would make cost and budget data actionable.
 
-This spec exists because `ResourceConfig` (cpu, memory, replicas) and `SLOConfig.errorBudget` are defined in the type system, validated on input, and present on mock topologies — but never consumed by the engine, metrics collector, or analysis output. Cost and budgeting are the features these types were designed to support.
+This spec exists because `ResourceConfig` (cpu, memory, replicas) and `SLOConfig.errorBudget` are defined in the type system, validated on input, and present on mock topologies - but never consumed by the engine, metrics collector, or analysis output. Cost and budgeting are the features these types were designed to support.
 
 ---
 
@@ -25,7 +25,7 @@ This spec exists because `ResourceConfig` (cpu, memory, replicas) and `SLOConfig
 
 ### Capability definition
 
-Cost Calculation & Budgeting introduces two related capabilities: (1) estimating the infrastructure cost of running a topology based on resource allocations, utilization, and throughput, and (2) tracking error budget consumption against SLO targets to answer "how much of our error budget did this simulation burn?" Both capabilities derive from data that already exists in the simulation output — they are analysis-layer features that add no new events or engine logic.
+Cost Calculation & Budgeting introduces two related capabilities: (1) estimating the infrastructure cost of running a topology based on resource allocations, utilization, and throughput, and (2) tracking error budget consumption against SLO targets to answer "how much of our error budget did this simulation burn?" Both capabilities derive from data that already exists in the simulation output - they are analysis-layer features that add no new events or engine logic.
 
 ### Classification
 
@@ -66,20 +66,20 @@ export interface ResourceConfig {
   maxReplicas?: number
 }
 ```
-This type is defined on `ComponentNode.resources` (optional) and validated by the validator's Zod schema. It is populated by the canvas serializer when the user configures node resources. However, the engine never reads `resources` — it only uses `queue`, `processing`, and `config`.
+This type is defined on `ComponentNode.resources` (optional) and validated by the validator's Zod schema. It is populated by the canvas serializer when the user configures node resources. However, the engine never reads `resources` - it only uses `queue`, `processing`, and `config`.
 
 **SLOConfig.errorBudget** at `src/engine/core/types.ts:264`:
 ```typescript
 export interface SLOConfig {
   latencyP99: number        // ms
-  availabilityTarget: number // fraction 0–1
-  errorBudget: number       // fraction 0–1
+  availabilityTarget: number // fraction 0-1
+  errorBudget: number       // fraction 0-1
 }
 ```
-`errorBudget` is validated (Zod: `z.number().min(0).max(1)` at `validator.ts:279`) and present on all mock topology nodes (e.g., `orderProcessingTopology.ts` uses values like `0.001`, `0.005`, `0.0001`). But `detectSLOBreaches` at `output.ts:172-213` only checks `latencyP99` and `availabilityTarget` — `errorBudget` is never read.
+`errorBudget` is validated (Zod: `z.number().min(0).max(1)` at `validator.ts:279`) and present on all mock topology nodes (e.g., `orderProcessingTopology.ts` uses values like `0.001`, `0.005`, `0.0001`). But `detectSLOBreaches` at `output.ts:172-213` only checks `latencyP99` and `availabilityTarget` - `errorBudget` is never read.
 
 **LegacySeedMetrics** at `src/engine/catalog/nodeSpecTypes.ts:79-98`:
-Contains `vCPU` and `ram` fields used by `buildSeededSimulationConfig` to derive worker counts and capacity — but these values influence the simulation config, not cost output.
+Contains `vCPU` and `ram` fields used by `buildSeededSimulationConfig` to derive worker counts and capacity - but these values influence the simulation config, not cost output.
 
 **buildSeededSimulationConfig** at `src/engine/catalog/componentSpecs.ts:95-140`:
 Uses `vCPU` and `ram` to derive `workers` and `capacity`. The `memoryCapacityBoost` formula (`clamp(memoryGb / 8, 0.5, 8)`) scales capacity by memory. This is the closest the system gets to resource-aware computation, but it's config derivation, not cost calculation.
@@ -102,7 +102,7 @@ Uses `vCPU` and `ram` to derive `workers` and `capacity`. The `memoryCapacityBoo
 
 ### Design
 
-The resource cost model computes a per-node infrastructure cost estimate from the node's `ResourceConfig`, a pricing table, and the simulation duration. The model is intentionally simple — it calculates the cost of *provisioned* resources, not consumed resources, because cloud infrastructure bills for allocation, not utilization.
+The resource cost model computes a per-node infrastructure cost estimate from the node's `ResourceConfig`, a pricing table, and the simulation duration. The model is intentionally simple - it calculates the cost of *provisioned* resources, not consumed resources, because cloud infrastructure bills for allocation, not utilization.
 
 ### Proposed types
 
@@ -146,7 +146,7 @@ costPerSuccessful = totalProvisionedCost / max(1, postWarmupProcessed)
 costPerRequest = totalProvisionedCost / max(1, postWarmupArrived)
 ```
 
-**Replicas vs. workers:** `resources.replicas` represents infrastructure instances (VMs, containers). `queue.workers` represents concurrency within a single logical node. In the current model, `replicas` is metadata only — the engine doesn't simulate multiple replicas. The cost model treats `replicas` as a multiplier on provisioned resources. A future `ScalingConfig`-aware cost model would use `maxReplicas` to compute peak cost.
+**Replicas vs. workers:** `resources.replicas` represents infrastructure instances (VMs, containers). `queue.workers` represents concurrency within a single logical node. In the current model, `replicas` is metadata only - the engine doesn't simulate multiple replicas. The cost model treats `replicas` as a multiplier on provisioned resources. A future `ScalingConfig`-aware cost model would use `maxReplicas` to compute peak cost.
 
 **Network cost:** Requires tracking total bytes transferred through each node. Currently, `Request.sizeBytes` exists on the request object but is never accumulated per-node. A per-node `totalBytesIn` and `totalBytesOut` accumulator would need to be added to `MetricsCollector`.
 
@@ -227,7 +227,7 @@ interface TopologyCostSummary {
 
 ### Design
 
-Error budget accounting consumes `SLOConfig.errorBudget` to answer: "Given a budget of N% errors over a time window, how much of that budget did this simulation consume?" The error budget is a reliability engineering concept — it defines the acceptable failure rate over a period (typically 30 days), and the simulation's error rate is extrapolated to see how fast it would burn the budget.
+Error budget accounting consumes `SLOConfig.errorBudget` to answer: "Given a budget of N% errors over a time window, how much of that budget did this simulation consume?" The error budget is a reliability engineering concept - it defines the acceptable failure rate over a period (typically 30 days), and the simulation's error rate is extrapolated to see how fast it would burn the budget.
 
 ### Calculation
 
@@ -286,7 +286,7 @@ This adds a third SLO dimension alongside latencyP99 and availability. The `SLOB
 
 Error budget and availability are related but not redundant:
 - **Availability** = 1 − errorRate. It measures *current* reliability.
-- **Error budget** measures *budget consumption rate*. A node with 99.5% availability and 99.9% budget (0.1%) is burning budget at 5× — it's "available enough right now" but unsustainable over 30 days.
+- **Error budget** measures *budget consumption rate*. A node with 99.5% availability and 99.9% budget (0.1%) is burning budget at 5× - it's "available enough right now" but unsustainable over 30 days.
 
 The error budget check catches sustainability problems that availability alone misses.
 
@@ -329,7 +329,7 @@ interface CostRecommendation {
 
 Simple heuristic-based recommendations:
 
-**Over-provisioned:** `utilization < 0.3` and `errorRate < 0.01`. The node has spare capacity and low errors — it could run with fewer resources.
+**Over-provisioned:** `utilization < 0.3` and `errorRate < 0.01`. The node has spare capacity and low errors - it could run with fewer resources.
 
 ```
 suggestedReplicas = max(1, ceil(resources.replicas × utilization / 0.7))
@@ -352,7 +352,7 @@ message = "Error budget burning at {burnRate}×; budget exhausted in ~{days} day
 
 `generateSimulationOutput` at `output.ts:130-170` constructs the full output object. The `cost` field is computed after `perNode` metrics are available, since cost calculations depend on throughput, rejection counts, and utilization data.
 
-The computation is pure analysis — it reads from `MetricsCollector` and `TopologyJSON` config, produces a `CostAnalysis` object, and has no side effects on the simulation.
+The computation is pure analysis - it reads from `MetricsCollector` and `TopologyJSON` config, produces a `CostAnalysis` object, and has no side effects on the simulation.
 
 ---
 
@@ -377,8 +377,8 @@ The computation is pure analysis — it reads from `MetricsCollector` and `Topol
 
 | Integration point | Producer | Consumer | Contract |
 | --- | --- | --- | --- |
-| `ResourceConfig` | `ComponentNode.resources` | Cost model | `{ cpu, memory, replicas }` — may be absent |
-| `SLOConfig.errorBudget` | `ComponentNode.slo` | Error budget accounting | Fraction 0–1; may be absent if no SLO |
+| `ResourceConfig` | `ComponentNode.resources` | Cost model | `{ cpu, memory, replicas }` - may be absent |
+| `SLOConfig.errorBudget` | `ComponentNode.slo` | Error budget accounting | Fraction 0-1; may be absent if no SLO |
 | `postWarmupProcessed` | `MetricsCollector` | Cost per successful request | Denominator for per-request cost |
 | `postWarmupRejected + postWarmupTimedOut` | `MetricsCollector` | Error budget burn rate | Numerator for error rate |
 | `utilization` | `PerNodeMetrics` | Over-provisioning detection | Average utilization over post-warmup window |
@@ -408,9 +408,9 @@ The computation is pure analysis — it reads from `MetricsCollector` and `Topol
 | `src/engine/validation/validator.ts` | 279 | F3: `errorBudget` Zod validation (min 0, max 1) |
 | `src/engine/catalog/componentSpecs.ts` | 95-140 | F1: `buildSeededSimulationConfig` uses vCPU/ram for config derivation |
 | `src/engine/catalog/nodeSpecTypes.ts` | 79-98 | F1: `LegacySeedMetrics.vCPU` and `.ram` |
-| `src/engine/metrics.ts` | 311-395 | F2/F3: `getPerNodeMetrics` — throughput, errorRate, availability |
-| `src/engine/analysis/output.ts` | 172-213 | F3/F4: `detectSLOBreaches` — extends with errorBudget |
-| `src/engine/analysis/output.ts` | 130-170 | F4: `generateSimulationOutput` — adds `cost` section |
+| `src/engine/metrics.ts` | 311-395 | F2/F3: `getPerNodeMetrics` - throughput, errorRate, availability |
+| `src/engine/analysis/output.ts` | 172-213 | F3/F4: `detectSLOBreaches` - extends with errorBudget |
+| `src/engine/analysis/output.ts` | 130-170 | F4: `generateSimulationOutput` - adds `cost` section |
 | `src/engine/__mocks__/orderProcessingTopology.ts` | various | F3: `errorBudget` values on mock nodes (0.001, 0.005, 0.0001) |
 
 ---
@@ -438,5 +438,5 @@ The computation is pure analysis — it reads from `MetricsCollector` and `Topol
 | 3 | Should the cost model account for `ScalingConfig.maxReplicas`? | Auto-scaling means cost varies over time; peak vs. average cost is a meaningful distinction |
 | 4 | Should error budget tracking be cumulative across simulation runs? | For release validation, a single run's burn rate is sufficient; for ongoing monitoring, cumulative tracking matters |
 | 5 | Should per-request cost include edge/network cost? | Adds accuracy but requires byte-level tracking through every edge |
-| 6 | Should the recommendation engine consider the relationship between capacity and rejection rate? | A node rejecting 10% of requests might cost less than one provisioned to handle all traffic — the optimizer should model this tradeoff |
+| 6 | Should the recommendation engine consider the relationship between capacity and rejection rate? | A node rejecting 10% of requests might cost less than one provisioned to handle all traffic - the optimizer should model this tradeoff |
 | 7 | Where should `CostConfig` live in the UI? | Global settings panel vs. per-scenario configuration vs. environment-level default |

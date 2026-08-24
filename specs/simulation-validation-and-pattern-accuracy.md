@@ -2,7 +2,7 @@
 
 Technical feature specification defining the four layers of simulation validation: pre-run topology validation, post-run statistical checks, pattern accuracy classification, and reproducibility guarantees. This spec consolidates the validator, Little's Law verification, conservation checking, warmup adequacy assessment, SLO breach detection, invariant checking (stub), and the seeded RNG reproducibility system into a single reference.
 
-This spec exists because validation is the trust layer — every metric, recommendation, and SLO breach reported by the simulator is only meaningful if the simulation ran correctly on valid input. A broken topology, an inadequate warmup, or a non-reproducible RNG would silently invalidate all downstream analysis.
+This spec exists because validation is the trust layer - every metric, recommendation, and SLO breach reported by the simulator is only meaningful if the simulation ran correctly on valid input. A broken topology, an inadequate warmup, or a non-reproducible RNG would silently invalidate all downstream analysis.
 
 ---
 
@@ -27,9 +27,9 @@ This spec exists because validation is the trust layer — every metric, recomme
 
 Simulation Validation & Pattern Accuracy provides four layers of trust:
 
-1. **Pre-run validation**: Ensures the topology is structurally sound before simulation starts — valid types, referential integrity, connectivity, and semantic constraints.
-2. **Post-run statistical checks**: Verifies that simulation output is internally consistent — Little's Law holds, conservation accounting balances, warmup was adequate, and SLO breaches are detected.
-3. **Parameter accuracy classification**: Classifies every simulation parameter by its fidelity to reality — invariant constants, user-supplied values, default overrides, or not-simulated placeholders.
+1. **Pre-run validation**: Ensures the topology is structurally sound before simulation starts - valid types, referential integrity, connectivity, and semantic constraints.
+2. **Post-run statistical checks**: Verifies that simulation output is internally consistent - Little's Law holds, conservation accounting balances, warmup was adequate, and SLO breaches are detected.
+3. **Parameter accuracy classification**: Classifies every simulation parameter by its fidelity to reality - invariant constants, user-supplied values, default overrides, or not-simulated placeholders.
 4. **Reproducibility**: Guarantees that the same seed + topology produces identical results, enabling regression testing and comparative analysis.
 
 ### Classification
@@ -65,7 +65,7 @@ Simulation Validation & Pattern Accuracy provides four layers of trust:
 
 ### What exists today
 
-**Pre-run validation** — `validateTopology` at `src/engine/validation/validator.ts:570-847`:
+**Pre-run validation** - `validateTopology` at `src/engine/validation/validator.ts:570-847`:
 - Zod structural parse against `TopologyJSONSchema`
 - Duplicate node/edge ID detection
 - Edge source/target reference validity
@@ -81,19 +81,19 @@ Simulation Validation & Pattern Accuracy provides four layers of trust:
 - Workload source node reachability check
 - Connectivity warnings: disconnected nodes, source-to-source edges, self-loops, source with incoming edges, sink with outgoing edges, router with ≤1 outgoing edge
 
-**Post-run statistical checks** — `src/engine/analysis/output.ts`:
+**Post-run statistical checks** - `src/engine/analysis/output.ts`:
 - Little's Law: `calculateLittlesLaw` (lines 223-250)
 - Conservation: `buildConservationCheck` (lines 308-326)
 - Warmup adequacy: `assessWarmupAdequacy` (lines 256-299)
 - SLO breaches: `detectSLOBreaches` (lines 172-213)
 
-**Invariant checking** — `InvariantCheck` at `types.ts:423-427` and `InvariantViolation` at `output.ts:37-44`:
-Both types exist, validated by Zod (`InvariantCheckSchema` at `validator.ts:498`), and `invariantViolations` is a field on `SimulationOutput`. But the engine always passes `[]` at `engine.ts:604` — no invariants are ever evaluated.
+**Invariant checking** - `InvariantCheck` at `types.ts:423-427` and `InvariantViolation` at `output.ts:37-44`:
+Both types exist, validated by Zod (`InvariantCheckSchema` at `validator.ts:498`), and `invariantViolations` is a field on `SimulationOutput`. But the engine always passes `[]` at `engine.ts:604` - no invariants are ever evaluated.
 
-**Parameter accuracy** — `ParameterAccuracyClass` at `types.ts:11-15`:
+**Parameter accuracy** - `ParameterAccuracyClass` at `types.ts:11-15`:
 Four classification levels defined (`'invariant'`, `'default-override'`, `'user-parameter'`, `'not-simulated'`) with a comment explaining each. Never referenced outside the type definition.
 
-**Reproducibility** — `createRandom` at `src/engine/stochastic/random.ts:37-74`:
+**Reproducibility** - `createRandom` at `src/engine/stochastic/random.ts:37-74`:
 Uses xmur3 hash for seed initialization and sfc32 PRNG. `SimulationOutput.reproducible` is hardcoded to `true` at `output.ts:117`. `SimulationOutput.seed` records the seed used.
 
 ### What's missing
@@ -256,8 +256,8 @@ withinTolerance: error <= 0.1 || absoluteError <= 0.5  // dual guard
 ```
 
 **Dual tolerance guard:** The `OR` condition means a node passes if *either*:
-1. Relative error ≤ 10% — works well for busy nodes where L > 5
-2. Absolute error ≤ 0.5 — works well for lightly loaded nodes where L ≈ 0.1 and 10% is too tight
+1. Relative error ≤ 10% - works well for busy nodes where L > 5
+2. Absolute error ≤ 0.5 - works well for lightly loaded nodes where L ≈ 0.1 and 10% is too tight
 
 **When Little's Law fails:**
 - Inadequate warmup (transient ramp-up inflates W)
@@ -281,9 +281,9 @@ Where `inFlight = max(0, arrived - processed - rejected - timedOut)`.
 A node is "balanced" if `inFlight / postWarmupArrived < 0.05` or `postWarmupArrived == 0`.
 
 **When conservation fails:**
-- Bulk `fail()` drops queued requests without calling `recordRejection` (known bug — see Request Rejection Behaviour)
-- Simulation duration too short — many requests still in queue at cutoff
-- Bug in metrics recording — double-counting or missing counts
+- Bulk `fail()` drops queued requests without calling `recordRejection` (known bug - see Request Rejection Behaviour)
+- Simulation duration too short - many requests still in queue at cutoff
+- Bug in metrics recording - double-counting or missing counts
 
 **Output type:** `ConservationResult` per node with all five counters plus `balanced` boolean.
 
@@ -311,8 +311,8 @@ adequate = warmupMs >= recommendedWarmupMs
 
 Checks two dimensions per node (only if `slo` is defined via node metadata):
 
-1. **Latency P99:** `nodeMetrics.latencyP99 > slo.latencyP99` — breach if actual exceeds target
-2. **Availability:** `nodeMetrics.availability < slo.availabilityTarget` — breach if actual is below target
+1. **Latency P99:** `nodeMetrics.latencyP99 > slo.latencyP99` - breach if actual exceeds target
+2. **Availability:** `nodeMetrics.availability < slo.availabilityTarget` - breach if actual is below target
 
 Severity: `severityForRatio(ratio)` returns `'critical'` if ratio ≥ 1.25, else `'warning'`.
 
@@ -331,7 +331,7 @@ interface InvariantCheck {
 }
 ```
 
-The Zod schema validates this structure. `TopologyJSON.invariants` can contain user-defined invariants. But `engine.ts:604` passes `[]` for `invariantViolations` — no invariants are ever evaluated.
+The Zod schema validates this structure. `TopologyJSON.invariants` can contain user-defined invariants. But `engine.ts:604` passes `[]` for `invariantViolations` - no invariants are ever evaluated.
 
 **Proposed evaluation model:**
 
@@ -351,7 +351,7 @@ function evaluateInvariants(
 ): InvariantViolation[];
 ```
 
-The `condition` string would need a safe expression evaluator (not `eval`) — a simple predicate language supporting:
+The `condition` string would need a safe expression evaluator (not `eval`) - a simple predicate language supporting:
 - Node metric access: `node["api-gateway"].latencyP99 < 100`
 - Global metric access: `summary.throughput > 1000`
 - Boolean operators: `&&`, `||`, `!`
@@ -385,7 +385,7 @@ interface ParameterAccuracy {
   parameter: string;         // e.g., "queue.workers", "processing.distribution"
   accuracy: ParameterAccuracyClass;
   source: string;            // e.g., "user config", "withNodeDefaults", "EDGE_DEFAULTS"
-  confidence: number;        // 0–1 heuristic
+  confidence: number;        // 0-1 heuristic
 }
 
 interface NodeAccuracyReport {
@@ -399,24 +399,24 @@ interface NodeAccuracyReport {
 
 | Parameter | `invariant` | `user-parameter` | `default-override` | `not-simulated` |
 | --- | --- | --- | --- | --- |
-| `queue.workers` | — | User set explicitly | Default 1 from `withNodeDefaults` | — |
-| `queue.capacity` | — | User set explicitly | Default 100 from `withNodeDefaults` | — |
-| `queue.discipline` | — | User set explicitly | Default 'fifo' from `withNodeDefaults` | — |
-| `processing.distribution` | — | User set explicitly | Default constant(1) from `withNodeDefaults` | — |
-| `processing.timeout` | — | User set explicitly | Default 30000 from `withNodeDefaults` | — |
-| `edge.latency.distribution` | — | User set explicitly | Default log-normal(2.3, 0.5) from renderer | — |
-| `edge.bandwidth` | — | User set explicitly | — | Has no runtime effect |
-| `edge.protocol` | — | User set explicitly | — | Has no runtime effect |
-| `edge.pathType` | — | User set explicitly | — | Has no runtime effect |
-| `resources.cpu` | — | User set explicitly | — | Has no runtime effect |
-| `resources.memory` | — | User set explicitly | — | Has no runtime effect |
-| `resilience.circuitBreaker` | — | User set explicitly | — | Has no runtime effect |
-| `resilience.retry` | — | User set explicitly | — | Has no runtime effect |
-| `scaling` | — | User set explicitly | — | Has no runtime effect |
-| Event priority mapping | `SYSTEM=0, ARRIVAL=1...` | — | — | — |
-| Warmup multiplier (10×) | `10` | — | — | — |
-| Conservation threshold (5%) | `0.05` | — | — | — |
-| Little's Law tolerance (10%/0.5) | `0.1, 0.5` | — | — | — |
+| `queue.workers` | - | User set explicitly | Default 1 from `withNodeDefaults` | - |
+| `queue.capacity` | - | User set explicitly | Default 100 from `withNodeDefaults` | - |
+| `queue.discipline` | - | User set explicitly | Default 'fifo' from `withNodeDefaults` | - |
+| `processing.distribution` | - | User set explicitly | Default constant(1) from `withNodeDefaults` | - |
+| `processing.timeout` | - | User set explicitly | Default 30000 from `withNodeDefaults` | - |
+| `edge.latency.distribution` | - | User set explicitly | Default log-normal(2.3, 0.5) from renderer | - |
+| `edge.bandwidth` | - | User set explicitly | - | Has no runtime effect |
+| `edge.protocol` | - | User set explicitly | - | Has no runtime effect |
+| `edge.pathType` | - | User set explicitly | - | Has no runtime effect |
+| `resources.cpu` | - | User set explicitly | - | Has no runtime effect |
+| `resources.memory` | - | User set explicitly | - | Has no runtime effect |
+| `resilience.circuitBreaker` | - | User set explicitly | - | Has no runtime effect |
+| `resilience.retry` | - | User set explicitly | - | Has no runtime effect |
+| `scaling` | - | User set explicitly | - | Has no runtime effect |
+| Event priority mapping | `SYSTEM=0, ARRIVAL=1...` | - | - | - |
+| Warmup multiplier (10×) | `10` | - | - | - |
+| Conservation threshold (5%) | `0.05` | - | - | - |
+| Little's Law tolerance (10%/0.5) | `0.1, 0.5` | - | - | - |
 
 **Output in SimulationOutput:**
 
@@ -434,7 +434,7 @@ Overall confidence is the geometric mean of per-node confidences. Per-node confi
 
 | Parameter | Weight | Rationale |
 | --- | --- | --- |
-| `processing.distribution` | 3 | Drives service time, throughput, latency — most impactful |
+| `processing.distribution` | 3 | Drives service time, throughput, latency - most impactful |
 | `queue.workers` | 2 | Drives concurrency and utilization |
 | `queue.capacity` | 2 | Drives rejection rate |
 | `edge.latency.distribution` | 2 | Drives end-to-end latency |
@@ -452,8 +452,8 @@ A node with all `user-parameter` values gets confidence 1.0. All `default-overri
 **Seeded PRNG:** `createRandom` at `src/engine/stochastic/random.ts:37-74`
 
 The RNG is initialized from a string seed via:
-1. `xmur3(seedString)` — converts arbitrary string to a hash function that produces 32-bit integers
-2. `sfc32(seed(), seed(), seed(), seed())` — initializes the sfc32 PRNG with four seeded values
+1. `xmur3(seedString)` - converts arbitrary string to a hash function that produces 32-bit integers
+2. `sfc32(seed(), seed(), seed(), seed())` - initializes the sfc32 PRNG with four seeded values
 
 sfc32 (Small, Fast, Chaotic) is a 128-bit state PRNG with:
 - Period: 2^128 (practically infinite for simulation purposes)
@@ -477,7 +477,7 @@ Because all random decisions flow through a single sequential RNG, the sequence 
 
 For reproducibility to hold, the following invariants must be maintained:
 
-1. **Single-threaded execution.** The event loop is sequential — `processEvents` extracts one event at a time from the MinHeap. If execution were parallelized, the order of RNG calls would be non-deterministic.
+1. **Single-threaded execution.** The event loop is sequential - `processEvents` extracts one event at a time from the MinHeap. If execution were parallelized, the order of RNG calls would be non-deterministic.
 
 2. **Deterministic event ordering.** The MinHeap breaks ties by insertion order (FIFO within same timestamp). Combined with deterministic event creation order, this ensures the same events are processed in the same order.
 
@@ -555,23 +555,23 @@ Two runs with the same topology and seed should produce identical fingerprints. 
 
 | Source file | Lines | Feature |
 | --- | --- | --- |
-| `src/engine/validation/validator.ts` | 570-847 | F1: `validateTopology` — full pre-run validation |
-| `src/engine/validation/validator.ts` | 506-525 | F1: `TopologyJSONSchema` — Zod structural schema |
-| `src/engine/validation/validator.ts` | 545-568 | F1: `collectReachableNodeIds` — BFS reachability |
+| `src/engine/validation/validator.ts` | 570-847 | F1: `validateTopology` - full pre-run validation |
+| `src/engine/validation/validator.ts` | 506-525 | F1: `TopologyJSONSchema` - Zod structural schema |
+| `src/engine/validation/validator.ts` | 545-568 | F1: `collectReachableNodeIds` - BFS reachability |
 | `src/engine/validation/validator.ts` | 616-631 | F1/F3: Default application with warnings |
-| `src/engine/validation/validator.ts` | 498-502 | F2: `InvariantCheckSchema` — Zod schema for invariants |
-| `src/engine/analysis/output.ts` | 223-250 | F2: `calculateLittlesLaw` — L=λW verification |
-| `src/engine/analysis/output.ts` | 256-299 | F2: `assessWarmupAdequacy` — warmup heuristic |
-| `src/engine/analysis/output.ts` | 308-326 | F2: `buildConservationCheck` — request accounting |
-| `src/engine/analysis/output.ts` | 172-213 | F2: `detectSLOBreaches` — SLO breach detection |
+| `src/engine/validation/validator.ts` | 498-502 | F2: `InvariantCheckSchema` - Zod schema for invariants |
+| `src/engine/analysis/output.ts` | 223-250 | F2: `calculateLittlesLaw` - L=λW verification |
+| `src/engine/analysis/output.ts` | 256-299 | F2: `assessWarmupAdequacy` - warmup heuristic |
+| `src/engine/analysis/output.ts` | 308-326 | F2: `buildConservationCheck` - request accounting |
+| `src/engine/analysis/output.ts` | 172-213 | F2: `detectSLOBreaches` - SLO breach detection |
 | `src/engine/analysis/output.ts` | 37-44 | F2: `InvariantViolation` interface (output type) |
 | `src/engine/analysis/output.ts` | 105-127 | F2: `SimulationOutput` containing all checks |
 | `src/engine/core/types.ts` | 11-15 | F3: `ParameterAccuracyClass` type definition |
 | `src/engine/core/types.ts` | 423-427 | F2: `InvariantCheck` type definition |
-| `src/engine/stochastic/random.ts` | 1-74 | F4: `xmur3`, `sfc32`, `createRandom` — seeded PRNG |
+| `src/engine/stochastic/random.ts` | 1-74 | F4: `xmur3`, `sfc32`, `createRandom` - seeded PRNG |
 | `src/engine/engine.ts` | 59 | F4: Single RNG creation from seed |
-| `src/engine/engine.ts` | 604 | F2: `invariantViolations: []` — stub |
-| `src/engine/engine.ts` | 603 | F2: `causalGraph: null` — stub |
+| `src/engine/engine.ts` | 604 | F2: `invariantViolations: []` - stub |
+| `src/engine/engine.ts` | 603 | F2: `causalGraph: null` - stub |
 
 ---
 
@@ -581,7 +581,7 @@ Two runs with the same topology and seed should produce identical fingerprints. 
 
 1. **Validation is a gate, not a filter.** If `validateTopology` returns `valid: false`, the simulation does not run. There is no "best-effort" mode that skips invalid nodes.
 
-2. **Post-run checks are informational.** Little's Law failure, conservation imbalance, or warmup inadequacy do not invalidate the output — they flag potential issues. The UI should display these as warnings, not errors.
+2. **Post-run checks are informational.** Little's Law failure, conservation imbalance, or warmup inadequacy do not invalidate the output - they flag potential issues. The UI should display these as warnings, not errors.
 
 3. **Single RNG is sufficient for reproducibility.** All random decisions go through one `RandomGenerator` instance. If per-subsystem RNGs were needed (e.g., for isolation), they would need to be seeded from the parent RNG deterministically.
 

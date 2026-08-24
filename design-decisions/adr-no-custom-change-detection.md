@@ -4,7 +4,7 @@ The question is about the **change detection / reactivity mechanism** between th
 
 This is an excellent architectural question.
 
-There are actually **two completely different state flows** involved — and they require different solutions.
+There are actually **two completely different state flows** involved - and they require different solutions.
 
 ---
 
@@ -149,7 +149,7 @@ Every mutation goes through:
 * `addEdge()`
 * `deleteNode()`
 
-When you control the mutation path, you don't need to observe changes — you notify on write.
+When you control the mutation path, you don't need to observe changes - you notify on write.
 
 ---
 
@@ -270,7 +270,7 @@ It depends on the state:
 
 ## Subscription model, event emitter, or reactive store?
 
-Both — but in different places.
+Both - but in different places.
 
 * **Reactive store (Zustand)** → Topology editing
 * **Event emitter (postMessage)** → Simulation output

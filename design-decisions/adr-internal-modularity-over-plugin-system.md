@@ -24,7 +24,7 @@ From the tickets and `ui.md`, the current architecture includes:
 | T-009       | Workload generator    | Traffic generation                                            |
 | T-010       | Routing table         | Network routing                                               |
 | T-012       | Network edge modeling | Latency, loss, bandwidth                                      |
-| T-013–T-016 | Failure + resilience  | Fault injection, cascade, circuit breakers                    |
+| T-013-T-016 | Failure + resilience  | Fault injection, cascade, circuit breakers                    |
 | T-017       | Metrics collector     | Observability                                                 |
 | T-018       | Request tracer        | Distributed tracing                                           |
 
@@ -63,7 +63,7 @@ A Discrete Event Simulation (DES) engine is fundamentally just:
 4. **Scheduling Function** (handlers schedule future events)
 5. **Deterministic PRNG**
 
-Everything else — queues, networks, failures, metrics — is **domain logic layered on top**.
+Everything else - queues, networks, failures, metrics - is **domain logic layered on top**.
 
 Right now, these concerns are partially mixed.
 
@@ -264,7 +264,7 @@ Same engine. Different modules.
 
 | Current     | Becomes              | Change                        |
 | ----------- | -------------------- | ----------------------------- |
-| T-004–T-007 | Core primitives      | No change                     |
+| T-004-T-007 | Core primitives      | No change                     |
 | T-002       | Core event interface | Move event types into modules |
 | T-011       | Pure engine loop     | Add module registry           |
 | T-008+      | Modules              | Wrap in module interface      |
@@ -275,7 +275,7 @@ This is a **structural refactor**, not a functional rewrite.
 
 # Two Levels of Generalization
 
-### Level 1 — Internal Modularity (Recommended Now)
+### Level 1 - Internal Modularity (Recommended Now)
 
 * Modules exist conceptually
 * Single package
@@ -286,7 +286,7 @@ Low complexity. High architectural clarity.
 
 ---
 
-### Level 2 — Plugin Runtime (Future)
+### Level 2 - Plugin Runtime (Future)
 
 * Engine is standalone package
 * Modules are external packages

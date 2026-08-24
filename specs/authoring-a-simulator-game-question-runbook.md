@@ -1,7 +1,7 @@
-# Runbook — Authoring a System Design Simulator Question
+# Runbook - Authoring a System Design Simulator Question
 
 > **Audience:** faculty / content authors adding a system-design simulator
-> question to the platform. **No engineering needed** — it's a normal GAME
+> question to the platform. **No engineering needed** - it's a normal GAME
 > question on the existing Game Playground rails.
 >
 > **Mental model:** the simulator is a **game at a URL**. newton-api stores the
@@ -15,18 +15,18 @@
 
 | Repo | Its job for a simulator question | Do you touch it? |
 |------|----------------------------------|------------------|
-| **newton-api** | Stores the GAME `AssignmentQuestion` (`game_url`, `initial_game_state`), the learner's `GamePlayground.game_json`, the pass snapshot | **Only authoring** — no code |
-| **newton-web** | Renders the iframe, relays postMessage, PATCHes each save | No — generic host, unchanged |
-| **ns-simulator** | Runs the design, grades it in the browser, posts the result | No — deployed once; you point `game_url` at it |
+| **newton-api** | Stores the GAME `AssignmentQuestion` (`game_url`, `initial_game_state`), the learner's `GamePlayground.game_json`, the pass snapshot | **Only authoring** - no code |
+| **newton-web** | Renders the iframe, relays postMessage, PATCHes each save | No - generic host, unchanged |
+| **ns-simulator** | Runs the design, grades it in the browser, posts the result | No - deployed once; you point `game_url` at it |
 
 ---
 
 ## 1. Prerequisites
 
 - The **simulator is deployed** at a stable HTTPS URL (or, for local testing, a
-  dev server — see §6). The embed URL must include **`?host=newton`**.
+  dev server - see §6). The embed URL must include **`?host=newton`**.
 - You can reach the **Django admin** (with a user that has
-  `assignments.can_preview_assignment_question` — superusers have it).
+  `assignments.can_preview_assignment_question` - superusers have it).
 - You have a **QuestionPackage JSON** ready (§3).
 
 ---
@@ -41,12 +41,12 @@
    - local: `http://localhost:5173/?host=newton` (match your dev port)
    - `hostOrigin=` makes the simulator's origin check strict (recommended in prod).
 5. **Initial game state** = paste the **QuestionPackage JSON** (§3). This is the
-   whole question — prompt, scale, scaffold, rules, rubric.
+   whole question - prompt, scale, scaffold, rules, rubric.
 6. **Save.**
 7. **Preview Question** (top-right, next to History) → opens a real playground in
-   newton-web. Actually play it — there are no automated checks for games.
+   newton-web. Actually play it - there are no automated checks for games.
 8. **Peer review** (someone other than the author solves it once). ⚠️ After peer
-   review, **`game_url` and `initial_game_state` freeze** — iterate on a
+   review, **`game_url` and `initial_game_state` freeze** - iterate on a
    throwaway staging question first.
 9. **Deliver:** create a **Game** row + **Course structure game mapping** (the
    games tab, the usual path) and/or map into an assignment.
@@ -104,11 +104,11 @@ skeleton (see the engine's `QuestionPackage` schema for all fields):
 ```
 
 **The three grading axes you author** (all graded in the browser):
-- **`structuralRules`** — graph facts (has a load balancer, single source, a path exists). Runs first; if these fail, simulation is skipped.
-- **`semanticCriteria`** — architecture invariants (`guardedPath`, `storageFit`, `fanout`, `placement`, `forbidUnjustified`). See `question-grading-model-and-anti-gaming.md` §4/§4.1.
-- **`rubric`** — runtime metrics after simulating under the hidden `suite` load (p99, error rate, invariants).
+- **`structuralRules`** - graph facts (has a load balancer, single source, a path exists). Runs first; if these fail, simulation is skipped.
+- **`semanticCriteria`** - architecture invariants (`guardedPath`, `storageFit`, `fanout`, `placement`, `forbidUnjustified`). See `question-grading-model-and-anti-gaming.md` §4/§4.1.
+- **`rubric`** - runtime metrics after simulating under the hidden `suite` load (p99, error rate, invariants).
 
-> **Note on `description`:** it's a human label — never parsed. The `kind` +
+> **Note on `description`:** it's a human label - never parsed. The `kind` +
 > typed fields are what actually grade. Verify a boundary by testing, not by the
 > prose (§4).
 
@@ -141,13 +141,13 @@ After a learner (or you) submits, the result lands in `GamePlayground.game_json`
 python manage.py shell -c "from playgrounds.models import GamePlayground; g=GamePlayground.objects.get(hash='<HASH>').game_json; print('passed:', g.get('test_cases_passed'), '| all:', g.get('all_test_cases_passed'), '| has topology:', 'topology' in g)"
 ```
 Expect the two score keys + `has topology: True`. The backend **stores this
-verbatim and trusts it** — it does not re-grade.
+verbatim and trusts it** - it does not re-grade.
 
 ---
 
 ## 6. Local testing (without deploying)
 
-1. Run the simulator dev server (`npm run dev:web`) — note its port (Vite default
+1. Run the simulator dev server (`npm run dev:web`) - note its port (Vite default
    `5173`).
 2. Set `game_url = http://localhost:<port>/?host=newton`.
 3. Run **newton-web** locally (its origin allow-list already includes
@@ -157,7 +157,7 @@ verbatim and trusts it** — it does not re-grade.
 
 If the iframe is blank: confirm the simulator dev server is on the exact port in
 `game_url`, and that newton-web actually compiled (a missing `content_platform`
-alias will fail the whole playground route — that's a newton-web env issue, not
+alias will fail the whole playground route - that's a newton-web env issue, not
 the question).
 
 ---
@@ -165,15 +165,15 @@ the question).
 ## 7. Gotchas
 
 - **Freezing:** `game_url` + `initial_game_state` are immutable after peer review;
-  test-case rows freeze at verified. No sanctioned unfreeze — fix a frozen
+  test-case rows freeze at verified. No sanctioned unfreeze - fix a frozen
   question by creating a fresh one. Iterate on staging first.
 - **No server grading (this version):** scores are client-computed and trusted.
   Fine for practice; a real graded assessment needs the deferred server-side
   re-grade (see `newton-api-backend-integration.md` §6).
-- **`initial_game_state` size:** no hard cap; the ~2–4 KB package is fine (the
+- **`initial_game_state` size:** no hard cap; the ~2-4 KB package is fine (the
   "tiny in prod" norm is convention).
 - **Semantic axis is graded now**, but `forbidUnjustified` needs a justification
-  answer to defend a present component — until justification capture is wired, a
+  answer to defend a present component - until justification capture is wired, a
   present-but-undefended component fails (grading-model spec §4.1).
 - **Score-key meaning:** the simulator reports `test_cases_passed` = passed-check
   count and `all_test_cases_passed` = overall pass. The platform treats
@@ -184,7 +184,7 @@ the question).
 
 ## 8. Where the code actually is (for engineers)
 
-- **newton-api / newton-web:** unchanged — the simulator question is pure
+- **newton-api / newton-web:** unchanged - the simulator question is pure
   authoring on the existing Game Playground rails.
 - **ns-simulator:** the Newton wire adapter (`engine/analysis/newtonGamePlayground.ts`
   + `renderer/utils/newtonHostMessaging.ts`), wired into `WorkspaceLayout.tsx`
