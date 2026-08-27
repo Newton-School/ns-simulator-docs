@@ -97,41 +97,27 @@
 ```json
 {
   "type": "SIMULATOR_CONFIG",
-  "questionId": "flash-sale-booking",
-  "questionType": "open-build",
-  "domains": ["storage", "correctness"],
-  "concepts": ["idempotency", "reservation-lock", "store-fit"],
-  "difficulty": "advanced",
   "workloadCategory": "correctness-heavy",
-  "scaffold": { "type": "empty" },
-  "constraints": { "canModifyScaffold": true, "maxNodeCount": 12 },
+  "domains": ["storage", "correctness"],
+  "difficulty": "advanced",
   "suite": {
-    "name": "flash-sale-suite",
-    "visibleToStudent": false,
     "cases": [
-      {
-        "id": "on-sale-burst",
-        "description": "Contended booking burst on a small seat inventory",
-        "workload": {
-          "baseRps": 1500,
-          "requestDistribution": [
-            { "type": "book",   "weight": 0.9, "sizeBytes": 512 },
-            { "type": "browse", "weight": 0.1, "sizeBytes": 256 }
-          ]
-        }
-      }
+      { "workload": { "baseRps": 1500, "requestDistribution": [
+        { "type": "book",   "weight": 0.9, "sizeBytes": 512 },
+        { "type": "browse", "weight": 0.1 }
+      ] } }
     ]
   },
-  "rubric": { "id": "flash-sale-rubric", "passThreshold": 8 },
-  "environmentProfile": { "mode": "ASSIGNMENT", "graded": true, "chromeDensity": "minimal" }
+  "rubric": { "passThreshold": 0.71 }
 }
 ```
 
-> "`workloadCategory: correctness-heavy` — that's us declaring the personality.
-> `baseRps: 1500`, ninety percent `book` writes — a tight, contended burst, not a
-> marathon. And remember, this is the *tractable* load; the prompt will still show the
-> real-world 'sold out in 4 minutes' scale. We compress runtime, we preserve
-> character."
+> "Short, on purpose — I write the personality and the load, everything else defaults
+> (empty canvas, the assignment lock, the suite name). `workloadCategory:
+> correctness-heavy` declares the personality; `domains` names the lesson. `baseRps:
+> 1500`, ninety percent `book` writes — a tight, contended burst, not a marathon. And
+> remember, this is the *tractable* load; the prompt still shows the real-world 'sold
+> out in 4 minutes' scale. We compress runtime, we preserve character."
 
 ---
 
@@ -143,9 +129,12 @@
 ### T — one source
 
 ```json
-{ "type": "STRUCTURAL_RULE", "id": "single-source",
-  "kind": "requires_single_source", "description": "Exactly one buyer source" }
+{ "type": "STRUCTURAL_RULE", "kind": "requires_single_source" }
 ```
+
+> "That's the whole row. `id` and a human `description` auto-derive — I only write the
+> fields that carry meaning. Same for every row below: I drop anything the simulator
+> can fill, and keep only what's load-bearing (points, hard-fails, the accept lists)."
 
 ### T — a reservation authority must exist and feed the ledger
 
@@ -153,14 +142,10 @@
 > that authority must reach the durable ledger. Two small structural rows."
 
 ```json
-{ "type": "STRUCTURAL_RULE", "id": "has-reservation-authority",
-  "kind": "requires_component", "componentType": "reservation-store",
-  "description": "A reservation authority must commit seats atomically" }
+{ "type": "STRUCTURAL_RULE", "kind": "requires_component", "componentType": "reservation-store" }
 ```
 ```json
-{ "type": "STRUCTURAL_RULE", "id": "reservation-feeds-ledger",
-  "kind": "requires_path", "fromType": "reservation-store", "toType": "relational-db",
-  "description": "Reserved bookings must be persisted to the durable ledger" }
+{ "type": "STRUCTURAL_RULE", "kind": "requires_path", "fromType": "reservation-store", "toType": "relational-db" }
 ```
 
 ### S — the guarded path (the heart of the question)
@@ -172,9 +157,7 @@
 > guard. Wire buyers straight to the database and this hard-fails."
 
 ```json
-{ "type": "SEMANTIC_CRITERION", "id": "booking-passes-through-reservation",
-  "kind": "guardedPath",
-  "description": "Every booking must reach the ledger only through the reservation authority",
+{ "type": "SEMANTIC_CRITERION", "kind": "guardedPath",
   "from": "api-endpoint", "guard": "reservation-store", "to": "relational-db",
   "points": 3, "hardFail": true }
 ```
@@ -188,9 +171,7 @@
 > exactly this: `transactional-relational`."
 
 ```json
-{ "type": "SEMANTIC_CRITERION", "id": "ledger-is-transactional",
-  "kind": "storageFit",
-  "description": "Seat inventory is contended, money-adjacent state needing a transactional store",
+{ "type": "SEMANTIC_CRITERION", "kind": "storageFit",
   "accessPattern": "transactional-relational",
   "accept": ["relational-db"],
   "partial": ["nosql-db"],
@@ -210,11 +191,7 @@
 > contention model can."
 
 ```json
-{ "type": "RUBRIC_CHECK", "id": "no-double-book",
-  "kind": "simulation",
-  "description": "No seat is committed by more than one reservation authority",
-  "metric": "reservations.oversells", "op": "==", "value": 0,
-  "points": 5 }
+{ "type": "RUBRIC_CHECK", "metric": "reservations.oversells", "op": "==", "value": 0, "points": 5 }
 ```
 
 > "Five points, the biggest weight in the question — because this *is* the question.
@@ -235,11 +212,7 @@
 ### Σ — still has to survive the burst
 
 ```json
-{ "type": "RUBRIC_CHECK", "id": "burst-error-rate",
-  "kind": "simulation",
-  "description": "Booking error rate stays bounded under the burst",
-  "metric": "summary.errorRate", "op": "<", "value": 0.05,
-  "points": 2 }
+{ "type": "RUBRIC_CHECK", "metric": "summary.errorRate", "op": "<", "value": 0.05, "points": 2 }
 ```
 
 > "Note I'm grading *error rate*, not p99. For a correctness question, 'did it fall
