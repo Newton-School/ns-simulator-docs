@@ -16,6 +16,10 @@
 This spec is the design authority for the grading model. The implementation
 companion lives in `docs/question-platform-hardening/`.
 
+See also:
+`multiple-valid-solutions-grading.md` for how the simulator should handle
+questions where more than one architecture family is fully correct.
+
 ---
 
 ## 0. The central finding: a grading-model mismatch is the root of gaming

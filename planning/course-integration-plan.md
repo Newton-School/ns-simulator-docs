@@ -19,6 +19,8 @@
 
 ---
 
+> Companion audit: the current lesson-by-lesson Educative coverage review lives in [educative-grokking-course-gap-matrix.md](./educative-grokking-course-gap-matrix.md). Use that file as the up-to-date feature audit; this document remains the broader course-integration plan.
+
 ## 1. Course Overview
 
 | Attribute | System Design & Software Engineering (SESD) | Full Stack DevOps Engineering (FSDE) | Computer Networks (CN) |
@@ -442,6 +444,8 @@ At each stage, students can compare before/after metrics and see exactly which b
 
 ## 6. Missing Functionality and Required Future Work
 
+This section is intentionally course-planning oriented. For the current 48-section Educative lesson audit and the exact simulator build recommendations, see the companion matrix above.
+
 ### 6.1 Feature Status Overview
 
 | Feature | Status | Importance for Teaching |
@@ -466,14 +470,14 @@ At each stage, students can compare before/after metrics and see exactly which b
 | Protocol labels (https, grpc, tcp, udp, websocket, amqp, kafka) | **Exists** | Medium -- correct labeling, but no protocol simulation |
 | Edge path types (same-rack, same-dc, cross-zone, cross-region, internet) | **Exists** | Medium -- influences latency defaults |
 | Topology save/load (JSON) | **Exists** | High -- enables assignment distribution |
-| DNS routing policies (latency-based, failover, geolocation) | **Does not exist** | High (CN) |
+| DNS routing policies (latency-based, failover, geolocation) | **Exists (basic)** | High (CN) |
 | Auto-scaling runtime behavior | **Partially exists** | High (CN/SESD) |
-| Health-check-aware load balancer routing | **Does not exist** | High (CN) |
-| Cache hit/miss simulation | **Does not exist** | High (SESD/CN) |
-| Database read/write split routing | **Partially exists** | Medium (SESD) |
-| Circuit breaker runtime behavior | **Partially exists** | Medium (SESD) |
-| Rate limiter runtime behavior | **Partially exists** | Medium (SESD/CN) |
-| Pre-built scenario library / templates | **Does not exist** | High (all courses) |
+| Health-check-aware load balancer routing | **Exists (basic)** | High (CN) |
+| Cache hit/miss simulation | **Exists (basic)** | High (SESD/CN) |
+| Database read/write split routing | **Exists (basic)** | Medium (SESD) |
+| Circuit breaker runtime behavior | **Exists (basic)** | Medium (SESD) |
+| Rate limiter runtime behavior | **Exists (basic)** | Medium (SESD/CN) |
+| Pre-built scenario library / templates | **Partially exists** | High (all courses) |
 | Guided walkthrough / tutorial mode | **Does not exist** | High (all courses) |
 | Side-by-side topology comparison | **Does not exist** | Medium (CN) |
 | Assignment mode with validation | **Does not exist** | High (all courses) |
@@ -483,18 +487,17 @@ At each stage, students can compare before/after metrics and see exactly which b
 
 #### 6.2.1 DNS Routing Policies (latency-based, failover, geolocation)
 
-**Current state:** The simulator has a DNS Resolver node and a RoutingTable that supports round-robin and weighted routing. Conditional routing exists but only supports `request.type` matching.
+**Current state:** The simulator now includes a `dnsRoutingPolicy` trait with `simple`, `weighted`, `failover`, `latency-based`, and `geolocation` modes, plus resolver-side caching behavior and sample scenarios.
 
 **What's needed:** The CN course covers Route 53 routing policies extensively (Week 3-4):
-- **Simple routing** -- already supported (single edge)
-- **Weighted routing** -- already supported (edge weights)
-- **Latency-based routing** -- route to the target with lowest latency. Requires the routing table to consider edge latency when selecting a target
-- **Failover routing** -- route to a secondary target when the primary is unhealthy. Requires health-aware routing
-- **Geolocation routing** -- route based on geographic origin. Requires request metadata to carry a region/location field
+- **Recursive lookup flow** -- resolver, root, TLD, and authoritative hops are not modeled as a visible chain
+- **Authoritative vs recursive split** -- the policy result is modeled, but the control-path architecture is not
+- **TTL expiry over time** -- caching intent exists, but the simulator does not yet teach TTL ageing as a timeline
+- **Resolution-path explainability** -- students cannot yet step through "why this answer was chosen" as a DNS sequence diagram
 
-**Why it matters:** Route 53 routing policies are a dedicated topic in the CN course. Students need to compare how different policies distribute traffic, which is currently only possible for weighted and round-robin.
+**Why it matters:** Route 53-style policy choices are now demonstrable, but the course diagrams also teach how resolution unfolds over time. That sequence is still missing from the simulator's teaching surface.
 
-**Recommendation:** Extend the `RoutingTable` to support a `routingStrategy` field on nodes with values `latency-based`, `failover`, and `geolocation` in addition to the existing `round-robin`, `weighted`, and `passthrough`.
+**Recommendation:** Keep the current policy trait and add a `DNS Resolution Timeline` view that visualizes cache lookup, resolver hops, TTL state, and final answer selection.
 
 #### 6.2.2 Auto-Scaling Runtime Behavior
 
@@ -512,40 +515,49 @@ At each stage, students can compare before/after metrics and see exactly which b
 
 #### 6.2.3 Health-Check-Aware Load Balancer Routing
 
-**Current state:** The Health Check Manager node exists as a palette component, and nodes can have `status: 'failed'` state. However, the `RoutingTable` does not check node health when resolving routes -- it routes to failed nodes equally.
+**Current state:** The simulator includes `healthAwareRouting`, so routers and balancers can filter unhealthy routes rather than blindly sending traffic to failed nodes.
 
-**What's needed:** Load balancers should skip unhealthy targets. This is fundamental to the CN course's coverage of elastic load balancing and target groups (Week 5-6).
+**What's needed:** The remaining gap is not basic unhealthy-target filtering; it is realistic health-probe behavior:
+- Probe intervals and failure thresholds
+- Recovery hysteresis
+- Health-state transitions driven by checks instead of only static failure state
+- Visualization of target-group membership over time
 
-**Why it matters:** In the current simulator, demonstrating "what happens when a server fails" shows that the load balancer *continues* sending traffic to the dead server, which is unrealistic and confusing for students. Real ALBs/NLBs stop routing to unhealthy targets.
+**Why it matters:** Students can already see "don't send traffic to dead targets," but the course also teaches *how* systems decide that a target is unhealthy. That control-loop logic is still implicit.
 
-**Recommendation:** Add a `nodeHealth` lookup to the `RoutingTable`. When resolving routes, filter out edges whose target node has `status === 'failed'`. Allow an optional `healthCheckInterval` config on router nodes.
+**Recommendation:** Wire the existing health-prober concept into runtime and expose a `Health Probe Timeline` for load balancer and discovery scenarios.
 
 #### 6.2.4 Cache Hit/Miss Simulation
 
-**Current state:** The Redis Cache and CDN nodes exist and process requests, but they process *all* requests identically. There is no concept of a cache hit (fast, doesn't propagate to origin) vs cache miss (slow, propagates to origin for data).
+**Current state:** Cache nodes now support hit/miss behavior through `cacheHitRate` and `cacheHitLatencyMs`, and the sample scenario library already includes a cache-aside example.
 
 **What's needed:** Cache nodes should:
-- Have a configurable **hit rate** (e.g., 85%)
-- On a hit: respond immediately with minimal latency and not forward the request downstream
-- On a miss: forward the request to the origin (database/backend) and cache the response
+- Model eviction pressure and working-set churn
+- Distinguish stale hits from fresh hits
+- Represent origin shield / multi-layer cache behavior
+- Make TTL expiry affect hit probability over time instead of remaining documentation-only
 
-**Why it matters:** Caching is a central topic in both SESD (Week 12) and CN (CDN/caching in Week 3-4). Without hit/miss simulation, adding a cache node has no meaningful effect on downstream traffic, making caching demonstrations hollow.
+**Why it matters:** Basic cache economics are already teachable. The remaining gap is that the course's diagrams often explain cache pathologies and layered cache design, which require more than a static hit-rate knob.
 
-**Recommendation:** Add a `cacheHitRate: number` (0.0-1.0) field to the node config. In the routing resolution, implement a probabilistic check: on hit, emit `request-complete` immediately; on miss, forward downstream. This is the single most impactful missing feature for teaching.
+**Recommendation:** Extend the cache trait into an `Advanced Cache Model` with eviction, stale-read behavior, and optional multi-layer POP/origin shield semantics.
 
 #### 6.2.5 Circuit Breaker Runtime Behavior
 
-**Current state:** The `ResilienceConfig` interface includes a full circuit breaker configuration (`failureThreshold`, `failureCount`, `recoveryTimeout`, `halfOpenRequests`). However, the engine does not implement circuit breaker state transitions (closed -> open -> half-open -> closed).
+**Current state:** The simulator now implements circuit-breaker phase transitions and fast rejects using a per-node breaker trait.
 
-**What's needed:** When a node's error rate exceeds the threshold, the circuit should open (rejecting requests immediately without forwarding), then transition to half-open after the recovery timeout (allowing a few test requests), and close again if those succeed.
+**What's needed:** The remaining gaps are richer breaker semantics:
+- Sliding-window error measurement
+- Per-exception or per-status-class policies
+- Better visibility into why the breaker tripped
+- Side-by-side comparison with retries, timeouts, and health-aware routing
 
-**Why it matters:** Circuit breakers are a key resilience pattern covered in SESD Week 12 and referenced in the SESD reading list (Site Reliability Engineering). Without runtime behavior, students can only discuss the pattern theoretically.
+**Why it matters:** The simulator can already demonstrate the core pattern. What it still lacks is the nuanced operational tuning that the course and production systems care about.
 
-**Recommendation:** Implement a `CircuitBreakerState` machine per-node that tracks failure counts and transitions between states during the simulation.
+**Recommendation:** Keep the existing runtime trait and add a `Resilience Policy Lab` that compares breaker thresholds, windows, and interactions with retries.
 
 #### 6.2.6 Pre-Built Scenario Library and Templates
 
-**Current state:** The simulator has a rich palette of individual components but no pre-built topologies. Every demonstration or assignment requires building a topology from scratch.
+**Current state:** The simulator now has a sample-scenario catalog, but it is still a small curated set rather than a full course-mapped library.
 
 **What's needed:** A library of ready-to-use scenarios mapped to course topics:
 - **"Single Server"** -- Client -> Server (for "What is a server?" lessons)
@@ -557,9 +569,9 @@ At each stage, students can compare before/after metrics and see exactly which b
 - **"Scale from Zero"** -- Progressive stages of scaling a simple app
 - **"VPC Multi-AZ"** -- Components organized in VPC > AZ > Subnet hierarchy
 
-**Why it matters:** Instructors need to start teaching immediately without spending 15 minutes building a topology on the canvas. Pre-built scenarios also ensure consistency across sections and semesters.
+**Why it matters:** The current catalog proves the UX path, but instructors still need many more lesson-specific packs if the simulator is going to mirror a full semester or an external course systematically.
 
-**Recommendation:** Create a `scenarios/` directory with `.json` topology files. Add a "Scenario Library" panel in the UI with thumbnails and descriptions. Tag each scenario with the course and week it supports.
+**Recommendation:** Expand the existing sample library into a tagged `Scenario Library` organized by course, week, and concept, with one-click lesson packs and companion prompts.
 
 #### 6.2.7 Guided Walkthrough / Tutorial Mode
 
@@ -606,13 +618,17 @@ At each stage, students can compare before/after metrics and see exactly which b
 
 #### 6.2.10 Rate Limiter Runtime Behavior
 
-**Current state:** The `ResilienceConfig` interface includes `rateLimiter` with `maxTokens` and `refillRate`, but the engine does not implement token bucket rate limiting.
+**Current state:** The simulator now implements token-bucket rate limiting at runtime through the rate-limiter trait.
 
-**What's needed:** Runtime token bucket rate limiting on nodes -- requests exceeding the rate are rejected with a specific reason code. Students should be able to observe the effect of different rate limits.
+**What's needed:** The remaining gap is comparative and distributed behavior:
+- Leaky bucket, fixed window, and sliding window variants
+- Per-tenant or per-key quotas
+- Distributed token coordination across replicas
+- Visual comparison of burst tolerance vs smoothness
 
-**Why it matters:** Rate limiting is a key concept in both CN (DDoS protection, API throttling) and SESD (system protection, graceful degradation). It's directly referenced in the auxiliary node types (`rate-limiter`, `throttler`).
+**Why it matters:** Token bucket alone teaches the core idea, but the course material treats rate limiting as an algorithm family with explicit tradeoffs.
 
-**Recommendation:** Implement a `TokenBucket` class that integrates with the `GGcKNode` arrival handler. Check rate limiter before queue admission; reject with reason `rate_limited` if tokens are exhausted.
+**Recommendation:** Build a `Rate Limiter Lab` that layers multiple algorithms and quota scopes on top of the existing token-bucket runtime.
 
 ### 6.3 Priority Ranking for Development
 
@@ -620,14 +636,14 @@ Based on teaching impact and development complexity:
 
 | Priority | Feature | Effort Estimate | Course Impact |
 |---|---|---|---|
-| **P0** | Pre-built scenario library | Low (JSON files + UI panel) | All courses -- enables immediate classroom use |
-| **P0** | Cache hit/miss simulation | Medium (routing + node logic) | SESD, CN -- caching is central to both |
-| **P1** | Health-check-aware LB routing | Low (filter in RoutingTable) | CN -- fixes unrealistic failure behavior |
-| **P1** | Guided walkthrough / tutorial | Medium (tutorial overlay) | All courses -- essential for onboarding |
+| **P0** | Scenario library expansion | Medium (more scenario packs + metadata) | All courses -- makes the simulator teachable out of the box |
+| **P0** | Guided walkthrough / tutorial | Medium (tutorial overlay) | All courses -- essential for onboarding |
+| **P1** | Advanced cache model | Medium (trait extension + UI surfacing) | SESD, CN -- teaches real cache tradeoffs, not just hits vs misses |
 | **P1** | Auto-scaling runtime | High (ScalingController + dynamic nodes) | CN, SESD -- core scaling concept |
-| **P2** | Circuit breaker runtime | Medium (state machine) | SESD -- resilience pattern |
-| **P2** | DNS routing policies | Medium (RoutingTable extension) | CN -- Route 53 coverage |
-| **P2** | Rate limiter runtime | Low (TokenBucket class) | CN, SESD -- protection patterns |
+| **P2** | Health probe runtime and visualization | Medium (probe loop + UI timeline) | CN -- teaches how targets become healthy/unhealthy |
+| **P2** | DNS resolution timeline | Medium (sequence UI + resolver/path model) | CN -- upgrades policy demos into real DNS teaching |
+| **P2** | Resilience policy lab | Medium (breaker/retry comparison tooling) | SESD -- resilience tuning and tradeoffs |
+| **P2** | Rate limiter lab | Medium (algorithm variants + comparison tooling) | CN, SESD -- protection patterns and tradeoffs |
 | **P2** | Assignment mode with validation | High (spec schema + validator + UI) | All courses -- scales assessment |
 | **P3** | Side-by-side comparison | High (split-view UI) | CN -- A/B comparison scenarios |
 | **P3** | Exportable reports | Medium (report generation) | All courses -- assignment submission |

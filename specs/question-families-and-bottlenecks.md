@@ -162,7 +162,7 @@ its domain(s) and the criterion that grades it. This is the lesson-level view: r
 
 | Bottleneck | The fix | Simulator mechanism | Status | Real-world questions |
 |------------|---------|---------------------|--------|----------------------|
-| **Cascading failure / retry storms** | `circuit-breaker` + `rate-limiter` | `circuitBreaker` trait exists (on `service-mesh`/`sidecar`); `rateLimiter` on `api-gateway`; the eponymous nodes are **unwired**; `retryBackoff` unbuilt | 🟡 Partial | API rate limiter, HA gateway |
+| **Cascading failure / retry storms** | `circuit-breaker` + `rate-limiter` + bounded retries | `circuitBreaker`, `rateLimiter`, and caller-owned `retryBackoff` now run at runtime; dedicated `rate-limiter` and `circuit-breaker-controller` nodes are first-class palette/catalog nodes | ✅ Physics | API rate limiter, HA gateway |
 | **Data-center failover** | DNS steering, active-passive | Edge/scenario fault injection exists; `dnsRoutingPolicy` partial | 🟡 Partial | Payment DR |
 
 ### Family 5 - Correctness (concurrency-bottlenecks)
@@ -170,13 +170,13 @@ its domain(s) and the criterion that grades it. This is the lesson-level view: r
 
 | Constraint | The fix | Simulator mechanism | Status | Real-world questions |
 |------------|---------|---------------------|--------|----------------------|
-| **Contention / double-booking** | `distributed-lock` or consistent `relational-db` | Graded by `guardedPath` + structural + **justification**; no `lockLease` physics | 🟡 Topology + justification | Ticketmaster, Hotel booking |
-| **Exactly-once / idempotency** | `idempotency-manager` / append-only ledger | Graded by `guardedPath` + justification; no `idempotencyDedup` physics | 🟡 Topology + justification | Payment gateway (Stripe) |
+| **Contention / double-booking** | `distributed-lock` or consistent `relational-db` | `lockLease` now models per-key lease acquire/contention/TTL; grading still uses `guardedPath` + structural + **justification** because correctness is not a single summary metric | ✅ Physics + justification | Ticketmaster, Hotel booking |
+| **Exactly-once / idempotency** | `idempotency-manager` / append-only ledger | `idempotencyDedup` now models keyed duplicate suppression on retryable write paths; grading still uses `guardedPath` + justification | ✅ Physics + justification | Payment gateway (Stripe) |
 
-> These are the three questions parked in `deferred-v2/` (`payment-system`,
-> `ticketmaster`, `rate-limiter`): correctness is carried by **topology + justification**,
-> which is the *right* model - but their eponymous nodes aren't in the V1 palette and have
-> no physics, so they ship in V2 with `lockLease` / `idempotencyDedup`.
+> The deferred correctness questions (`payment-system`, `ticketmaster`,
+> `rate-limiter`) are no longer blocked on missing lock/retry/idempotency physics.
+> What still remains is richer ledger/reconciliation/exactly-once approximation,
+> not the basic runtime behavior of the guard nodes themselves.
 
 ### Family 6 - Meta-constraint
 

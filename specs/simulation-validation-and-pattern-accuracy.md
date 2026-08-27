@@ -410,8 +410,8 @@ interface NodeAccuracyReport {
 | `edge.pathType` | - | User set explicitly | - | Has no runtime effect |
 | `resources.cpu` | - | User set explicitly | - | Has no runtime effect |
 | `resources.memory` | - | User set explicitly | - | Has no runtime effect |
-| `resilience.circuitBreaker` | - | User set explicitly | - | Has no runtime effect |
-| `resilience.retry` | - | User set explicitly | - | Has no runtime effect |
+| `resilience.circuitBreaker` | - | User set explicitly; drives breaker open/half-open/closed routing | Defaults seeded on breaker-capable nodes | - |
+| `resilience.retry` | - | User set explicitly; drives caller-owned retry/backoff re-entry after retryable downstream failures | Default retry-disabled when omitted | - |
 | `scaling` | - | User set explicitly | - | Has no runtime effect |
 | Event priority mapping | `SYSTEM=0, ARRIVAL=1...` | - | - | - |
 | Warmup multiplier (10×) | `10` | - | - | - |

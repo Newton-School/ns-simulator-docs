@@ -74,10 +74,11 @@
   2. `storageProfile` (stores are physically identical today).
   3. `broadcastFanout` (`message-broker` doesn't actually broadcast).
   4. Failure-mode set: `connectionPool`, `gcJitter`, `cacheStampede`, `dataSkew`, `replicationCost`.
-  5. Coordination set: `lockLease`, `idempotencyDedup`, wire `rate-limiter`→`rateLimiter`,
-     `circuit-breaker-controller`→`circuitBreaker`.
+  5. Coordination set: richer ledger/reconciliation/exactly-once behavior on top of shipped
+     `lockLease`, `idempotencyDedup`, and the wired `rate-limiter` / `circuit-breaker-controller`.
 - **Un-defer the 3 questions** (`payment-system`, `ticketmaster`, `rate-limiter`) -
-  blocked on the coordination traits + un-hiding their palette nodes.
+  no longer blocked on missing guard-node/runtime wiring; remaining work is curriculum
+  packaging plus higher-order correctness semantics.
 - **Wire `healthProber`** into `health-check-manager`; wire the fault system into
   `chaos-engineering-framework`.
 - **Richer request model** (endpoint/body/status codes) and on-source-node workload UI.

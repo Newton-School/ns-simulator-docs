@@ -9,22 +9,24 @@ This directory contains reusable Codex skills for working on the DSDS simulator 
 
 ## Recommended Flow
 
-1. `component-taxonomy-selector`
-2. `topology-json-author`
-3. `scenario-composer` or `chaos-experiment-designer`
-4. `simulation-output-analyst`
-5. `failure-propagation-analyzer`
-6. `resilience-pattern-tuner`
-7. `invariant-policy-checker`
-8. `cost-and-provider-mapper`
-9. `schema-catalog-sync-guard`
-10. `ticket-implementation-copilot`
-11. `dsds-ui-spec-to-component`
+1. `simulator-question-author`
+2. `component-taxonomy-selector`
+3. `topology-json-author`
+4. `scenario-composer` or `chaos-experiment-designer`
+5. `simulation-output-analyst`
+6. `failure-propagation-analyzer`
+7. `resilience-pattern-tuner`
+8. `invariant-policy-checker`
+9. `cost-and-provider-mapper`
+10. `schema-catalog-sync-guard`
+11. `ticket-implementation-copilot`
+12. `dsds-ui-spec-to-component`
 
 ## Skill Catalog
 
 | Skill | Primary Use | Path |
 |---|---|---|
+| `simulator-question-author` | Translate interview-style prompts into simulator-ready assignment packages. | `skills/simulator-question-author/SKILL.md` |
 | `component-taxonomy-selector` | Map requirements to valid DSDS component types and categories. | `skills/component-taxonomy-selector/SKILL.md` |
 | `topology-json-author` | Produce and validate simulator-ready `TopologyJSON`. | `skills/topology-json-author/SKILL.md` |
 | `scenario-composer` | Build deterministic workload/fault/invariant scenario bundles. | `skills/scenario-composer/SKILL.md` |

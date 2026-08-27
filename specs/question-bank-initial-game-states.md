@@ -238,7 +238,7 @@ Hot/Cold · Async/Sync · Cost.
 ---
 
 ## 8. Rate limiter (Exam 2) - correctness, shared state
-**Covers:** Direction/Data-flow · Correctness · Tradeoffs. **Graded by:** T (rate-limiter → SHARED cache edge) + J (algorithm; cache-not-DB). **Sim does NOT help** (contention isn't modeled) - no `simulation` check.
+**Covers:** Direction/Data-flow · Correctness · Tradeoffs. **Graded by:** T (rate-limiter → SHARED cache edge) + J (algorithm; cache-not-DB). **Sim now helps** with runtime throttling behavior, while the shared-state correctness requirement is still graded primarily by topology + justification rather than a single summary metric.
 
 ```json
 {
@@ -305,7 +305,7 @@ Hot/Cold · Async/Sync · Cost.
 ---
 
 ## 10. Ticketmaster - correctness-under-contention
-**Covers:** Correctness · StorageFit · Direction · FR. **Graded by:** T (booking→lock; waiting queue) + S (SQL + search-index) + J (no-double-book). **Sim** only for waiting-queue latency.
+**Covers:** Correctness · StorageFit · Direction · FR. **Graded by:** T (booking→lock; waiting queue) + S (SQL + search-index) + J (no-double-book). **Sim** now helps with lock contention, retries, and waiting-queue latency; the no-double-booking judgment still remains topology + justification led.
 
 ```json
 {
@@ -376,7 +376,7 @@ Hot/Cold · Async/Sync · Cost.
 ---
 
 ## 12. Payment - exactly-once + auditability
-**Covers:** Correctness(exactly-once) · NFR-durability · StorageFit(ledger) · Direction. **Graded by:** T (write→idempotency guard) + S (append-only ledger) + J. **Sim does NOT help** (exactly-once/immutability aren't simulatable).
+**Covers:** Correctness(exactly-once) · NFR-durability · StorageFit(ledger) · Direction. **Graded by:** T (write→idempotency guard) + S (append-only ledger) + J. **Sim helps partially** through idempotency and retry behavior, but full exactly-once and immutable-ledger semantics are still not first-class simulation outputs.
 
 ```json
 {
