@@ -85,6 +85,12 @@
 > the graph. `kind` is the specific check. And notice — I didn't say anything about
 > caches or databases yet. I'm literally just asserting the graph has one faucet."
 
+> "I've written `id` and `description` here so you can see the full shape — but you
+> can drop both. The simulator derives them (`requires-single-source`, 'Exactly one
+> traffic source'). In practice this row is just
+> `{ \"type\": \"STRUCTURAL_RULE\", \"kind\": \"requires_single_source\" }`. Write only
+> the fields that carry meaning; everything else fills itself in."
+
 > "This is the whole philosophy in miniature: **a question is a pile of small,
 > orthogonal checks.** Each one is dumb on its own. Together, they're a rubric."
 
@@ -104,16 +110,7 @@
 **[SCREEN: add row.]**
 
 ```json
-{
-  "type": "RUBRIC_CHECK",
-  "id": "p99",
-  "kind": "simulation",
-  "description": "p99 under 100 ms",
-  "metric": "summary.latency.p99",
-  "op": "<",
-  "value": 100,
-  "points": 3
-}
+{ "type": "RUBRIC_CHECK", "metric": "summary.latency.p99", "op": "<", "value": 100, "points": 3 }
 ```
 
 > "Look at what this is. It's an *assertion over a number the simulator produces.*
@@ -132,16 +129,7 @@
 > zero."
 
 ```json
-{
-  "type": "RUBRIC_CHECK",
-  "id": "no-invariants",
-  "kind": "invariant",
-  "description": "No invariant violations",
-  "metric": "invariantViolations.count",
-  "op": "==",
-  "value": 0,
-  "points": 1
-}
+{ "type": "RUBRIC_CHECK", "kind": "invariant", "metric": "invariantViolations.count", "op": "==", "value": 0 }
 ```
 
 **[Recap:]**
@@ -182,44 +170,38 @@
 > **row zero**: the SIMULATOR_CONFIG. This is the one that goes from Django *into*
 > the simulator and sets up the entire sandbox."
 
-**[SCREEN: scroll through a trimmed SIMULATOR_CONFIG, highlighting fields as you say them.]**
+**[SCREEN: type this short SIMULATOR_CONFIG, highlighting the workload as you talk.]**
 
 ```json
 {
   "type": "SIMULATOR_CONFIG",
-  "questionId": "my-first-question",
-  "questionType": "open-build",
   "workloadCategory": "read-heavy",
-  "scaffold": { "type": "empty" },
   "suite": {
     "cases": [
-      {
-        "id": "peak",
-        "workload": {
-          "baseRps": 2000,
-          "requestDistribution": [
-            { "type": "read",  "weight": 0.99, "sizeBytes": 256 },
-            { "type": "write", "weight": 0.01, "sizeBytes": 512 }
-          ]
-        }
-      }
+      { "workload": { "baseRps": 2000, "requestDistribution": [
+        { "type": "read",  "weight": 0.99 },
+        { "type": "write", "weight": 0.01, "sizeBytes": 512 }
+      ] } }
     ]
-  },
-  "environmentProfile": { "mode": "ASSIGNMENT", "graded": true }
+  }
 }
 ```
 
-> "Let me point at the parts that matter. `scaffold: empty` — the student starts from
-> a blank canvas. `suite.cases[].workload` — this is the traffic *we* inject. Notice
-> `baseRps` is 2000, not 200,000 — the browser can't run two hundred thousand
-> requests a second, so we run a **representative** load that still stresses the same
-> path. And `requestDistribution` is 99% reads — that's us saying 'this is a
-> read-heavy world,' which is what makes a cache mandatory later."
+> "That's the *whole* config. And here's the thing people brace for — they expect a
+> giant block of settings — but almost everything defaults. Empty canvas, blank
+> constraints, the lock — all filled in for you. The **one** thing worth writing is
+> the workload, because it's the traffic *we* inject and the student can't touch it."
 
-> "And `environmentProfile` is the lock. `mode: ASSIGNMENT` means the student can't
-> open the settings, can't lower our traffic, can't reseed to get a lucky run. The
-> question *owns* the load. That's the anti-gaming guarantee — they can only change
-> the diagram, never the exam."
+> "Look at it. `baseRps` is 2000, not 200,000 — the browser can't run two hundred
+> thousand requests a second, so we run a **representative** load that still stresses
+> the same path. `requestDistribution` is 99% reads — that's us declaring a
+> read-heavy world, which is what makes a cache mandatory later. I only wrote the two
+> weights; `sizeBytes` on the reads defaults to 256, so I dropped it."
+
+> "And the anti-gaming lock is automatic. A Newton assignment runs in **ASSIGNMENT**
+> mode by default: the student can't open the settings, can't lower our traffic,
+> can't reseed for a lucky run. The question *owns* the load — they change the
+> diagram, never the exam. You didn't have to write that; you got it for free."
 
 **[SCREEN: back to the three-box round-trip diagram, animate the arrows lighting up.]**
 

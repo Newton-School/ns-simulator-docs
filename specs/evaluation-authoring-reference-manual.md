@@ -926,7 +926,56 @@ Each row is one Django test case. Create the rows **in the exact order** below. 
 Every `input` object is discriminated by its **`type`** key. The translator reads
 the rows in order; `SIMULATOR_CONFIG` must be first.
 
+### 11.3a Minimal rows - write only the essence
+
+The Newton translator (`buildQuestionPackageFromRows`) **fills every derivable
+field**, so an authored row only needs the parts that carry meaning. A structural
+rule is one line:
+
+```json
+{ "type": "STRUCTURAL_RULE", "kind": "requires_single_source" }
+```
+
+and a rubric check is:
+
+```json
+{ "type": "RUBRIC_CHECK", "metric": "summary.latency.p99", "op": "<", "value": 100 }
+```
+
+**Auto-filled when omitted** (set a field only to override; your value always wins):
+
+| Omitted field | Filled with |
+|---------------|-------------|
+| rule / check `id` | a unique slug from the kind/metric (`requires-single-source`, `p99`); collisions get `-2`, `-3` |
+| rule / check `description` | a human sentence derived from the kind |
+| `SEMANTIC_CRITERION.points` | `1` |
+| `RUBRIC_CHECK.kind` | inferred from the metric (`topology.*`→topology, invariant metric→invariant, else simulation) |
+| `SIMULATOR_CONFIG.questionId` | slug of the title |
+| `questionType` / `difficulty` | `open-build` / `intermediate` |
+| `scaffold` | `{ "type": "empty" }` |
+| `constraints.canModifyScaffold` / `canRemoveScaffoldNodes` | `true` (a partial `constraints` is completed; `maxNodeCount` etc. are yours) |
+| `suite.name` / `suite.visibleToStudent` | `<questionId>-suite` / `false` |
+| `cases[].id` / `cases[].description` | `peak`, then `case-2`… / none |
+| `requestDistribution[].weight` | `1` (or `1/n` split across classes) |
+| `requestDistribution[].sizeBytes` | `256` |
+| a `RUBRIC_CHECK` row, when you have none yet | a harmless always-passing `no-invariants` check (so a structural-only draft still loads) |
+
+**Keep a field only when it differs from the default** — e.g. `points` above 1,
+`sizeBytes` ≠ 256, a non-default `weight`, a hard-fail (`"hardFail": true`), the
+`accept`/`antiPattern` lists, an explicit `passThreshold` (0-1 fraction), or an
+`environmentProfile` with non-default capabilities. The shipped
+`django-admin-assignment.md` files are stripped to exactly this minimal shape.
+
+> **Existing questions keep their authored `id`s.** When an authored id differs from
+> what would be derived (e.g. `single-source` vs. `requires-single-source`), leave it
+> — dropping it changes the check's result identifier. New questions can omit it.
+
 ### 11.4 Row 1 - `SIMULATOR_CONFIG` (the master row)
+
+> Every key below except `type` is **optional** (§11.3a). The full form is shown for
+> reference; author only the keys whose value is not the default. `configVersion` and
+> `promptSource` are not read at all; `questionVersion` and `presentationMode` default
+> to `"1.0"` / `"raw-html"` — so in the common case all four are dropped.
 
 Carries everything that is not a rule/criterion/check. Top-level keys:
 

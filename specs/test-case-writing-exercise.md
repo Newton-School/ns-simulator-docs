@@ -35,73 +35,36 @@ Every question opens with one `SIMULATOR_CONFIG` row. It is boilerplate that boo
 locked sandbox and owns the injected load. Write it once; the exercise below only adds
 grading rows after it.
 
-```json
-{
-  "type": "SIMULATOR_CONFIG",
-  "configVersion": "1.0",
-  "questionId": "simple-web-service",
-  "questionVersion": "1.0",
-  "questionType": "open-build",
-  "difficulty": "beginner",
-  "workloadCategory": "read-heavy",
-  "presentationMode": "raw-html",
-  "promptSource": "question_text",
-  "scaffold": { "type": "empty" },
-  "constraints": {
-    "canModifyScaffold": true,
-    "canRemoveScaffoldNodes": true,
-    "maxNodeCount": 12
-  },
-  "suite": {
-    "name": "simple-web-service-suite",
-    "visibleToStudent": false,
-    "cases": [
-      {
-        "id": "peak",
-        "description": "Read peak (injected)",
-        "workload": {
-          "baseRps": 1000,
-          "requestDistribution": [
-            { "type": "read", "weight": 1.0, "sizeBytes": 256 }
-          ]
-        }
-      }
-    ]
-  },
-  "rubric": { "id": "simple-web-service-rubric", "passThreshold": 1 },
-  "environmentProfile": { "mode": "ASSIGNMENT", "graded": true }
-}
-```
-
-> `suite.cases[].workload` is the load the question injects — the student cannot change
-> it. You don't need to memorize the `constraints` booleans: if you write a partial
-> `constraints` (or omit it), the simulator fills `canModifyScaffold` and
-> `canRemoveScaffoldNodes` for you. Your values win where you set them.
-
-### The smallest thing that loads
-
-You only ever need **two rows** for a question to open: a `SIMULATOR_CONFIG` and **one**
-`RUBRIC_CHECK`. If you're mid-authoring and haven't written a real rubric check yet, the
-simulator injects a harmless always-passing one (`no-invariants`) automatically — so a
-structural-only draft still opens. This is the minimum `SIMULATOR_CONFIG`:
+**Write only the essence.** Every field the simulator can derive, it fills for you —
+so the whole `SIMULATOR_CONFIG` you need to type is:
 
 ```json
 {
   "type": "SIMULATOR_CONFIG",
-  "questionId": "my-question",
-  "questionType": "open-build",
-  "difficulty": "beginner",
-  "scaffold": { "type": "empty" },
-  "suite": {
-    "name": "my-suite",
-    "visibleToStudent": false,
-    "cases": [ { "id": "smoke",
-      "workload": { "baseRps": 100,
-        "requestDistribution": [ { "type": "read", "weight": 1.0, "sizeBytes": 256 } ] } } ]
-  },
-  "rubric": { "id": "my-rubric", "passThreshold": 1 }
+  "suite": { "cases": [ { "workload": { "baseRps": 1000,
+    "requestDistribution": [ { "type": "read" } ] } } ] }
 }
 ```
+
+That's it. The suite `workload` is the only thing worth stating — it's the load the
+question injects, and the student can't change it.
+
+**What gets filled in automatically (don't type these):**
+
+| You can omit | Default the simulator applies |
+|--------------|-------------------------------|
+| `questionId` | derived from the question title |
+| `questionType`, `difficulty` | `open-build`, `intermediate` |
+| `scaffold` | `{ "type": "empty" }` |
+| `constraints` (or a partial one) | `canModifyScaffold` + `canRemoveScaffoldNodes` filled |
+| `suite.name`, `suite.visibleToStudent` | `<id>-suite`, `false` |
+| `cases[].id`, `cases[].description` | `peak` (then `case-2`…), none |
+| `requestDistribution[].weight` | `1.0` (split evenly if several classes) |
+| `requestDistribution[].sizeBytes` | `256` |
+| `rubric.passThreshold` | pass if the point total is met |
+| a rubric check, if you have none yet | a harmless always-passing `no-invariants` check |
+
+Set any of these only when you want to override the default — your value always wins.
 
 Add grading rows one at a time from there.
 
@@ -116,13 +79,11 @@ Add grading rows one at a time from there.
 **The row**
 
 ```json
-{
-  "type": "STRUCTURAL_RULE",
-  "id": "single-source",
-  "kind": "requires_single_source",
-  "description": "Exactly one client (traffic source)"
-}
+{ "type": "STRUCTURAL_RULE", "kind": "requires_single_source" }
 ```
+
+That's the whole row. `id` (`requires-single-source`) and a human `description`
+("Exactly one traffic source") are derived for you — set them only to override.
 
 **Grades:** exactly one source node. Pass = one source. Fail = zero, or two+.
 No simulation runs — this reads the diagram.
@@ -140,13 +101,7 @@ No simulation runs — this reads the diagram.
 **The row**
 
 ```json
-{
-  "type": "STRUCTURAL_RULE",
-  "id": "has-service",
-  "kind": "requires_component",
-  "componentType": "microservice",
-  "description": "A service must process requests"
-}
+{ "type": "STRUCTURAL_RULE", "kind": "requires_component", "componentType": "microservice" }
 ```
 
 **Grades:** at least one `microservice` node is present.
@@ -164,14 +119,7 @@ No simulation runs — this reads the diagram.
 **The row**
 
 ```json
-{
-  "type": "STRUCTURAL_RULE",
-  "id": "reaches-store",
-  "kind": "requires_path",
-  "fromType": "microservice",
-  "toType": "kv-store",
-  "description": "Requests must reach a durable store"
-}
+{ "type": "STRUCTURAL_RULE", "kind": "requires_path", "fromType": "microservice", "toType": "kv-store" }
 ```
 
 **Grades:** a directed path exists from a `microservice` to a `kv-store`.
@@ -196,19 +144,18 @@ No simulation runs — this reads the diagram.
 ```json
 {
   "type": "SEMANTIC_CRITERION",
-  "id": "store-fit",
   "kind": "storageFit",
-  "description": "Point lookup by key",
   "accessPattern": "point-lookup",
   "accept": ["kv-store", "nosql-db"],
   "antiPattern": ["relational-db"],
-  "points": 3,
   "hardFail": true
 }
 ```
 
 **Grades:** the store type fits a point-lookup workload. `accept` = full credit,
 `antiPattern` = zero, `hardFail: true` = picking the trap zeroes the whole question.
+(`id`, `description`, and `points` are derived — `points` defaults to 1; set it only if
+this criterion should be worth more.)
 
 **Break it:** a `relational-db` as the store → hard-fails with
 *"relational-db is an anti-pattern for a point-lookup workload."* This is the first row
@@ -229,17 +176,11 @@ that catches a design that is *structurally* fine but *semantically* wrong.
 **The row**
 
 ```json
-{
-  "type": "RUBRIC_CHECK",
-  "id": "p99",
-  "kind": "simulation",
-  "description": "Read p99 under 100 ms",
-  "metric": "summary.latency.p99",
-  "op": "<",
-  "value": 100,
-  "points": 3
-}
+{ "type": "RUBRIC_CHECK", "metric": "summary.latency.p99", "op": "<", "value": 100 }
 ```
+
+`id` (`p99`), `description`, and `kind` (`simulation`, inferred from the metric) are all
+derived. `points` defaults to 1; set it to weight this check more heavily.
 
 **Grades:** the injected load runs, and the measured p99 must be `< 100`. This is the
 first row that needs a simulation — under-size the store and the queue backs up, p99
@@ -276,14 +217,22 @@ stacking axes: each row catches a class of mistake the others cannot.
 
 ---
 
-## If the preview won't load — error → fix
+## The question text always shows
 
-The simulator now shows an author-actionable message instead of a raw validator error.
-Common ones and their one-line fix:
+You can open the preview with **only the Django `question_text`** — before writing a
+single test-case row. The brief renders immediately so you can iterate on wording and
+rows independently. If the grading config is missing or invalid, the prompt still shows
+and a **non-blocking amber "Preview — grading not configured yet" banner** tells you
+what's left to fix. The question is only fully gradeable once that banner is gone.
+
+## Preview warning → fix
+
+The banner (or, if there is no prompt at all, the empty-state message) is
+author-actionable. Common ones and their one-line fix:
 
 | Message you see | What to do |
 |-----------------|-----------|
-| "…missing the SIMULATOR_CONFIG test-case row" | Add a row whose `input` starts with `"type": "SIMULATOR_CONFIG"`, wired as a **test case** (not in `initial_game_state`). |
+| "Add a SIMULATOR_CONFIG test-case row…" | Add a row whose `input` starts with `"type": "SIMULATOR_CONFIG"`, wired as a **test case** (not in `initial_game_state`). |
 | "Add at least one RUBRIC_CHECK test-case row…" | Add one `RUBRIC_CHECK` row (or rely on the auto-injected `no-invariants` default). |
 | "…passThreshold must be a fraction between 0 and 1…" | Change `passThreshold` to a fraction, e.g. `0.71`, not a point total. |
 | "…suite… needs at least one case… workload…" | Give the `SIMULATOR_CONFIG` a `suite.cases[0].workload` with `baseRps` + `requestDistribution`. |
