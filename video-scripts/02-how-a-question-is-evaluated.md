@@ -101,33 +101,36 @@
 **[SCREEN: rows on the left, the axis table on the right; draw an arrow from each row
 to its axis as you go.]**
 
+> "One row per axis. (On screen I draw the arrow to the axis table — the rows
+> themselves are pure JSON, no comments.)"
+
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "requires_single_source" }        // → T
+{ "type": "STRUCTURAL_RULE", "kind": "requires_single_source" }
 ```
-> "Structural rule → **Topology**. Shape of the graph. One faucet."
+> "**→ T.** Structural rule → **Topology**. Shape of the graph. One faucet."
 
 ```json
 { "type": "SEMANTIC_CRITERION", "kind": "storageFit",
   "accessPattern": "point-lookup",
   "accept": ["kv-store", "nosql-db"],
-  "antiPattern": ["relational-db"], "hardFail": true }                 // → S
+  "antiPattern": ["relational-db"], "hardFail": true }
 ```
-> "Semantic criterion, storageFit → **Scale-fit semantics**. Look at this — it *names
-> the right answers* (`accept`) and the *trap* (`antiPattern`). Pick a relational DB
-> for a billion point lookups and this hard-fails you. Same shape, wrong component,
+> "**→ S.** Semantic criterion, storageFit → **Scale-fit semantics**. Look at this — it
+> *names the right answers* (`accept`) and the *trap* (`antiPattern`). Pick a relational
+> DB for a billion point lookups and this hard-fails you. Same shape, wrong component,
 > caught."
 
 ```json
-{ "type": "RUBRIC_CHECK", "kind": "simulation",
-  "metric": "summary.latency.p99", "op": "<", "value": 100 }           // → Σ
+{ "type": "RUBRIC_CHECK", "metric": "summary.latency.p99", "op": "<", "value": 100 }
 ```
-> "Rubric check over a verdict metric → **Simulation**. p99 under 100ms or it's red."
+> "**→ Σ.** Rubric check over a verdict metric → **Simulation**. p99 under 100ms or it's
+> red."
 
 ```json
 { "type": "RUBRIC_CHECK", "kind": "invariant",
-  "metric": "invariantViolations.count", "op": "==", "value": 0 }      // → Σ / correctness
+  "metric": "invariantViolations.count", "op": "==", "value": 0 }
 ```
-> "And the invariant → nothing physically illegal happened."
+> "**→ Σ / correctness.** And the invariant → nothing physically illegal happened."
 
 > "See what happened? Four rows, three axes, and *every one of them fails for a
 > different reason.* That's not an accident — that's the author deliberately covering
