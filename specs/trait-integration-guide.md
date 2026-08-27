@@ -23,6 +23,18 @@ The work that is **not** automatic - and where cohesion actually lives - is
 **making the effect visible and gradable**: metrics, the verdict projection, the
 event timeline, the on-canvas node lens, and determinism.
 
+### Recently shipped on this surface
+
+- `storageProfile` now makes store-fit decisions visible at runtime instead of
+  leaving them only in rubric text.
+- `broadcastFanout` now delivers one broker publish to every downstream subscriber.
+- `idempotencyDedup` now models a keyed duplicate short-circuit on the write path.
+- `retryBackoff` now models caller-owned retries with exponential backoff/jitter.
+- `lockLease` now models per-key lease acquisition/contention/TTL for `distributed-lock`.
+- `rate-limiter`, `circuit-breaker-controller`, and `distributed-lock` are now first-class palette/catalog nodes rather than generic placeholders.
+- `Blueprints` in the library now reuse the question-brief workflow for
+  requirements-first scaffolds.
+
 ---
 
 ## The trait pipeline today
@@ -104,16 +116,15 @@ numbers invisibly.
    otherwise students can buy durability "for free."
 
 6. **Palette scope.** A trait that finally makes a hidden node meaningful (e.g.
-   `dataSkew` on `shard-node`, or wiring `rate-limiter`) is the trigger to add that
+   `dataSkew` on `shard-node`, or wiring `throttler`) is the trigger to add that
    type to `V1_PALETTE_NODE_TYPES` in `LibrarySidebar.tsx` **and** un-defer any
    question that needs it. Keep them out of the palette until the trait ships, or the
    node is a generic pass-through again.
 
 7. **Grading axis alignment.** Correctness-style traits (`idempotencyDedup`,
-   `lockLease`) are graded by **topology + justification**, not a simulation metric -
-   don't add a `summary.*` check for them (the authoring validator flags this).
-   Performance traits (`storageProfile`, `connectionPool`, `gcJitter`) *are* graded
-   by simulation metrics.
+   `lockLease`) now create real runtime behavior, but they are still graded mainly by
+   **topology + justification**, not a single `summary.*` scalar. Performance traits
+   (`storageProfile`, `connectionPool`, `gcJitter`) *are* graded by simulation metrics.
 
 ---
 
@@ -159,17 +170,21 @@ feelable answer, and the fix (raise the pool / add a replica) is visible on the 
 
 ## Recommended rollout order (keeps V1 green)
 
-1. **`➕` extensions first** - extend `cache`/`rateLimiter`/`circuitBreaker`/
-   `keyBasedRouting` `appliesTo`. No new engine code, no new metrics, low risk.
-2. **`storageProfile`** - highest pedagogical leverage; make stores physically
-   distinct so "pick the right DB" is felt, not just graded. Ships the biggest gap.
-3. **`broadcastFanout`** - fixes the `message-broker`-doesn't-broadcast gap; unblocks
-   the fan-out questions' *simulation* (today only structural).
-4. **Failure-mode set** (`gcJitter`, `connectionPool`, `cacheStampede`, `dataSkew`,
+1. **`➕` extensions first** - extend `cache`/`keyBasedRouting`/`coldStart`/
+   `contentRouting` `appliesTo`. No new engine code, no new metrics, low risk.
+2. **Shipped foundation slice** - `storageProfile`, `broadcastFanout`,
+   `idempotencyDedup`, `retryBackoff`, `lockLease`, plus the requirements-first
+   `Blueprints` workflow.
+3. **Delivery lifecycle expansion** - the queue path now ships producer
+   ack/release plus delivery mode, visibility-timeout redelivery, and DLQ
+   handoff plus caller-owned `retryBackoff`. Remaining work in this bucket is
+   delete-ack boundaries and richer broker guarantees / consumer-group semantics.
+4. **Coordination + correctness set** - `lockLease`, `idempotencyDedup`, and the
+   dedicated `rate-limiter` / `circuit-breaker-controller` / `distributed-lock`
+   nodes are now wired. Remaining work is higher-order correctness semantics such
+   as reconciliation, ledgers, and exactly-once approximations.
+5. **Failure-mode set** (`gcJitter`, `connectionPool`, `cacheStampede`, `dataSkew`,
    `replicationCost`) - each is a self-contained "aha" and a whole new question class.
-5. **Coordination set** (`lockLease`, `idempotencyDedup`, wire `rate-limiter`/
-   `circuit-breaker-controller`) - this is what un-defers `payment-system` /
-   `ticketmaster` / `rate-limiter`; pair each with un-hiding its palette node.
 
 After **every** step: re-run `scripts/validate-question-dir.ts` over all 9 shipped
 questions to prove references still pass and gamed still fails on the intended axis.

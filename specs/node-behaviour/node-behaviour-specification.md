@@ -455,7 +455,7 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | **Palette ID** | `message-queue` |
 | **Today** | GGcKNode queue. `asyncBoundary: true` on palette (not used by engine). Same as any other node. |
 | **Real world** | Point-to-point message delivery. Producer sends message to queue. One consumer receives and processes each message. Messages are buffered until consumed. Decouples producer from consumer. Dead letter queue for failed messages. Visibility timeout. |
-| **Teaching gap** | Cannot demonstrate: decoupling (producer doesn't wait for consumer), message buffering (queue depth growing when consumers are slow), dead letter queue (failed messages go to a separate queue), exactly-once vs at-least-once delivery, visibility timeout. |
+| **Teaching gap** | The simulator now demonstrates decoupling, visible backlog growth, visibility-timeout redelivery, and DLQ handoff. Remaining gaps: delete-ack boundaries separate from consumer work, consumer groups, broker replication, and true exactly-once coordination. |
 | **Required behaviour** | (1) Producer-side: accept the message and complete the producer's request immediately (acknowledge receipt). The producer should NOT wait for the consumer to process. (2) Consumer-side: messages are pulled by consumers at their own pace. If consumer is slow, queue depth grows visibly. (3) Dead letter queue - after N failed processing attempts, move message to a configured DLQ node. (4) Deduplication - optionally reject duplicate message IDs. |
 | **Config knobs** | `deliverySemantics: 'at-least-once' | 'at-most-once' | 'exactly-once'`, `visibilityTimeoutMs`, `maxReceiveCount` (before DLQ), `dlqNodeId`, `maxRetentionMs` |
 

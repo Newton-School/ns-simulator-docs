@@ -250,6 +250,15 @@ A `rubric` check's `kind` is inferred from the metric prefix
 `summary.totalRequests` · `summary.successfulRequests` · `summary.failedRequests` ·
 `perNode.maxUtilization` · `perNode.maxErrorRate` · `perNode.maxLatencyP99`
 
+**Correctness / capability aggregates (run-wide, summed across all nodes):**
+`reservations.oversells` · `reservations.commits` · `reservations.conflicts`
+(reservation-store — a double-book is `reservations.oversells > 0`) ·
+`locks.contentions` · `locks.acquires` · `locks.keyless` (distributed-lock) ·
+`retries.attempts` · `retries.budgetExhausted` (retry-backoff callers).
+These are `kind: "simulation"` checks. Any single trait counter is also reachable
+per node as `perNode.<nodeId>.traitCounters.<counter>`, but prefer the run-wide
+aggregate so the check does not depend on a node id the student can rename.
+
 **Invariant:** `invariantViolations.count` · `sloBreaches.count` ·
 `conservation.unbalanced` · `littlesLaw.violations`
 
@@ -420,6 +429,7 @@ Every customizable property across the DSL. **Scope** names the containing objec
 | `tags` | QuestionPackage | string[] | Optional | Free tags. | - |
 | `estimatedTimeMinutes` | QuestionPackage | number | Optional | Est. solve time. | - |
 | `type` | QuestionPackage | `fix \| build-budget \| optimize \| open-build \| scaling \| ha-chaos \| tradeoff` | Required | Question archetype. | - |
+| `entryFormat` | QuestionPackage | `blank-canvas \| requirements-first \| partial-scaffold \| broken-scaffold \| baseline-optimize \| locked-lab` | Optional | Learner starting surface and wrapper style. Orthogonal to `type`: `type` says how the question grades, `entryFormat` says how the learner enters it. | Omitted fields stay backward-compatible via inference. Explicit mismatches trigger authoring-validator diagnostics such as `entryFormat.blankCanvasMismatch`, `entryFormat.baselineVerdictMissing`, or `entryFormat.lockedLabUnlocked`. |
 | `workloadCategory` | QuestionPackage | `read-heavy \| write-heavy \| connection-heavy \| correctness-heavy \| batch-heavy` | Optional | Primary evaluation axis selector. | No `compute`/`equal` enum - `batch-worker` node is category `compute`; "equal" = a 0.5/0.5 `requestDistribution`. |
 | `domains` | QuestionPackage | `QuestionDomain[]` (`compute \| storage \| network \| resilience \| correctness \| cost`) | Optional but strongly recommended | Declares the bottleneck domain(s) the question is teaching. Drives authoring-validator consistency checks and platform behavior such as edge/resource edit policy. | Missing ⇒ validator `domains.missing`; `network` / `resilience` / `cost` currently warn as V2 domains. |
 | `concepts` | QuestionPackage | `string[]` (non-empty kebab-case slugs by convention) | Optional | Fine-grained lesson tags, narrower than `domains` (for example `read-cache`, `store-fit`, `async-decoupling`). | Free-form metadata today; schema enforces only non-empty strings. |
@@ -428,7 +438,7 @@ Every customizable property across the DSL. **Scope** names the containing objec
 | `prompt.text` | prompt | string (markdown) | Required | Problem statement. | Frame as "design the architecture, not code". |
 | `prompt.functionalRequirements` | prompt | string[] | Required | FRs (prose). | Not parsed - each must map to an obligation (§3) or be labeled context. |
 | `prompt.nonFunctionalRequirements` | prompt | `NFRTarget[]` | Required | Structured NFRs. | Orphan NFR (no matching rubric check) ⇒ validator `nfr.orphan`. |
-| `prompt.scale` | prompt | `ScaleParameters` | Required | Display + derivation numbers. | Display-only unless injected into `suite.workload`. |
+| `prompt.scale` | prompt | `ScaleParameters` | Required | Display + derivation numbers. | Feeds grade-time workload derivation when a suite case omits `workload.baseRps` / `requestDistribution`; explicit case overrides still win. |
 | `prompt.additionalContext` | prompt | string | Optional | Extra context. | - |
 | `NFRTarget.metric` | NFR | `latency_p99 \| latency_p50 \| availability \| error_rate \| throughput` | Required | NFR metric. | Distinct from verdict metric keys. |
 | `NFRTarget.operator` | NFR | `< \| <= \| > \| >=` | Required | Comparison. | - |
@@ -436,8 +446,8 @@ Every customizable property across the DSL. **Scope** names the containing objec
 | `NFRTarget.unit` | NFR | `ms \| percent \| req_per_sec \| nines` | Required | Unit. | - |
 | `NFRTarget.description` | NFR | string | Required | Student-facing label. | - |
 | `scale.dau` | scale | number ≥ 0 | Optional | Daily active users (display). | - |
-| `scale.peakRps` | scale | number ≥ 0 | Optional | Real-world peak (display). | Do NOT put in `baseRps`. Validator warns `scale.rpsNotInjected` if no case sets `baseRps`. |
-| `scale.readWriteRatio` | scale | number 0-100 | Optional | Reads % (display + derivation). | Display-only unless injected as typed `requestDistribution` ⇒ validator `scale.mixNotInjected`. |
+| `scale.peakRps` | scale | number ≥ 0 | Optional | Real-world peak (display + derivation). | Grade-time workload derivation uses this when a case omits `workload.baseRps`; keep explicit case `baseRps` only for scenario-specific overrides. |
+| `scale.readWriteRatio` | scale | number 0-100 | Optional | Reads % (display + derivation). | Grade-time workload derivation synthesizes a typed `read`/`write` `requestDistribution` when a case omits one, reusing the source workload's request sizes. |
 | `scale.storageGb` | scale | number ≥ 0 | Optional | Storage size (display). | - |
 | `scale.retentionDays` | scale | number ≥ 0 | Optional | Retention (display). | - |
 | `scale.growthRatePercent` | scale | number ≥ 0 | Optional | Growth (display). | - |
@@ -538,8 +548,9 @@ Every customizable property across the DSL. **Scope** names the containing objec
 2. **`validateAuthoredQuestion(pkg)`** - the authoring-contract lint (semantic, not
    schema). Returns `error`/`warning` diagnostics: wrong metric keys, un-injected
    scale numbers, missing `sizeBytes`, orphan NFRs, correctness-on-simulation,
-   dangling justify bindings, read/write `guardedPath` misuse. `error`s should block
-   a save; `warning`s are advisory.
+   dangling justify bindings, read/write `guardedPath` misuse, and explicit
+   `entryFormat`/scaffold/type mismatches. `error`s should block a save;
+   `warning`s are advisory.
 
 ### 8.2 Gotcha index
 - **Metric key resolution** - use the exact verdict paths (`summary.latency.p99`).
@@ -598,14 +609,15 @@ Not every schema field drives grading. Author accordingly.
 | `resources.pricingModel` | ✅ | ⚠️ affects the **live** cost chip / `cost.ts` only; graded `budget.unit:"cost"` still uses the v1 heuristic (§6.2) |
 | `environmentProfile` (mode / visibility / `capabilities`) | ✅ (Newton row / launch) | ⚠️ **platform-facing** - governs edit locks, `edgeModel`, visibility; not a scored axis. Overlaid by `domains` (§10.4) |
 | `edgeModel` (`network` / `connector`) | ✅ | ⚠️ behavioral - `connector` edges carry no sim physics or egress cost (§10.3) |
-| `constraints.*` (`maxNodeCount`, `maxBudget`, `maxTotalWorkers`, `allowed/forbiddenNodeTypes`) | ✅ | ❌ **not enforced at grade time** (UI/palette only) - use `budget` + `max_node_count`/`max_component_count` structural rules to enforce |
+| `constraints.*` (`maxNodeCount`, `maxBudget`, `maxTotalWorkers`, `allowed/forbiddenNodeTypes`) | ✅ | ✅ **graded + behavioral** - palette filtering still applies, and grade time now enforces node caps, spend caps, worker caps, and allowed/forbidden component types |
 | `workloadCategory` | ✅ | ❌ label only (author-side axis selector; not read by grading) |
 | `domains` | ✅ | ⚠️ **advisory + platform-facing** - checked by the authoring validator and consumed by environment-profile / edit-policy logic, but not scored as a rubric axis by themselves |
 | `concepts` | ✅ | ❌ metadata only (taxonomy / indexing aid; not graded) |
 | `type` (`fix`/`build-budget`/`optimize`/`open-build`/`scaling`/`ha-chaos`/`tradeoff`) | ✅ | ❌ **all are labels** - none drives behavior. `optimize` does **not** grade against `scaffold.baselineVerdict`; `build-budget` does not auto-enforce `budget`; `ha-chaos` "works" only via `suite.faults`. |
-| `scaffold.baselineVerdict` | ✅ | ❌ not graded (no "beat the baseline" check) |
+| `entryFormat` (`blank-canvas`/`requirements-first`/`partial-scaffold`/`broken-scaffold`/`baseline-optimize`/`locked-lab`) | ✅ | ⚠️ **platform-facing** - explicit authoring/presentation metadata. Backward-compatible inference exists for legacy questions; `locked-lab` drives the Lab wrapper, `baseline-optimize` drives the comparison shell, and the other formats now feed the live workflow tracker / question shell selection. |
+| `scaffold.baselineVerdict` | ✅ | ✅ graded for baseline-comparison questions - the primary case must improve at least one comparison metric without regressing the others |
 | `requestDistribution[].metadata` | ✅ | ❌ not consumed |
-| `readWriteRatio → requestDistribution` auto-derivation | - | ❌ not built (author the mix by hand) |
+| `readWriteRatio → requestDistribution` auto-derivation | - | ✅ built - when a case omits `requestDistribution`, grading derives a typed `read`/`write` mix from `prompt.scale.readWriteRatio` and the source workload's request sizes |
 
 > To enforce a node cap, use `budget:{unit:"nodes",cap:N}` or a
 > `max_node_count`/`max_component_count` structural rule - `constraints.maxNodeCount`
@@ -924,6 +936,7 @@ Carries everything that is not a rule/criterion/check. Top-level keys:
 | `configVersion` | `"1.0"` (row schema version) |
 | `questionId` / `questionVersion` | question identity |
 | `questionType` | the archetype (`open-build`, …) - mirrors `type` in `question.json` |
+| `entryFormat` | Optional learner-entry shell (`requirements-first`, `partial-scaffold`, `locked-lab`, …) - mirrors `entryFormat` in `question.json` |
 | `domains` / `concepts` | as in `question.json` §7 - **`domains` drive edit policy** (§10.4) |
 | `difficulty` / `workloadCategory` | as in `question.json` |
 | `presentationMode` | `"raw-html"` (renders `question_text` as HTML) |
@@ -941,6 +954,7 @@ Carries everything that is not a rule/criterion/check. Top-level keys:
   "questionId": "url-shortener",
   "questionVersion": "1.0",
   "questionType": "open-build",
+  "entryFormat": "requirements-first",
   "domains": ["compute", "storage"],
   "concepts": ["read-cache", "store-fit"],
   "difficulty": "intermediate",
@@ -1024,8 +1038,8 @@ the question grows.
 
 - [ ] Every `componentType` referenced (structural + semantic) exists in the current
       palette (`PALETTE_TEMPLATES`).
-- [ ] `SIMULATOR_CONFIG.scaffold` / `constraints` / `suite` / `domains` / `concepts`
-      match `question.json` exactly.
+- [ ] `SIMULATOR_CONFIG.entryFormat` / `scaffold` / `constraints` / `suite` /
+      `domains` / `concepts` match `question.json` exactly.
 - [ ] Each `STRUCTURAL_RULE` / `SEMANTIC_CRITERION` / `RUBRIC_CHECK` row equals its
       `question.json` array element (minus `type`).
 - [ ] `question_text` HTML says the same thing as `prompt.text` (+ FR/NFR/scale).

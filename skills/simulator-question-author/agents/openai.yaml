@@ -1,0 +1,4 @@
+interface:
+  display_name: "Simulator Question Author"
+  short_description: "Translate interview prompts into DSDS assignments."
+  default_prompt: "Use $simulator-question-author to convert this system design prompt into a simulator-ready Django assignment with question_text, suite cases, and graded rows."
