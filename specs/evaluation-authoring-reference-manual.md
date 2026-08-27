@@ -23,6 +23,16 @@
 > execution-profile lock) is governed by an **environment profile** (§10). Newton
 > assignments are authored as **Django test-case rows**, not a raw `question.json`
 > (§11).
+>
+> **What's new (2026-08, later).** Authoring the Django rows is now **forgiving**:
+> `SIMULATOR_CONFIG` is optional and every field auto-derives (`id` / `description` /
+> `points` / workload `weight`+`sizeBytes` / suite name+case ids / constraint booleans —
+> §11.3a), so rows are **atomic** (`{ "type": "STRUCTURAL_RULE", "kind":
+> "requires_single_source" }`). The prompt always renders (preview mode + actionable
+> errors on bad config; §11.1). New **contention** modeling: a `keyspace` on a workload
+> class (§2.3) plus a `reservation-store` component surface **`reservations.oversells`**
+> (no-double-book), and `locks.*` / `retries.*` run-wide metrics exist (§4.2). `budget`
+> is authored inside the `SIMULATOR_CONFIG` row (§6.2, §11.4).
 
 ---
 
@@ -133,8 +143,9 @@ type token.
 |-------|----------|------|
 | `type` | ✅ | free string; used in edge `condition` (`request.type === "read"`) and GET/POST inference |
 | `weight` | ✅ | fraction 0-1; weights across the array should sum to 1.0 |
-| `sizeBytes` | ✅ (full topology) | payload bytes - drives bandwidth/serialization; **a full topology's entries require it** (the suite override tolerates its absence but a merged topology does not) |
-| `metadata` | optional | untyped `Record<string, unknown>` escape hatch (not consumed by grading today) |
+| `sizeBytes` | ✅ (full topology) | payload bytes - drives bandwidth/serialization; **a full topology's entries require it** (the suite override tolerates its absence, and the Newton row builder defaults it to 256, but a merged full topology does not) |
+| `metadata` | optional | untyped `Record<string, unknown>` attached to each request (e.g. `idempotencyKey`); read by capability traits (idempotency/reservation), not by grading directly |
+| `keyspace` | optional | `{ "field": string, "size": number }` - stamps each request a key drawn from `size` distinct keys, creating **contention** over a small keyspace. This is what drives reservation / no-double-book questions (a small `size` under high RPS makes many requests fight over the same key). Read as `reservations.oversells` etc. |
 
 > **Why declare payload sizes.** `sizeBytes` feeds edge bandwidth and transfer
 > time; omitting it on a full topology fails validation
@@ -329,7 +340,8 @@ justification  →  semantic (forbidUnjustified reads justification results)  �
   gates. Points live on `rubric` checks and `semanticCriteria`.
 
 ### 5.3 Structural rule kinds (full)
-Base fields on every rule: `id`, `description`, `kind`.
+Base fields on every rule: `kind` (required) plus `id` and `description` (both
+**optional** in the Newton flow — auto-derived; §11.3a).
 
 | `kind` | Extra fields | Passes when |
 |--------|--------------|-------------|
@@ -376,7 +388,9 @@ component's alias), (2) number-citation (within 0.5%), (3) tradeoff token. Outco
 ```json
 "budget": { "unit": "cost", "cap": 600 }
 ```
-`unit` ∈ `cost | nodes | edges`; `cap` = positive number. Evaluated by
+`unit` ∈ `cost | nodes | edges`; `cap` = positive number. In the Newton flow, author
+it **inside the `SIMULATOR_CONFIG` row** (`"budget": { … }`); the row builder threads it
+into the package (§11.4). Evaluated by
 `evaluateBudget(topology, budget)` after the structural gate; the result surfaces
 as a **`topology.budget`** check row that **fails the contract when
 `actual > cap`** (drops `allPassed`), so an over-provisioned "kitchen-sink" design
@@ -861,6 +875,11 @@ They encode the **same** package; the Newton translator (`newtonGamePlayground.t
 `parseNewtonSeed` / `buildQuestionPackageFromRows`) rebuilds the immutable config
 from the **rows**, not from `initial_game_state`.
 
+> **Companion reference:** [`test-case-catalog.md`](./test-case-catalog.md) is a
+> copy-paste catalog of every row type, rule/criterion/check kind, verdict metric, and
+> `SIMULATOR_CONFIG` field — with a field-by-field syntax breakdown. Use it as the
+> "what can I write" index; use this manual for the "why / how it grades".
+
 Each question folder ships a **`django-admin-assignment.md`** that spells the rows
 out verbatim; it is the copy-paste source for the Newton admin. It opens with a
 standing note: **this shape is Newton-assignment-only** - standalone/local authoring
@@ -883,6 +902,15 @@ at `systems-simulator.newtonschool.co` keeps topology Open/Save and is authored 
   the prompt and never author an edge-tuning expectation in a connector assignment.
 - Justification prompts are hidden and ungraded in Newton assignment mode today -
   do **not** include `justify` rows in this flow.
+- **The prompt always renders.** As long as `question_text` (or `question_title`) is set,
+  the brief loads even before any rows exist or when a row is malformed. If the grading
+  config can't be built, the question loads in **preview mode** (prompt visible) with a
+  non-blocking *"grading not configured yet"* notice, and validation failures surface as
+  **author-actionable messages** (e.g. *"passThreshold must be a fraction between 0 and
+  1"*) rather than a cryptic zod error. Only a seed with neither a prompt nor any grading
+  row fails outright.
+- **Row `input` must be pure JSON — no comments.** A trailing `// note` makes the row
+  invalid JSON, so it is silently dropped; write the object only.
 
 ### 11.2 Django question fields
 
@@ -923,8 +951,11 @@ Each row is one Django test case. Create the rows **in the exact order** below. 
 | `output` | `""` (empty) |
 | `output_file` | empty |
 
-Every `input` object is discriminated by its **`type`** key. The translator reads
-the rows in order; `SIMULATOR_CONFIG` must be first.
+Every `input` object is discriminated by its **`type`** key. `SIMULATOR_CONFIG` is
+**optional** — a question authored from only `STRUCTURAL_RULE` / `SEMANTIC_CRITERION` /
+`RUBRIC_CHECK` rows builds fine (every config field defaults). Add a `SIMULATOR_CONFIG`
+row only to inject a workload (for Simulation checks), set a `budget`/`constraints`, or
+override a default; when present, keep it first.
 
 ### 11.3a Minimal rows - write only the essence
 
@@ -958,7 +989,7 @@ and a rubric check is:
 | `cases[].id` / `cases[].description` | `peak`, then `case-2`… / none |
 | `requestDistribution[].weight` | `1` (or `1/n` split across classes) |
 | `requestDistribution[].sizeBytes` | `256` |
-| a `RUBRIC_CHECK` row, when you have none yet | a harmless always-passing `no-invariants` check (so a structural-only draft still loads) |
+| a `RUBRIC_CHECK` row, when you have none yet | a harmless always-passing placeholder check so a structural-only draft still satisfies the "≥1 check" schema rule. It is **hidden from the authoring Tests list** (and excluded from the pass/total badge) — authors only ever see checks they wrote. |
 
 **Keep a field only when it differs from the default** — e.g. `points` above 1,
 `sizeBytes` ≠ 256, a non-default `weight`, a hard-fail (`"hardFail": true`), the
@@ -972,10 +1003,11 @@ and a rubric check is:
 
 ### 11.4 Row 1 - `SIMULATOR_CONFIG` (the master row)
 
-> Every key below except `type` is **optional** (§11.3a). The full form is shown for
-> reference; author only the keys whose value is not the default. `configVersion` and
-> `promptSource` are not read at all; `questionVersion` and `presentationMode` default
-> to `"1.0"` / `"raw-html"` — so in the common case all four are dropped.
+> The **whole row is optional** (§11.3), and every key below except `type` is optional
+> (§11.3a). The full form is shown for reference; author only the keys whose value is not
+> the default. `configVersion` and `promptSource` are not read at all; `questionVersion`
+> and `presentationMode` default to `"1.0"` / `"raw-html"` — so in the common case all
+> four are dropped.
 
 Carries everything that is not a rule/criterion/check. Top-level keys:
 
@@ -993,6 +1025,7 @@ Carries everything that is not a rule/criterion/check. Top-level keys:
 | `scaffold` | `{ "type": "empty" }` or a `partial`/`complete` topology |
 | `constraints` | `canModifyScaffold` / `canRemoveScaffoldNodes` / `maxNodeCount` |
 | `suite` | the injected workload (`name`, `visibleToStudent`, `cases[]`) - §2 |
+| `budget` | `{ "unit": "cost"\|"nodes"\|"edges", "cap": number }` - the anti-kitchen-sink cap (§6.2). Authored **in this row** (the Newton builder threads it into the package). |
 | `rubric` | **header only** here: `{ id, passThreshold }`. The checks are their own rows. |
 | `environmentProfile` | the mode + visibility + capabilities lens - §10 |
 
@@ -1048,27 +1081,28 @@ corresponding array element in `question.json`.
 | `SEMANTIC_CRITERION` | `semanticCriteria[]` (§5) | `placement` / `guardedPath` / `fanout` / `storageFit` / `forbidUnjustified` |
 | `RUBRIC_CHECK` | `rubric.checks[]` (§4.2) | `simulation` / `topology` / `invariant` |
 
-Worked example - the remaining url-shortener rows (title → input):
+Worked example - the remaining url-shortener rows. The Django `title` is the label; the
+`input` is the JSON only (**no comments — a `//` line makes the input invalid JSON**):
 
+`title`: `STRUCTURAL_RULE: single-source`
 ```json
-// STRUCTURAL_RULE: single-source
 { "type": "STRUCTURAL_RULE", "id": "single-source", "kind": "requires_single_source",
   "description": "Exactly one traffic source" }
 ```
+`title`: `SEMANTIC_CRITERION: store-fits-point-lookup`
 ```json
-// SEMANTIC_CRITERION: store-fits-point-lookup
 { "type": "SEMANTIC_CRITERION", "id": "store-fits-point-lookup", "kind": "storageFit",
   "description": "Short-code lookup is a direct lookup by key", "accessPattern": "point-lookup",
   "accept": ["kv-store", "nosql-db"], "partial": ["in-memory-cache"], "antiPattern": ["relational-db"],
   "points": 3, "hardFail": true }
 ```
+`title`: `RUBRIC_CHECK: p99`
 ```json
-// RUBRIC_CHECK: p99
 { "type": "RUBRIC_CHECK", "id": "p99", "kind": "simulation", "description": "p99 under 100 ms",
   "metric": "summary.latency.p99", "op": "<", "value": 100, "points": 3 }
 ```
+`title`: `RUBRIC_CHECK: no-invariants`
 ```json
-// RUBRIC_CHECK: no-invariants
 { "type": "RUBRIC_CHECK", "id": "no-invariants", "kind": "invariant", "description": "No invariant violations",
   "metric": "invariantViolations.count", "op": "==", "value": 0, "points": 1 }
 ```
