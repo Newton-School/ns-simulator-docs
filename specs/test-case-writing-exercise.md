@@ -73,9 +73,37 @@ grading rows after it.
 }
 ```
 
-> `constraints.canModifyScaffold`, `constraints.canRemoveScaffoldNodes`, and
-> `constraints.maxNodeCount` are all required. `suite.cases[].workload` is the load the
-> question injects — the student cannot change it.
+> `suite.cases[].workload` is the load the question injects — the student cannot change
+> it. You don't need to memorize the `constraints` booleans: if you write a partial
+> `constraints` (or omit it), the simulator fills `canModifyScaffold` and
+> `canRemoveScaffoldNodes` for you. Your values win where you set them.
+
+### The smallest thing that loads
+
+You only ever need **two rows** for a question to open: a `SIMULATOR_CONFIG` and **one**
+`RUBRIC_CHECK`. If you're mid-authoring and haven't written a real rubric check yet, the
+simulator injects a harmless always-passing one (`no-invariants`) automatically — so a
+structural-only draft still opens. This is the minimum `SIMULATOR_CONFIG`:
+
+```json
+{
+  "type": "SIMULATOR_CONFIG",
+  "questionId": "my-question",
+  "questionType": "open-build",
+  "difficulty": "beginner",
+  "scaffold": { "type": "empty" },
+  "suite": {
+    "name": "my-suite",
+    "visibleToStudent": false,
+    "cases": [ { "id": "smoke",
+      "workload": { "baseRps": 100,
+        "requestDistribution": [ { "type": "read", "weight": 1.0, "sizeBytes": 256 } ] } } ]
+  },
+  "rubric": { "id": "my-rubric", "passThreshold": 1 }
+}
+```
+
+Add grading rows one at a time from there.
 
 ---
 
@@ -247,6 +275,22 @@ store. It fails only because the store is the wrong *kind*. That is the point of
 stacking axes: each row catches a class of mistake the others cannot.
 
 ---
+
+## If the preview won't load — error → fix
+
+The simulator now shows an author-actionable message instead of a raw validator error.
+Common ones and their one-line fix:
+
+| Message you see | What to do |
+|-----------------|-----------|
+| "…missing the SIMULATOR_CONFIG test-case row" | Add a row whose `input` starts with `"type": "SIMULATOR_CONFIG"`, wired as a **test case** (not in `initial_game_state`). |
+| "Add at least one RUBRIC_CHECK test-case row…" | Add one `RUBRIC_CHECK` row (or rely on the auto-injected `no-invariants` default). |
+| "…passThreshold must be a fraction between 0 and 1…" | Change `passThreshold` to a fraction, e.g. `0.71`, not a point total. |
+| "…suite… needs at least one case… workload…" | Give the `SIMULATOR_CONFIG` a `suite.cases[0].workload` with `baseRps` + `requestDistribution`. |
+| "…accessPattern must be one of…" | Use a valid `storageFit` access pattern: `point-lookup`, `time-series`, `append-only-ledger`, `transactional-relational`, `search-index`, `blob`. |
+| "…metric is not a recognized verdict key…" | Use an exact key like `summary.latency.p99`, `summary.errorRate`, `reservations.oversells`. |
+
+Each message also prints the raw validator detail in parentheses if you need it.
 
 ## The authoring loop
 
