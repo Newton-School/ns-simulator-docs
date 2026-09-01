@@ -1,6 +1,6 @@
 # Support Ledger And Runtime Semantics
 
-Date: 2026-08-31
+Date: 2026-09-01
 
 ## 1. Why this exists
 
@@ -61,16 +61,69 @@ It does **not** claim full distributed-systems semantics. It is the first honest
 
 ### 3.1 Lifecycle state
 
-Each request outcome can now carry a normalized lifecycle state such as:
+Each request outcome now carries a normalized lifecycle state such as:
 
 - `completed`
 - `timed-out`
 - `rejected`
 - `in-flight`
 
-This is intentionally small for now. It gives the simulator a common vocabulary before a richer transition timeline is added.
+This remains intentionally small. It gives the simulator a stable top-line vocabulary for summaries, grading, and filtering.
 
-### 3.2 Delivery semantics
+### 3.2 Per-request state timeline
+
+Each request outcome now also carries a first-class `stateTimeline` ledger.
+
+Current scopes:
+
+- `request`
+- `delivery`
+- `idempotency`
+- `lock`
+- `reservation`
+
+Current request states include:
+
+- `generated`
+- `admitted`
+- `queued`
+- `processing`
+- `forwarded`
+- `retry-scheduled`
+- `completed`
+- `timed-out`
+- `rejected`
+- `in-flight`
+
+Current delivery states include:
+
+- `producer-acked`
+- `released-to-consumer`
+- `redelivery-scheduled`
+- `dlq-routed`
+
+Current coordination states include:
+
+- idempotency:
+  - `recorded`
+  - `deduped`
+  - `key-missing`
+- lock:
+  - `attempting`
+  - `acquired`
+  - `contended`
+  - `held`
+  - `released`
+  - `key-missing`
+- reservation:
+  - `committed`
+  - `sold-out`
+  - `oversold`
+  - `key-missing`
+
+This timeline is now retained on the request-outcome ledger and surfaced in the results tray, so authors and students can inspect how a request moved through queue delivery and correctness-related traits without reading raw canonical events.
+
+### 3.3 Delivery semantics
 
 Queue-backed outcomes now carry an assessed delivery snapshot:
 
@@ -85,9 +138,9 @@ The most important honesty rule today:
 
 - configured `exactly-once` is currently downgraded to runtime `at-least-once`
 
-because commit-outcome coordination is not modeled yet.
+because commit-outcome coordination is still not modeled yet.
 
-### 3.3 Coordination state markers
+### 3.4 Coordination state markers
 
 Certain traits now stamp explicit semantic markers into the request metadata so the final outcome can preserve the last meaningful state.
 
@@ -116,6 +169,7 @@ Those markers are folded into the final `requestOutcomes[*].semantics` snapshot.
 Each `RequestOutcomeRecord` now includes:
 
 - lifecycle state
+- ordered state timeline transitions across request, delivery, and coordination scopes
 - direct vs queued flow kind
 - delivery semantics assessment when a queue is involved
 - coordination decisions for idempotency, lock, and reservation behavior
@@ -129,8 +183,8 @@ Each `RequestOutcomeRecord` now includes:
 
 This is enough to support:
 
-- future results-tray badges
-- future bottom-tray timelines
+- results-tray semantic drill-downs
+- searchable delivery and coordination transitions in retained outcome rows
 - future grading helpers for "duplicate possible", "lock contended", or "oversold detected"
 
 without changing the core queueing engine shape.
@@ -141,7 +195,6 @@ This foundation is intentionally narrow.
 
 It still does **not** provide:
 
-- a full state-transition timeline for every request
 - consumer-group offsets
 - partition ordering truth
 - commit-outcome ledger semantics
@@ -162,10 +215,10 @@ So authors must still treat these carefully:
 The next dependency-safe order remains:
 
 1. consume support-ledger truth in more authoring and UI surfaces
-2. add richer state transitions on top of the current lifecycle vocabulary
-3. extend delivery semantics into broker-specific behavior
-4. add commit-outcome semantics for correctness-heavy questions
-5. add replication and quorum behavior after that
+2. extend delivery semantics into broker-specific behavior
+3. add commit-outcome semantics for correctness-heavy questions
+4. add replication and quorum behavior after that
+5. add protocol-specific semantics only after the above support truth is explicit
 
 ## 7. Code map
 

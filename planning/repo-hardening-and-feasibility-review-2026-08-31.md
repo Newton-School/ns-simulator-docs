@@ -1,6 +1,6 @@
 # Repo Hardening And Feasibility Review
 
-Date: 2026-08-31
+Date: 2026-09-01
 
 Scope: codebase robustness, simulator fidelity, UI/UX, authoring workflow, and question-family feasibility.
 
@@ -24,10 +24,11 @@ The failure came from the test expecting LAB experiences to expose `['question',
 
 Current health after the fix:
 
-- `npm test`: `98` files passed, `677` tests passed, `2` skipped
+- `npm test`: `99` files passed, `689` tests passed, `2` skipped
 - `npm run typecheck`: passed
 - `npm run build`: passed
-- the main renderer entry chunk is about `563.64 kB` after feature-boundary lazy loading for question, library, scenario, settings, and results-adjacent surfaces
+- `npm run check:web-bundle-budget`: passed
+- the main renderer entry chunk is about `566.75 kB` after feature-boundary lazy loading for question, library, scenario, settings, and results-adjacent surfaces
 
 ## 3. Fresh-Author Portability Problem
 
@@ -592,37 +593,36 @@ The important distinction is:
 
 ### Missing engine semantics
 
-#### 1. State semantics have a foundation now, but not a full timeline model yet
+#### 1. State semantics now have a first-class request timeline, but broader grading and replay use is still incomplete
 
 What already exists:
 
 - normalized request lifecycle state in `src/engine/core/simulationSemantics.ts`
 - per-outcome semantics snapshots in `RequestOutcomeRecord`
 - trait-written coordination markers for idempotency, lock, and reservation decisions
-- results-tray surfacing for lifecycle, flow kind, delivery assessment, tags, and notes
+- first-class per-request `stateTimeline` transitions across request, delivery, idempotency, lock, and reservation scopes
+- deterministic transition recording for queue acknowledgement, queue release, retry scheduling, redelivery, DLQ routing, and lock release
+- results-tray surfacing for lifecycle, flow kind, delivery assessment, tags, notes, and retained state timelines
 
 What is still missing:
 
-- explicit lifecycle state for requests, jobs, retries, locks, leases, and acknowledgements
-- state transitions that can be inspected and graded
-- a shared vocabulary for "reserved", "in-flight", "acked", "released", "expired", "deduped", and "committed"
+- grading helpers that directly consume the recorded transition ledger instead of relying mostly on final outcome inference
+- broader entity coverage beyond retained request timelines, such as richer job, lease, and broker-retention views
+- bottom-tray and replay experiences that render the same timeline without forcing authors into the raw event stream
+- a larger canonical vocabulary for states like expiry, retention, partition offset, and commit-journal boundaries
 
 What problem this causes:
 
-- authors can ask stateful correctness questions, but the runtime cannot always prove which state transition happened
-- multiple traits may affect the same request, but there is no first-class state timeline tying them together
+- authors can now inspect meaningful request transitions, but they still cannot grade every correctness-heavy question directly from those transitions
+- multiple traits are tied together on the request ledger now, but broker- and replica-level semantics still do not have equivalent first-class runtime truth
 
 The solution:
 
-1. Build a runtime state-machine layer on top of the existing lifecycle snapshot.
-2. Define canonical transition enums for:
-   - request lifecycle
-   - queue message lifecycle
-   - lock or lease lifecycle
-   - idempotency decision lifecycle
-3. Emit deterministic state-transition events from traits.
-4. Grade against those transitions instead of inferring semantics only from final metrics.
-5. Surface the same transitions in replay and bottom-tray inspection later, without changing the current canvas.
+1. Keep the current request-level state ledger as the canonical foundation.
+2. Add grading helpers that evaluate checks against recorded transitions directly.
+3. Extend the vocabulary to broker-retention, offset, partition, and commit-outcome states.
+4. Surface the same transitions in replay and bottom-tray inspection later, without changing the current canvas.
+5. Only then promote correctness-heavy questions from partial support into stronger graded flows.
 
 #### 2. Delivery semantics have a foundation now, but broker truth is still partial
 
