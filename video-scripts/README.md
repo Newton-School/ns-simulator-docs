@@ -23,12 +23,12 @@ Video 2 gives the grading vocabulary (axes), Video 3 applies both to build somet
   dual-topology rule (§1.1–1.3).
 - `specs/interview-question-to-django-assignment-translation.md` — the translation
   workflow and requirement-bucket model.
-- `system-design-simulator-questions/questions/url-shortener/django-admin-assignment.md`
+- `examples/question-bank/url-shortener/django-admin-assignment.md`
   — the real row shapes used verbatim in Video 1 and referenced throughout.
 
 ## Note on Video 3
 The Ticketmaster / flash-sale booking question is **built and in the bank** at
-`system-design-simulator-questions/questions/flash-sale-booking/` (question.json +
+`examples/question-bank/flash-sale-booking/` (question.json +
 reference-topology.json + gamed-topology.json). Building it required new engine
 capability — a `reservation-store` component with an atomic per-key reserve, a
 contended `keyspace` workload, and a `reservations.oversells` verdict metric —

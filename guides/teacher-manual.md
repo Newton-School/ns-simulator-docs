@@ -57,12 +57,12 @@ Author questions as a **QuestionPackage** (JSON). The workflow:
 5. **Run the Dual-Topology test** before shipping:
    ```bash
    npx tsx scripts/validate-question-dir.ts \
-     ../system-design-simulator-questions/questions/<id>
+     ns-simulator-docs/examples/question-bank/<id>
    ```
    Expect: the **reference** design PASSES all checks; the **gamed** design FAILS on
    the intended axis. A question that hasn't been graded both ways isn't authored.
 
-The 12 bank questions under `system-design-simulator-questions/questions/` are worked
+The repo-local bank under `ns-simulator-docs/examples/question-bank/` contains worked
 examples - each ships with a `question.json`, a passing `reference-topology.json`, a
 failing `gamed-topology.json`, and a README explaining the discriminator.
 
@@ -92,7 +92,7 @@ Match the discriminator to the threshold:
 | Simulation rubric grading | ✅ | - |
 | Live budget meter (v1 cost heuristic) | ✅ | real price-sheet cost model |
 | Dual-topology authoring + validator | ✅ | authoring UI in-app |
-| **Written justification grading** | ❌ **hidden** (deterministic keyword matcher was confusing) | LLM-assisted defense grading |
+| **Written justification grading** | partial: graph-bound deterministic checks only | fairness-reviewed evaluation model |
 | Request **body / endpoint / status codes** | ❌ (type/size/path only) | first-class payload model |
 | Editable read/write mix on canvas | ❌ (question-owned JSON) | on-canvas mix + auto-derivation |
 | Connect-time design lint (Client→DB) | ❌ (errors surface on Run) | live design-smell hints |

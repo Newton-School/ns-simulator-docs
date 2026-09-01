@@ -1,0 +1,150 @@
+{
+  "version": "1.0",
+  "id": "ride-hailing",
+  "title": "Design a ride-hailing match & payment backend",
+  "difficulty": "advanced",
+  "type": "open-build",
+  "workloadCategory": "read-heavy",
+  "prompt": {
+    "text": "You are the lead infrastructure architect at a ride-hailing company preparing for a national-holiday surge. You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.\n\nDesign a matching path that keeps nearby-driver lookups on a fast in-memory layer positioned between the service and the payment database, and a separate payment path that commits to a strongly consistent transactional database. Keep the hot matching path off the payment database.\n\nTarget: rider-to-driver match p99 latency under 3 s.\n\nTraffic: 40,000 peak RPS at an 80:20 read-to-write ratio.\n\nAt submission you will explain why the nearby-driver hot path is separated from the payment store and how payments stay ACID-consistent.",
+    "functionalRequirements": [
+      "Serve rider-to-driver matching from a fast in-memory layer positioned between the service and the payment database.",
+      "Commit payments to a strongly consistent transactional database, isolated from the matching path."
+    ],
+    "nonFunctionalRequirements": [
+      {
+        "metric": "latency_p99",
+        "operator": "<",
+        "value": 3000,
+        "unit": "ms",
+        "description": "Rider-to-driver match p99 latency under 3 s at peak."
+      }
+    ],
+    "scale": {
+      "peakRps": 40000,
+      "readWriteRatio": 80
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 16
+  },
+  "structuralRules": [
+    {
+      "id": "has-payment-db",
+      "kind": "requires_component",
+      "componentType": "relational-db",
+      "description": "A strongly consistent database for payments"
+    },
+    {
+      "id": "single-source",
+      "kind": "requires_single_source",
+      "description": "Exactly one traffic source"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "pay-fits-relational",
+      "kind": "storageFit",
+      "description": "Payment is transactional-relational (ACID), not KV",
+      "accessPattern": "transactional-relational",
+      "accept": [
+        "relational-db"
+      ],
+      "antiPattern": [
+        "kv-store",
+        "nosql-db"
+      ],
+      "points": 3,
+      "hardFail": false
+    },
+    {
+      "id": "geo-hot-path",
+      "kind": "placement",
+      "description": "Nearby-driver matching uses a cache/index, not the payment database",
+      "componentType": "in-memory-cache",
+      "between": [
+        "microservice",
+        "relational-db"
+      ],
+      "points": 2
+    }
+  ],
+  "suite": {
+    "name": "ride-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "peak",
+        "description": "Match-heavy peak",
+        "workload": {
+          "baseRps": 3000,
+          "requestDistribution": [
+            {
+              "type": "read",
+              "weight": 0.8,
+              "sizeBytes": 256
+            },
+            {
+              "type": "write",
+              "weight": 0.2,
+              "sizeBytes": 512
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "ride-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "match-latency",
+        "kind": "simulation",
+        "description": "p99 match under 3 s",
+        "metric": "summary.latency.p99",
+        "op": "<",
+        "value": 3000,
+        "points": 3
+      },
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "_justify": [
+    {
+      "id": "why-hot-cold",
+      "decision": "Why separate the nearby-driver hot path (in-memory) from the payment database at 40,000 peak RPS, and what is the trade-off of running two stores?",
+      "boundTo": {
+        "componentType": "in-memory-cache"
+      },
+      "requires": {
+        "choice": true,
+        "number": true,
+        "tradeoff": true
+      }
+    }
+  ],
+  "family": "compute",
+  "domains": [
+    "compute",
+    "storage"
+  ],
+  "concepts": [
+    "store-fit",
+    "geo-cache-placement"
+  ]
+}

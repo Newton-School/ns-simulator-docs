@@ -13,10 +13,10 @@
 >    or dropped
 >
 > **Grounding examples.** Existing exemplars live in:
-> - [url-shortener/django-admin-assignment.md](/Users/hritvikmohan/Desktop/HM25/ns-simulator-prod/system-design-simulator-questions/questions/url-shortener/django-admin-assignment.md)
-> - [messaging-fanout/django-admin-assignment.md](/Users/hritvikmohan/Desktop/HM25/ns-simulator-prod/system-design-simulator-questions/questions/messaging-fanout/django-admin-assignment.md)
-> - [news-feed/django-admin-assignment.md](/Users/hritvikmohan/Desktop/HM25/ns-simulator-prod/system-design-simulator-questions/questions/news-feed/django-admin-assignment.md)
-> - [evaluation-authoring-reference-manual.md](/Users/hritvikmohan/Desktop/HM25/ns-simulator-prod/ns-simulator-prod/ns-simulator-docs/specs/evaluation-authoring-reference-manual.md:843)
+> - [url-shortener/django-admin-assignment.md](../examples/question-bank/url-shortener/django-admin-assignment.md)
+> - [messaging-fanout/django-admin-assignment.md](../examples/question-bank/messaging-fanout/django-admin-assignment.md)
+> - [news-feed/django-admin-assignment.md](../examples/question-bank/news-feed/django-admin-assignment.md)
+> - [evaluation-authoring-reference-manual.md](evaluation-authoring-reference-manual.md)
 
 ## 1. Problem Statement
 
@@ -110,7 +110,7 @@ preserves the same character:
 - same stressed path
 - same intended failure mode
 
-See [evaluation-authoring-reference-manual.md](/Users/hritvikmohan/Desktop/HM25/ns-simulator-prod/ns-simulator-prod/ns-simulator-docs/specs/evaluation-authoring-reference-manual.md:106) for the display-scale vs tractable-scale rule.
+See [evaluation-authoring-reference-manual.md](evaluation-authoring-reference-manual.md) for the display-scale vs tractable-scale rule.
 
 ## 3. What the Final Deliverable Must Contain
 
@@ -196,7 +196,7 @@ classification table.
 The author must fill this worksheet before authoring rows.
 
 A fill-in template version lives at
-[interview-question-translation-worksheet-template.md](/Users/hritvikmohan/Desktop/HM25/ns-simulator-prod/ns-simulator-prod/ns-simulator-docs/specs/interview-question-translation-worksheet-template.md).
+[interview-question-translation-worksheet-template.md](interview-question-translation-worksheet-template.md).
 
 That worksheet template now includes a worked example based on a
 URL-shortener prompt. Authors should treat the filled sample rows as a pattern
@@ -204,7 +204,7 @@ reference, then duplicate, replace, or delete them while translating their own
 question.
 
 The worksheet set also has a companion reference pack at
-[interview-question-translation-reference-pack.md](/Users/hritvikmohan/Desktop/HM25/ns-simulator-prod/ns-simulator-prod/ns-simulator-docs/specs/interview-question-translation-reference-pack.md),
+[interview-question-translation-reference-pack.md](interview-question-translation-reference-pack.md),
 which collects a glossary plus the reusable authoring tables imported from
 `evaluation-authoring-reference-manual.md`.
 

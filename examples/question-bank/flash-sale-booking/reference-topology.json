@@ -1,0 +1,95 @@
+{
+  "id": "flash-sale-ref",
+  "name": "Flash-sale booking (reference)",
+  "version": "1.0.0",
+  "global": {
+    "simulationDuration": 8000,
+    "warmupDuration": 500,
+    "seed": "flash-sale-ref",
+    "timeResolution": "microsecond",
+    "defaultTimeout": 2000
+  },
+  "nodes": [
+    {
+      "id": "client",
+      "type": "api-endpoint",
+      "category": "compute",
+      "label": "Buyers",
+      "position": { "x": 0, "y": 0 },
+      "queue": { "workers": 500, "capacity": 100000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 0.1 }, "timeout": 2000 }
+    },
+    {
+      "id": "svc",
+      "type": "microservice",
+      "category": "compute",
+      "label": "Booking Service",
+      "position": { "x": 0, "y": 90 },
+      "queue": { "workers": 80, "capacity": 100000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 2 }, "timeout": 2000 }
+    },
+    {
+      "id": "reservation",
+      "type": "reservation-store",
+      "category": "auxiliary",
+      "label": "Reservation Authority",
+      "position": { "x": 0, "y": 180 },
+      "queue": { "workers": 32, "capacity": 100000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 2 }, "timeout": 2000 },
+      "config": { "resourceKeyField": "seatId", "reserveLookupMs": 2 }
+    },
+    {
+      "id": "ledger",
+      "type": "relational-db",
+      "category": "storage-and-data",
+      "label": "Booking Ledger",
+      "position": { "x": 0, "y": 270 },
+      "queue": { "workers": 32, "capacity": 100000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 3 }, "timeout": 2000 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-client-svc",
+      "source": "client",
+      "target": "svc",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": { "distribution": { "type": "constant", "value": 0.5 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "e-svc-reservation",
+      "source": "svc",
+      "target": "reservation",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": { "distribution": { "type": "constant", "value": 0.5 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "e-reservation-ledger",
+      "source": "reservation",
+      "target": "ledger",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": { "distribution": { "type": "constant", "value": 0.5 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    }
+  ],
+  "workload": {
+    "sourceNodeId": "client",
+    "pattern": "constant",
+    "baseRps": 1200,
+    "requestDistribution": [{ "type": "book", "weight": 1.0, "sizeBytes": 512 }]
+  }
+}

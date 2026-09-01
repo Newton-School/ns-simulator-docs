@@ -78,7 +78,9 @@ Current scopes:
 
 - `request`
 - `delivery`
+- `broker`
 - `idempotency`
+- `commit-outcome`
 - `lock`
 - `reservation`
 
@@ -101,6 +103,18 @@ Current delivery states include:
 - `released-to-consumer`
 - `redelivery-scheduled`
 - `dlq-routed`
+
+Current broker states include:
+
+- `partition-assigned`
+- `group-delivered`
+
+Current commit-outcome states include:
+
+- `intent-recorded`
+- `commit-confirmed`
+- `outcome-unknown`
+- `replay-blocked`
 
 Current coordination states include:
 
@@ -138,7 +152,8 @@ The most important honesty rule today:
 
 - configured `exactly-once` is currently downgraded to runtime `at-least-once`
 
-because commit-outcome coordination is still not modeled yet.
+because a full atomic end-to-end commit protocol and reconciliation are still
+not modeled.
 
 ### 3.4 Coordination state markers
 
@@ -195,9 +210,9 @@ This foundation is intentionally narrow.
 
 It still does **not** provide:
 
-- consumer-group offsets
-- partition ordering truth
-- commit-outcome ledger semantics
+- consumer-group offsets or rebalancing
+- partition ordering or retention truth
+- automatic reconciliation after an unknown commit outcome
 - quorum or replica acknowledgment semantics
 - linearizability
 - full L4 versus L7 behavioral divergence
@@ -206,7 +221,9 @@ It still does **not** provide:
 So authors must still treat these carefully:
 
 - `exactly-once` is not first-class
-- `consumer-groups` are not first-class
+- `consumer-groups` are guided: the simulator assigns deterministic partitions
+  and delivers one copy per configured group, but does not model offsets,
+  rebalances, or retention
 - `message-ordering` is not first-class
 - `quorum` and `consensus` are deferred
 

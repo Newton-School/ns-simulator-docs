@@ -36,6 +36,12 @@ hld-simulator-docs/
 
 ## Documentation
 
+### [Fresh Author Start Here](guides/fresh-author-start-here.md)
+
+The repo-local, executable onboarding path for question authors. It points to
+the canonical question-bank trios and the validation command that works from
+this checkout alone.
+
 ### [System Overview](docs/SYSTEM_OVERVIEW.md)
 
 The single source of truth for understanding the simulator end-to-end. Covers how the simulation engine works, the three user phases (BUILD → SIMULATE → ANALYSE), UI representation (screen layout, canvas states, inspector, JSON topology viewer, results tray), CLI commands, component inventory, feature-to-ticket map, and design foundations.

@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "id": "cache-placement",
+  "title": "Scale a read-hot product API",
+  "difficulty": "beginner",
+  "type": "open-build",
+  "workloadCategory": "read-heavy",
+  "prompt": {
+    "text": "You are an SRE hardening a product-catalog API that has started to struggle under read traffic. You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.\n\nAll traffic must enter through a load balancer, reach the application service, and read from the primary database. Introduce and place a cache layer so reads are shielded from the database - it must sit on the path between the service and the database, never in front of the load balancer.\n\nTarget: read p99 latency under 120 ms at peak.\n\nTraffic: 20,000 peak RPS at a 95:5 read-to-write ratio. Without the cache, reads will overwhelm the database.",
+    "functionalRequirements": [
+      "Route all traffic through the load balancer before it reaches the service.",
+      "Serve reads through a cache layer positioned between the service and the database (not before the load balancer)."
+    ],
+    "nonFunctionalRequirements": [
+      {
+        "metric": "latency_p99",
+        "operator": "<",
+        "value": 120,
+        "unit": "ms",
+        "description": "Read p99 latency under 120 ms at peak load."
+      }
+    ],
+    "scale": {
+      "peakRps": 20000,
+      "readWriteRatio": 95
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 10
+  },
+  "structuralRules": [
+    {
+      "id": "has-lb",
+      "kind": "requires_component",
+      "componentType": "load-balancer",
+      "description": "A load balancer fronts the system"
+    },
+    {
+      "id": "single-source",
+      "kind": "requires_single_source",
+      "description": "Exactly one traffic source"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "cache-between",
+      "kind": "placement",
+      "description": "Cache sits between the service and the database, not before the load balancer",
+      "componentType": "in-memory-cache",
+      "between": [
+        "microservice",
+        "relational-db"
+      ],
+      "notBefore": "load-balancer",
+      "points": 4,
+      "hardFail": false
+    }
+  ],
+  "suite": {
+    "name": "cache-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "peak",
+        "description": "Read-heavy",
+        "workload": {
+          "baseRps": 2000,
+          "requestDistribution": [
+            {
+              "type": "read",
+              "weight": 0.95,
+              "sizeBytes": 256
+            },
+            {
+              "type": "write",
+              "weight": 0.05,
+              "sizeBytes": 512
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "cache-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "p99",
+        "kind": "simulation",
+        "description": "p99 under 120 ms",
+        "metric": "summary.latency.p99",
+        "op": "<",
+        "value": 120,
+        "points": 3
+      },
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "family": "compute",
+  "domains": [
+    "compute"
+  ],
+  "concepts": [
+    "cache-placement"
+  ]
+}

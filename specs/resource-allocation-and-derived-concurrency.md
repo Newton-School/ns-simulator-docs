@@ -473,7 +473,7 @@ Ship Slice 0, verify in-app, then stage 1 → 2 → 3 → 4 → (5 when unblocke
 
 ## Mapping to the question bank
 
-Priority is set by the 9 V1 questions in `system-design-simulator-questions/questions/`. This maps each to the slices it needs.
+Priority is set by the repo-local V1 question bank in `examples/question-bank/`. This maps each to the slices it needs.
 
 ### The finding that drives everything
 

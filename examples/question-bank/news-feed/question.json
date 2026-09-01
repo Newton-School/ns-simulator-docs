@@ -1,0 +1,146 @@
+{
+  "version": "1.0",
+  "id": "news-feed",
+  "title": "Design a social news feed",
+  "difficulty": "intermediate",
+  "type": "open-build",
+  "workloadCategory": "read-heavy",
+  "prompt": {
+    "text": "You are the architect for a social app's home feed. You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.\n\nDesign a write path where posting an item fans it out to followers' timelines via a broadcast component to independent timeline builders, and a read path where a user loads their prebuilt timeline by direct lookup.\n\nTarget: feed-load (read-path) p99 latency under 200 ms.\n\nTraffic: 50,000 peak RPS at a 98:2 read-to-write ratio. Timeline reads that hit the backing store directly will saturate it.\n\nAt submission you will explain your fan-out-on-write versus fan-out-on-read decision for this read ratio.",
+    "functionalRequirements": [
+      "Write path: on a new post, fan the item out to follower timelines via a broadcast component to independent timeline builders.",
+      "Read path: load a user's prebuilt timeline by direct lookup within the p99 target."
+    ],
+    "nonFunctionalRequirements": [
+      {
+        "metric": "latency_p99",
+        "operator": "<",
+        "value": 200,
+        "unit": "ms",
+        "description": "Feed-load (read-path) p99 latency under 200 ms at peak."
+      }
+    ],
+    "scale": {
+      "dau": 10000000,
+      "peakRps": 50000,
+      "readWriteRatio": 98
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 14
+  },
+  "structuralRules": [
+    {
+      "id": "single-source",
+      "kind": "requires_single_source",
+      "description": "Exactly one traffic source"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "fanout-timelines",
+      "kind": "fanout",
+      "description": "A broker fans posts out to independent timeline builders",
+      "broker": "message-broker",
+      "minConsumers": 2,
+      "forbiddenBroker": "queue",
+      "points": 3,
+      "hardFail": false
+    },
+    {
+      "id": "feed-store-fit",
+      "kind": "storageFit",
+      "description": "Timeline reads are direct lookups by user",
+      "accessPattern": "point-lookup",
+      "accept": [
+        "kv-store",
+        "nosql-db"
+      ],
+      "partial": [
+        "in-memory-cache"
+      ],
+      "antiPattern": [
+        "relational-db"
+      ],
+      "points": 2
+    }
+  ],
+  "suite": {
+    "name": "feed-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "peak",
+        "description": "Read-heavy feed peak",
+        "workload": {
+          "baseRps": 3000,
+          "requestDistribution": [
+            {
+              "type": "read",
+              "weight": 0.98,
+              "sizeBytes": 512
+            },
+            {
+              "type": "write",
+              "weight": 0.02,
+              "sizeBytes": 1024
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "feed-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "p99",
+        "kind": "simulation",
+        "description": "feed p99 under 200 ms",
+        "metric": "summary.latency.p99",
+        "op": "<",
+        "value": 200,
+        "points": 3
+      },
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "_justify": [
+    {
+      "id": "why-fanout",
+      "decision": "Given a 50,000-RPS, 98:2 read-heavy load, why fan out on write (precompute timelines) instead of on read, and what is the trade-off?",
+      "boundTo": {
+        "componentType": "message-broker"
+      },
+      "requires": {
+        "choice": true,
+        "number": true,
+        "tradeoff": true
+      }
+    }
+  ],
+  "family": "compute",
+  "domains": [
+    "compute",
+    "storage"
+  ],
+  "concepts": [
+    "fan-out-on-write",
+    "read-cache"
+  ]
+}

@@ -1,0 +1,158 @@
+{
+  "version": "1.0",
+  "id": "flash-sale-booking",
+  "title": "Design a flash-sale ticket booking system",
+  "difficulty": "advanced",
+  "type": "open-build",
+  "workloadCategory": "correctness-heavy",
+  "prompt": {
+    "text": "You are the lead infrastructure architect for a flash-sale ticket platform (like Ticketmaster on a hot on-sale). You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.\n\nA popular event goes on sale and tens of thousands of buyers hit the buy button for the same small pool of seats in the same few seconds. The one rule you cannot break: a seat must never be sold to two different buyers.\n\nDesign a booking write path where every booking for a seat is committed atomically through a single reservation authority before it is written to the durable ledger. Buyers who lose the race for a seat should get a fast, correct 'sold out' response - that is expected, not an error.\n\nTraffic: an on-sale burst against a small seat inventory. Most requests will legitimately be told 'sold out'; the design must still never double-book.\n\nAt submission you will explain your reservation strategy (atomic conditional reserve / SELECT ... FOR UPDATE vs. check-then-write), why a single reservation authority is required (and why naively running two independent reservation stores double-books), and how you would handle holds that are never paid for.",
+    "functionalRequirements": [
+      "Booking path: accept a booking for a seat and commit it atomically through a single reservation authority before writing to the durable ledger.",
+      "Contended seats resolve to exactly one winner; all other buyers for that seat get a correct 'sold out' response."
+    ],
+    "nonFunctionalRequirements": [
+      {
+        "metric": "error_rate",
+        "operator": "<",
+        "value": 5,
+        "unit": "percent",
+        "description": "The booking path stays healthy under the burst (sold-out responses are successes, not errors)."
+      }
+    ],
+    "scale": {
+      "dau": 5000000,
+      "peakRps": 200000,
+      "readWriteRatio": 1
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 12
+  },
+  "structuralRules": [
+    {
+      "id": "single-source",
+      "kind": "requires_single_source",
+      "description": "Exactly one traffic source"
+    },
+    {
+      "id": "has-reservation-authority",
+      "kind": "requires_component",
+      "componentType": "reservation-store",
+      "description": "A reservation authority must commit seats atomically"
+    },
+    {
+      "id": "reservation-feeds-ledger",
+      "kind": "requires_path",
+      "fromType": "reservation-store",
+      "toType": "relational-db",
+      "description": "Reserved bookings must be persisted to the durable ledger"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "booking-passes-through-reservation",
+      "kind": "guardedPath",
+      "description": "Every booking must reach the ledger only through the reservation authority",
+      "from": "api-endpoint",
+      "guard": "reservation-store",
+      "to": "relational-db",
+      "points": 3,
+      "hardFail": true
+    },
+    {
+      "id": "ledger-is-transactional",
+      "kind": "storageFit",
+      "description": "Seat inventory is contended, money-adjacent state needing a transactional store",
+      "accessPattern": "transactional-relational",
+      "accept": [
+        "relational-db"
+      ],
+      "partial": [
+        "nosql-db"
+      ],
+      "antiPattern": [
+        "in-memory-cache"
+      ],
+      "points": 3,
+      "hardFail": true
+    }
+  ],
+  "suite": {
+    "name": "flash-sale-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "on-sale-burst",
+        "description": "Contended booking burst against a small seat inventory (injected)",
+        "workload": {
+          "baseRps": 1200,
+          "requestDistribution": [
+            {
+              "type": "book",
+              "weight": 1.0,
+              "sizeBytes": 512,
+              "keyspace": {
+                "field": "seatId",
+                "size": 40
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "flash-sale-rubric",
+    "passThreshold": 0.71,
+    "checks": [
+      {
+        "id": "no-double-book",
+        "kind": "simulation",
+        "description": "No seat is committed by more than one reservation authority",
+        "metric": "reservations.oversells",
+        "op": "==",
+        "value": 0,
+        "points": 5
+      },
+      {
+        "id": "burst-error-rate",
+        "kind": "simulation",
+        "description": "Booking error rate stays under 5% during the burst",
+        "metric": "summary.errorRate",
+        "op": "<",
+        "value": 0.05,
+        "points": 2
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "_justify": [
+    {
+      "id": "why-single-authority",
+      "decision": "How do you commit a seat exactly once (atomic conditional reserve / SELECT ... FOR UPDATE vs. check-then-write)? Why must the reservation run through a single authority, and what happens if you run two independent reservation stores? How do you release seats held but never paid for?",
+      "boundTo": {
+        "componentType": "reservation-store"
+      },
+      "requires": {
+        "choice": true,
+        "tradeoff": true
+      }
+    }
+  ],
+  "family": "correctness",
+  "domains": [
+    "storage",
+    "correctness"
+  ],
+  "concepts": [
+    "atomic-reservation",
+    "no-double-book",
+    "store-fit"
+  ]
+}
