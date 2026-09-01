@@ -14,7 +14,7 @@
 > **Status:** BUILT and validated (2026-08-27). The `reservation-store` component,
 > the `keyspace` workload, and the `reservations.oversells` verdict metric all ship
 > in the engine; the question lives at
-> `system-design-simulator-questions/questions/flash-sale-booking/`. Every row
+> `examples/question-bank/flash-sale-booking/`. Every row
 > below is copied from the validated `question.json`.
 > **Grounding:** `contended-inventory-and-oversell-model.md` (the build),
 > `evaluation-authoring-reference-manual.md` §1.3 (`correctness-heavy`).
@@ -303,7 +303,7 @@ grade →  structural ✓   semantic ✓   BUT rubric 2/7   →  FAIL
 ## Author notes (build complete)
 
 - Every row above is copied from the validated
-  `system-design-simulator-questions/questions/flash-sale-booking/question.json`.
+  `examples/question-bank/flash-sale-booking/question.json`.
 - The engine build (reservation-store component, `keyspace` workload,
   `reservations.oversells` verdict metric, run-scoped shared trait state) is documented
   in `specs/contended-inventory-and-oversell-model.md` §6.

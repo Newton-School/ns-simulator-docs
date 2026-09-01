@@ -1,0 +1,93 @@
+{
+  "version": "1.0",
+  "id": "cargo-cult-cdn",
+  "title": "Design a dynamic per-user API",
+  "difficulty": "intermediate",
+  "type": "open-build",
+  "workloadCategory": "read-heavy",
+  "prompt": {
+    "text": "You are reviewing an architecture for an API that serves dynamic, per-user responses (personalized and not cacheable). You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.\n\nDesign the request path from the edge to the service and its data store. Add only components that earn their place - a CDN in front of content that cannot be cached is unnecessary.\n\nTraffic: 8,000 peak RPS of personalized responses.\n\nIf you include a CDN, you will need to explain at submission what it actually speeds up here. Otherwise, leave it out.",
+    "functionalRequirements": [
+      "Serve dynamic, per-user responses from the service and its data store.",
+      "Do not add infrastructure that gives no benefit for traffic that cannot be cached."
+    ],
+    "nonFunctionalRequirements": [],
+    "scale": {
+      "peakRps": 8000
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 10
+  },
+  "structuralRules": [
+    {
+      "id": "single-source",
+      "kind": "requires_single_source",
+      "description": "Exactly one traffic source"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "cdn-justified",
+      "kind": "forbidUnjustified",
+      "description": "CDN must be absent, or supported by a valid justification",
+      "componentType": "cdn",
+      "points": 4,
+      "hardFail": false
+    }
+  ],
+  "suite": {
+    "name": "cdn-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "baseline",
+        "description": "Nominal",
+        "workload": {
+          "baseRps": 1000
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "cdn-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "_justify": [
+    {
+      "id": "why-cdn",
+      "decision": "If your design includes a CDN in front of dynamic per-user responses, explain exactly what it speeds up and the trade-off you accept. If not, explain why you left it out.",
+      "boundTo": {
+        "componentType": "cdn"
+      },
+      "requires": {
+        "choice": true,
+        "tradeoff": true
+      }
+    }
+  ],
+  "family": "compute",
+  "domains": [
+    "compute"
+  ],
+  "concepts": [
+    "justified-omission"
+  ]
+}

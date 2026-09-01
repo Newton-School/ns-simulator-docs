@@ -1,0 +1,298 @@
+{
+  "id": "fanout-ref",
+  "name": "Fan-out (reference: broker to 3)",
+  "version": "1.0.0",
+  "global": {
+    "simulationDuration": 30000,
+    "warmupDuration": 5000,
+    "seed": "fanout-ref",
+    "timeResolution": "millisecond",
+    "defaultTimeout": 5000
+  },
+  "nodes": [
+    {
+      "id": "client",
+      "type": "api-endpoint",
+      "category": "compute",
+      "label": "Client",
+      "position": {
+        "x": 0,
+        "y": 90
+      },
+      "queue": {
+        "workers": 500,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "m5.large",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 500,
+        "queueSlots": 99500,
+        "perRequestMemMb": 0.04096
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.1
+        },
+        "timeout": 5000
+      }
+    },
+    {
+      "id": "svc",
+      "type": "microservice",
+      "category": "compute",
+      "label": "svc",
+      "position": {
+        "x": 0,
+        "y": 180
+      },
+      "queue": {
+        "workers": 80,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "c5.large",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 80,
+        "queueSlots": 99920,
+        "perRequestMemMb": 0.02048
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 1
+        },
+        "timeout": 5000
+      }
+    },
+    {
+      "id": "broker",
+      "type": "message-broker",
+      "category": "messaging-and-streaming",
+      "label": "broker",
+      "position": {
+        "x": 0,
+        "y": 270
+      },
+      "queue": {
+        "workers": 200,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "r5.large",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 200,
+        "queueSlots": 99800,
+        "perRequestMemMb": 0.08192
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 1
+        },
+        "timeout": 5000
+      }
+    },
+    {
+      "id": "c1",
+      "type": "batch-worker",
+      "category": "compute",
+      "label": "c1",
+      "position": {
+        "x": 0,
+        "y": 360
+      },
+      "queue": {
+        "workers": 50,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "c5.large",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 50,
+        "queueSlots": 99950,
+        "perRequestMemMb": 0.02048
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 1
+        },
+        "timeout": 5000
+      }
+    },
+    {
+      "id": "c2",
+      "type": "batch-worker",
+      "category": "compute",
+      "label": "c2",
+      "position": {
+        "x": 0,
+        "y": 450
+      },
+      "queue": {
+        "workers": 50,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "c5.large",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 50,
+        "queueSlots": 99950,
+        "perRequestMemMb": 0.02048
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 1
+        },
+        "timeout": 5000
+      }
+    },
+    {
+      "id": "c3",
+      "type": "batch-worker",
+      "category": "compute",
+      "label": "c3",
+      "position": {
+        "x": 0,
+        "y": 540
+      },
+      "queue": {
+        "workers": 50,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "c5.large",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 50,
+        "queueSlots": 99950,
+        "perRequestMemMb": 0.02048
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 1
+        },
+        "timeout": 5000
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-client-svc",
+      "source": "client",
+      "target": "svc",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.5
+        },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "e-svc-broker",
+      "source": "svc",
+      "target": "broker",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.5
+        },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "e-broker-c1",
+      "source": "broker",
+      "target": "c1",
+      "mode": "asynchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.5
+        },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "e-broker-c2",
+      "source": "broker",
+      "target": "c2",
+      "mode": "asynchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.5
+        },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "e-broker-c3",
+      "source": "broker",
+      "target": "c3",
+      "mode": "asynchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.5
+        },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    }
+  ],
+  "workload": {
+    "sourceNodeId": "client",
+    "pattern": "constant",
+    "baseRps": 1000,
+    "requestDistribution": [
+      {
+        "type": "read",
+        "weight": 1,
+        "sizeBytes": 256
+      }
+    ]
+  }
+}

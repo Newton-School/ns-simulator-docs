@@ -1,0 +1,257 @@
+{
+  "id": "ride-gamed",
+  "name": "Ride-hailing (gamed: payments on KV, no geo cache)",
+  "version": "1.0.0",
+  "global": {
+    "simulationDuration": 30000,
+    "warmupDuration": 5000,
+    "seed": "ride-gamed",
+    "timeResolution": "millisecond",
+    "defaultTimeout": 5000
+  },
+  "nodes": [
+    {
+      "id": "client",
+      "type": "api-endpoint",
+      "category": "compute",
+      "label": "Client",
+      "position": {
+        "x": 0,
+        "y": 90
+      },
+      "queue": {
+        "workers": 500,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "m5.large",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 500,
+        "queueSlots": 99500,
+        "perRequestMemMb": 0.04096
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.1
+        },
+        "timeout": 5000
+      }
+    },
+    {
+      "id": "lb",
+      "type": "load-balancer",
+      "category": "network-and-edge",
+      "label": "lb",
+      "position": {
+        "x": 0,
+        "y": 180
+      },
+      "queue": {
+        "workers": 300,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "m5.large",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 300,
+        "queueSlots": 99700,
+        "perRequestMemMb": 0.04096
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 1
+        },
+        "timeout": 5000
+      }
+    },
+    {
+      "id": "svc",
+      "type": "microservice",
+      "category": "compute",
+      "label": "svc",
+      "position": {
+        "x": 0,
+        "y": 270
+      },
+      "queue": {
+        "workers": 80,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "c5.large",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 80,
+        "queueSlots": 99920,
+        "perRequestMemMb": 0.02048
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 2
+        },
+        "timeout": 5000
+      }
+    },
+    {
+      "id": "kv",
+      "type": "kv-store",
+      "category": "storage-and-data",
+      "label": "kv",
+      "position": {
+        "x": 0,
+        "y": 360
+      },
+      "queue": {
+        "workers": 20,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "m5.large",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 20,
+        "queueSlots": 99980,
+        "perRequestMemMb": 0.04096
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 2
+        },
+        "timeout": 5000
+      }
+    },
+    {
+      "id": "db",
+      "type": "relational-db",
+      "category": "storage-and-data",
+      "label": "db",
+      "position": {
+        "x": 0,
+        "y": 450
+      },
+      "queue": {
+        "workers": 20,
+        "capacity": 100000,
+        "discipline": "fifo"
+      },
+      "resources": {
+        "instanceType": "m5.xlarge",
+        "instanceCount": 1,
+        "workloadKind": "io-bound",
+        "workersPerInstance": 20,
+        "queueSlots": 99980,
+        "perRequestMemMb": 0.08192
+      },
+      "processing": {
+        "distribution": {
+          "type": "constant",
+          "value": 2
+        },
+        "timeout": 5000
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-client-lb",
+      "source": "client",
+      "target": "lb",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.5
+        },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "e-lb-svc",
+      "source": "lb",
+      "target": "svc",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.5
+        },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "e-svc-kv",
+      "source": "svc",
+      "target": "kv",
+      "mode": "conditional",
+      "condition": "request.type === \"read\"",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.5
+        },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "e-svc-db",
+      "source": "svc",
+      "target": "db",
+      "mode": "conditional",
+      "condition": "request.type === \"write\"",
+      "protocol": "tcp",
+      "latency": {
+        "distribution": {
+          "type": "constant",
+          "value": 0.5
+        },
+        "pathType": "same-dc"
+      },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 50000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    }
+  ],
+  "workload": {
+    "sourceNodeId": "client",
+    "pattern": "constant",
+    "baseRps": 3000,
+    "requestDistribution": [
+      {
+        "type": "read",
+        "weight": 0.8,
+        "sizeBytes": 256
+      },
+      {
+        "type": "write",
+        "weight": 0.2,
+        "sizeBytes": 512
+      }
+    ]
+  }
+}

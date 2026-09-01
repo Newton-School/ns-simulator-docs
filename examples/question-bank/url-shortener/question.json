@@ -1,0 +1,137 @@
+{
+  "version": "1.0",
+  "id": "url-shortener",
+  "title": "Design a URL shortener",
+  "difficulty": "intermediate",
+  "type": "open-build",
+  "workloadCategory": "read-heavy",
+  "prompt": {
+    "text": "You are the lead infrastructure architect for a new URL-shortening service (like bit.ly). You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.\n\nDesign a write path that accepts a long URL and stores a short-code -> long-URL mapping in a durable store, and a read path that resolves a short code and issues an HTTP redirect.\n\nTarget: redirect (read-path) p99 latency under 100 ms at peak.\n\nTraffic: 200,000 peak RPS at a 99:1 read-to-write ratio. Reads that fall through to the primary store will saturate it.\n\nAt submission you will explain your storage-engine choice for short-code lookups at this scale, your short-code generation and collision-handling strategy (for example, base62), and your redirect status code (301 vs 302).",
+    "functionalRequirements": [
+      "Write path: accept a long URL and store a short-code -> long-URL mapping in a durable store.",
+      "Read path: resolve a short code to its long URL and return a redirect within the p99 target."
+    ],
+    "nonFunctionalRequirements": [
+      {
+        "metric": "latency_p99",
+        "operator": "<",
+        "value": 100,
+        "unit": "ms",
+        "description": "Redirect (read-path) p99 latency under 100 ms at peak load."
+      }
+    ],
+    "scale": {
+      "dau": 50000000,
+      "peakRps": 200000,
+      "readWriteRatio": 99
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 12
+  },
+  "structuralRules": [
+    {
+      "id": "single-source",
+      "kind": "requires_single_source",
+      "description": "Exactly one traffic source"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "store-fits-point-lookup",
+      "kind": "storageFit",
+      "description": "Short-code lookup is a direct lookup by key",
+      "accessPattern": "point-lookup",
+      "accept": [
+        "kv-store",
+        "nosql-db"
+      ],
+      "partial": [
+        "in-memory-cache"
+      ],
+      "antiPattern": [
+        "relational-db"
+      ],
+      "points": 3,
+      "hardFail": true
+    }
+  ],
+  "suite": {
+    "name": "url-shortener-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "peak",
+        "description": "Read-heavy peak (injected 99:1)",
+        "workload": {
+          "baseRps": 2000,
+          "requestDistribution": [
+            {
+              "type": "read",
+              "weight": 0.99,
+              "sizeBytes": 256
+            },
+            {
+              "type": "write",
+              "weight": 0.01,
+              "sizeBytes": 512
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "url-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "p99",
+        "kind": "simulation",
+        "description": "p99 under 100 ms",
+        "metric": "summary.latency.p99",
+        "op": "<",
+        "value": 100,
+        "points": 3
+      },
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "_justify": [
+    {
+      "id": "why-store",
+      "decision": "Which storage engine did you choose for short-code lookups at 200,000 RPS and why? How do you generate collision-free short codes (for example, base62), and which redirect status code (301 vs 302) do you return?",
+      "boundTo": {
+        "componentType": "kv-store"
+      },
+      "requires": {
+        "choice": true,
+        "number": true,
+        "tradeoff": true
+      }
+    }
+  ],
+  "family": "compute",
+  "domains": [
+    "compute",
+    "storage"
+  ],
+  "concepts": [
+    "read-cache",
+    "store-fit"
+  ]
+}

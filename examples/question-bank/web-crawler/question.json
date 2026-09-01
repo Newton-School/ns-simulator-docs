@@ -1,0 +1,144 @@
+{
+  "version": "1.0",
+  "id": "web-crawler",
+  "title": "Design a distributed web crawler",
+  "difficulty": "expert",
+  "type": "open-build",
+  "workloadCategory": "batch-heavy",
+  "prompt": {
+    "text": "You are building a distributed crawler that must fetch billions of pages without crawling the same URL again. You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.\n\nDesign a pipeline: URLs are checked against a dedup index before entering the frontier (crawl) queue, the frontier fans work out to many fetchers, and fetched pages flow through processors in order into object storage.\n\nTarget: sustain the injected aggregate crawl throughput.\n\nTraffic: about 23,000 URLs/sec steady, mostly writes.\n\nAt submission you will explain your dedup mechanism (for example, Bloom filter vs exact index) before enqueue.",
+    "functionalRequirements": [
+      "Check URLs against a dedup index before enqueueing them into the frontier (crawl) queue.",
+      "Fan the frontier out to many fetch workers.",
+      "Flow fetched pages through processors in an ordered pipeline into object storage."
+    ],
+    "nonFunctionalRequirements": [
+      {
+        "metric": "throughput",
+        "operator": ">=",
+        "value": 2000,
+        "unit": "req_per_sec",
+        "description": "Sustain the injected aggregate crawl throughput (>= 2,000 RPS in-sim)."
+      }
+    ],
+    "scale": {
+      "peakRps": 23000
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 16
+  },
+  "structuralRules": [
+    {
+      "id": "has-frontier",
+      "kind": "requires_component",
+      "componentType": "queue",
+      "description": "A frontier (crawl) queue"
+    },
+    {
+      "id": "has-dedup",
+      "kind": "requires_component",
+      "componentType": "kv-store",
+      "description": "A dedup index"
+    },
+    {
+      "id": "single-source",
+      "kind": "requires_single_source",
+      "description": "Exactly one seed source"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "enqueue-through-dedup",
+      "kind": "guardedPath",
+      "description": "URLs pass the dedup index before the frontier queue",
+      "from": "microservice",
+      "guard": "kv-store",
+      "to": "queue",
+      "points": 4,
+      "hardFail": false
+    },
+    {
+      "id": "crawl-pipeline",
+      "kind": "placement",
+      "description": "Ordered pipeline frontier -> fetchers -> processors",
+      "componentType": "batch-worker",
+      "orderedPipeline": [
+        "queue",
+        "batch-worker",
+        "microservice"
+      ],
+      "points": 3
+    }
+  ],
+  "suite": {
+    "name": "crawler-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "steady",
+        "description": "Steady crawl",
+        "workload": {
+          "baseRps": 3000,
+          "requestDistribution": [
+            {
+              "type": "write",
+              "weight": 1,
+              "sizeBytes": 2048
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "crawler-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "throughput",
+        "kind": "simulation",
+        "description": "aggregate throughput sustained",
+        "metric": "summary.throughput",
+        "op": ">=",
+        "value": 2000,
+        "points": 2
+      },
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "_justify": [
+    {
+      "id": "why-dedup",
+      "decision": "Why deduplicate before enqueue, how would you do it (for example, Bloom filter vs exact index), and what false-positive trade-off do you accept?",
+      "boundTo": {
+        "componentType": "kv-store"
+      },
+      "requires": {
+        "choice": true,
+        "tradeoff": true
+      }
+    }
+  ],
+  "family": "compute",
+  "domains": [
+    "compute"
+  ],
+  "concepts": [
+    "dedup-gate"
+  ]
+}

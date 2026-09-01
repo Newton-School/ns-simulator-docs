@@ -1,0 +1,132 @@
+{
+  "version": "1.0",
+  "id": "sensor-store",
+  "title": "Ingest a large IoT sensor fleet",
+  "difficulty": "intermediate",
+  "type": "open-build",
+  "workloadCategory": "write-heavy",
+  "prompt": {
+    "text": "You are designing the ingestion backend for a large IoT fleet that keeps sending time-stamped readings. You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.\n\nDesign an ingest path that sustains a very high write rate where new readings are only added, and supports range queries over recent time windows per sensor. Choose a storage engine whose access pattern matches time-series data.\n\nTarget: sustain the injected write throughput without dropping events.\n\nTraffic: 200,000 writes/sec, with about 5% reads for recent-window range queries.\n\nAt submission you will explain your storage-engine choice for time-series data at this write rate.",
+    "functionalRequirements": [
+      "Ingest time-stamped readings at a sustained high write rate.",
+      "Support range queries over recent time windows per sensor."
+    ],
+    "nonFunctionalRequirements": [
+      {
+        "metric": "throughput",
+        "operator": ">=",
+        "value": 2000,
+        "unit": "req_per_sec",
+        "description": "Sustain the injected write throughput (>= 2,000 RPS in-sim) without dropped events."
+      }
+    ],
+    "scale": {
+      "peakRps": 200000,
+      "readWriteRatio": 5
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 10
+  },
+  "structuralRules": [
+    {
+      "id": "single-source",
+      "kind": "requires_single_source",
+      "description": "Exactly one traffic source"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "store-fits-time-series",
+      "kind": "storageFit",
+      "description": "200K writes/s time-series data should use wide-column, time-series, or suitable NoSQL storage - not relational",
+      "accessPattern": "time-series",
+      "accept": [
+        "time-series-db",
+        "columnar-db",
+        "nosql-db"
+      ],
+      "antiPattern": [
+        "relational-db"
+      ],
+      "points": 6,
+      "hardFail": true
+    }
+  ],
+  "suite": {
+    "name": "sensor-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "ingest",
+        "description": "Write-heavy ingest",
+        "workload": {
+          "baseRps": 3000,
+          "requestDistribution": [
+            {
+              "type": "write",
+              "weight": 0.95,
+              "sizeBytes": 256
+            },
+            {
+              "type": "read",
+              "weight": 0.05,
+              "sizeBytes": 256
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "sensor-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "throughput",
+        "kind": "simulation",
+        "description": "Sustains write throughput",
+        "metric": "summary.throughput",
+        "op": ">=",
+        "value": 2000,
+        "points": 2
+      },
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "_justify": [
+    {
+      "id": "why-db",
+      "decision": "Why is your storage engine the right fit for 200,000 time-series writes/sec where new readings are only added, compared with a relational database, and what capability do you trade away?",
+      "boundTo": {
+        "componentType": "time-series-db"
+      },
+      "requires": {
+        "choice": true,
+        "number": true,
+        "tradeoff": true
+      }
+    }
+  ],
+  "family": "storage",
+  "domains": [
+    "storage"
+  ],
+  "concepts": [
+    "store-fit"
+  ]
+}

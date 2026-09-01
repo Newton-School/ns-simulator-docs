@@ -1196,8 +1196,9 @@ so I optimized for X and accepted Y."*
 
 ### 13.4 The check-kind taxonomy
 
-Every rubric criterion is one of these — each a **pure function of the graph (+ scale +
-justification)** returning pass / partial / fail, optionally `hardFail`:
+Every rubric criterion is one of these — most a **pure function of the graph (+ scale +
+justification)**, and two (`stateTransition` / `stateSequence`) a **function of the
+runtime request ledger** — returning pass / partial / fail, optionally `hardFail`:
 
 | kind | passes when | example |
 |---|---|---|
@@ -1207,10 +1208,17 @@ justification)** returning pass / partial / fail, optionally `hardFail`:
 | `guardedPath` | **all** `from→to` traffic traverses a guard (no bypass) | rate-limiter→shared cache |
 | `fanout` | a **broker** fans out to N consumers (a *queue* to N ≠ fan-out) | 1 broker + 3 consumers ✅ |
 | `storageFit` | store type matches the access pattern; anti-patterns flagged | time-series → wide-column, SQL = fail |
+| `stateTransition` | a runtime transition appears (or, via `maxCount`, never appears) across eligible request outcomes | "oversell never occurs" (`minCount:0,maxCount:0`); "≥1 request deduped" |
+| `stateSequence` | an ordered transition subsequence appears in ≥N request timelines | lock resolves `attempting→acquired→released` |
 | `simulation` | verdict metric meets NFR target under injected load | p99 < 15s SLA |
 | `justification` | names a real node + cites a real number + states a tradeoff, graph-consistent | every "justify" prompt |
 | `forbidUnjustified` | component absent, OR present *and* defended | CDN must be absent or justified |
 | `budget` | total cost/nodes/edges ≤ cap | anti-kitchen-sink |
+
+The `stateTransition` / `stateSequence` kinds are the **runtime semantic criteria** — they
+read the per-request `stateTimeline` the engine records (request / delivery / idempotency /
+lock / reservation scopes) rather than the static graph. See
+`specs/runtime-semantic-criteria.md`.
 
 ### 13.5 The evaluation algorithms (how the clever ones actually work)
 
@@ -1234,15 +1242,23 @@ drops the whole question's `allPassed`.
   fail; else any `accept` present → pass; else `partial` → partial; else fail.
 - **`forbidUnjustified`** — absent ⇒ pass; present ⇒ pass only if the bound
   justification passed (conservatively fails if undefended).
+- **`stateTransition` / `stateSequence`** (runtime) — read `requestOutcomes[].stateTimeline`
+  from the graded run (injected via `SemanticContext.runtimeCases`, no re-run). `stateTransition`
+  counts transitions matching a `{scope,state,…}` matcher against a `minCount`/`maxCount` window —
+  `maxCount:0` is the **absence** check ("oversell never happens"). `stateSequence` asserts an
+  ordered (not necessarily contiguous) subsequence appears within a single request's timeline,
+  across ≥`minMatches` outcomes. A `where.caseId` scopes to one suite case; the authoring
+  validator rejects an unknown case id (`semantic.caseIdUnknown`).
 
 **Ordering:** semantic criteria run **after** the structural gate passes; a
 structurally-broken topology short-circuits *before* simulation and semantics (don't
 waste a 2-minute run on a graph that's already disqualified).
 
-### 13.6 The justification model — deterministic, un-stuffable, no LLM
+### 13.6 The justification model — un-stuffable core, optional LLM semantic layer
 
-**Decision: structured, graph-consistent justification — not keyword matching, not an
-LLM judge.** A prompt is *bound to a decision* and graded on three requirements:
+**Decision: structured, graph-consistent justification — the anti-stuffing gate is
+deterministic, never a free-floating LLM judge.** A prompt is *bound to a decision* and
+graded on three requirements:
 
 1. **Graph-consistency (the anti-stuffing core).** The claimed choice must match
    what's *actually in the student's graph.* If the text says "I used Cassandra for
@@ -1250,16 +1266,28 @@ LLM judge.** A prompt is *bound to a decision* and graded on three requirements:
    surfaced. **You cannot write a correct-sounding justification for a wrong graph.**
 2. **Number-citation.** Must cite a scale number the question actually defines
    (randomized per attempt), so memorized prose from a reference answer doesn't fit.
-3. **Tradeoff presence.** Must name a real cost/limitation (matched against authored
-   tradeoff tokens plus a "not a non-answer" check).
+3. **Tradeoff presence.** Must name a real cost/limitation.
 
 This makes the justification a **cross-check on the topology,** not a parallel prose
-channel — which is exactly what defeats keyword-stuffing, deterministically, at zero
-per-grade cost.
+channel — which is what defeats keyword-stuffing.
+
+**Two graders, same three criteria.** The default deterministic grader matches tokens
+(zero cost, always available). On top of it sits an **optional LLM semantic grader** that
+evaluates the *same* three criteria with language understanding — so paraphrase,
+synonyms, and `200K`=`200,000` are judged like a human would, instead of failing a
+keyword match. Crucially, the LLM is still bound by graph-consistency: it is *told* which
+component the student actually placed and must fail rule 1 if the bound component is
+absent — it grades *quality of reasoning about the real graph*, it does not invent a
+parallel prose channel.
+
+The LLM layer is **provider-agnostic** (Gemini / Claude / OpenAI, selected by env), runs
+in the Electron main process so the API key never reaches the renderer, and **falls back
+to the deterministic grader** on any failure or missing key. Grading is therefore never
+blocked by the network. See `specs/llm-backed-justification-grading.md`.
 
 *Source: `structural.ts`, `semanticCriteria.ts`, `rubric.ts`, `justification.ts`,
-`authoringValidator.ts`, `evaluation-authoring-reference-manual.md` (the master DSL),
-`question-grading-model-and-anti-gaming.md`.*
+`llmGrader.ts`, `authoringValidator.ts`, `evaluation-authoring-reference-manual.md` (the
+master DSL), `question-grading-model-and-anti-gaming.md`.*
 
 ---
 
@@ -1385,10 +1413,23 @@ aren't.**
   exactly what queueing physics decides. → graded by the **simulation (Σ)** axis.
 - **Correctness invariants** — exactly-once, no-double-booking, dedup, immutability,
   ordering, "generates the *right* short code" — the metrics engine models neither
-  contention nor content, so it **cannot** decide these. → graded by **topology
-  (structural + guardedPath) + justification (J)**, *never* by a latency number.
+  contention nor content in general, so a latency number **cannot** decide these. →
+  graded by **topology (structural + guardedPath) + justification (J)**, and — where the
+  engine actually models the behavior — by **runtime state-transition assertions**,
+  *never* by a latency number.
 
-**Topology-as-proxy** is how we still grade the un-simulatable: "generate a unique code"
+**The runtime-semantics carve-out.** A growing slice of correctness *is* now observable
+at runtime, because the engine records a per-request `stateTimeline` and specific traits
+stamp real decisions into it: the reservation store emits `committed` / `sold-out` /
+`oversold`, the idempotency store emits `deduped`, the lock lease emits `contended`. For
+those, a `stateTransition` criterion grades the property **directly** — "`reservation:
+oversold` never appears" is a true absence check, not a proxy. This is the honest
+boundary moving, not being faked: we grade at runtime *only* what the engine genuinely
+models (see `specs/support-ledger-and-runtime-semantics.md` for the ledger's tiers), and
+everything past that edge — commit-outcome consensus, partition ordering, quorum — stays
+`deferred` and is graded by topology + justification, exactly as before.
+
+**Topology-as-proxy** is how we still grade the rest of the un-simulatable: "generate a unique code"
 isn't simulatable, but "a durable store sits on the write path" is a **structural
 proxy**, and a **justification prompt** carries the nuance ("why a durable store, what's
 the tradeoff"). We assert the *shape* that the correct behavior requires, and require the
@@ -1651,13 +1692,20 @@ checks must fail; "Axis" = which of T/S/Σ/J/$ carries the grade.
   path → feed p99 fails (Σ); (b) a *work-queue* (1-of-N) instead of a broadcast broker
   (1→N) → `fanout` hard-fails.
 
-### 21.4 Ticketmaster / ticket booking — *F5 contention* 🟡 topology + justification
+### 21.4 Ticketmaster / ticket booking — *F5 contention* 🟡/✅ topology + justification + runtime
 - **Requirements:** no double-booking of a seat; virtual waiting queue under a flash sale.
-- **Not simulatable:** mutual exclusion / no-double-book (contention isn't modeled — §16).
-  **Grade the structure:** `guardedPath(booking → lock-store/transactional-db)` so **all**
-  booking traffic traverses the guard; `structural` for the admission/waiting queue.
-- **Discriminator (must fail):** a booking path that reaches the seat store *without*
-  going through the lock/transaction guard (a bypass edge) → `guardedPath` fails.
+- **Now partly simulatable:** the `reservation-store` trait models atomic per-seat
+  reservation over run-scoped shared state and emits `committed` / `sold-out` / `oversold`
+  into each request's `stateTimeline` under a keyspace (contended-seat) workload. So the
+  no-double-book property gets a **direct runtime check**, not only a proxy:
+  `stateTransition {scope:'reservation', state:'oversold'}` with `minCount:0, maxCount:0`
+  — oversell must **never** occur (see `specs/contended-inventory-and-oversell-model.md`,
+  `specs/runtime-semantic-criteria.md`).
+- **Grade the structure too:** `guardedPath(booking → lock-store/reservation-store)` so
+  **all** booking traffic traverses the guard; `structural` for the admission/waiting queue.
+- **Discriminator (must fail):** a gamed topology without atomic reservation oversells
+  under the flash-sale keyspace → the `oversold` absence check fails (the reference topology
+  records 0 oversells and passes); a bypass edge to the seat store → `guardedPath` fails.
 - **Justify:** "distributed lock + TTL vs. optimistic concurrency; why; tradeoff." The
   *waiting-queue* part (F1) *can* get a Σ throughput/latency check under a burst workload.
 
@@ -1721,7 +1769,7 @@ checks must fail; "Axis" = which of T/S/Σ/J/$ carries the grade.
 [The Coding Gopher — Top 10 Most Common](https://thecodinggopher.substack.com/p/the-top-10-most-common-system-design).
 *Internal source of truth:* `specs/question-families-and-bottlenecks.md` (the
 family→bottleneck→status map), `specs/evaluation-authoring-reference-manual.md` (master
-DSL), and the shipped bank in `system-design-simulator-questions/questions/*`.
+DSL), and the shipped bank in `examples/question-bank/*`.
 
 ---
 
@@ -1811,8 +1859,12 @@ Use these verbatim as your Q&A slides. Each is a real objection you *will* get.
 > clearly), and every question is validated both ways.
 
 > **"The real skill is the reasoning/tradeoffs — you can't grade that."**
-> Deterministic justification grading does exactly that: name-a-real-node + cite-a-number
-> + state-a-tradeoff, cross-checked against the graph. No LLM, fully reproducible.
+> Justification grading does exactly that: name-a-real-node + cite-a-number +
+> state-a-tradeoff, cross-checked against the graph. The anti-stuffing gate is
+> deterministic and fully reproducible; an optional provider-agnostic LLM layer (Gemini /
+> Claude / OpenAI) grades the *same* three criteria with language understanding when a key
+> is configured, and falls back to the deterministic grader otherwise — so it never
+> becomes a free-floating LLM judge or a network dependency.
 
 > **"Floating-point drift will make your runs non-reproducible."**
 > Integer-only PRNG + BigInt-microsecond clock + µs-quantized sampling. Floats touch a
@@ -1855,6 +1907,13 @@ Teaching these builds credibility — they're consistent with the honesty doctri
    endpoint, no body, no response code. So application-level nuance is narrative/justify
    context, never a simulation check (which is exactly the performance/correctness
    boundary in §16).
+9. **Runtime semantics is a first layer, not full distributed-systems semantics.** The
+   `stateTimeline` (§13.4, §16) genuinely records reservation/lock/dedup/delivery
+   decisions, but the boundary is explicit and enforced by the support ledger: configured
+   `exactly-once` is **downgraded to runtime `at-least-once`** (commit-outcome coordination
+   isn't modeled), and consumer-group offsets, partition ordering, and quorum/consensus are
+   `deferred`. Author correctness questions inside what the ledger marks `first-class` /
+   `guided`; grade the rest by topology + justification.
 
 **Highest-leverage doc follow-ups:** (1) a determinism/numerics spec; (2) a dedicated
 sim-core spec for Modules 1–3; (3) split Part IV into a standalone skeptic-facing
@@ -1909,6 +1968,9 @@ one-pager for sales/keynote use.
 | Cost | `src/engine/analysis/cost.ts` |
 | Metrics & aggregation | `src/engine/metrics.ts`, `metrics/windowedLatencyAggregator.ts`, `analysis/{phaseTimeline,output,verdict}.ts` |
 | Grading — structural/semantic/rubric/justification | `src/engine/analysis/{structural,semanticCriteria,rubric,justification}.ts` |
+| LLM justification grading (provider-agnostic) | `src/engine/analysis/llmGrader.ts`; IPC in `src/main/index.ts` (`llm:gradeJustification`) |
+| Runtime semantics (state timeline, delivery) | `src/engine/core/simulationSemantics.ts`; support tiers `analysis/supportLedger.ts` |
+| Coordination traits | `src/engine/traits/{reservationStore,lockLease,idempotencyDedup}.ts` |
 | Authoring validation | `authoringValidator.ts`; `scripts/validate-question-dir.ts` |
 | Environment profiles | `src/engine/analysis/environmentProfile.ts` |
 | Frontend | `src/renderer/src/{store,hooks,components}`, `useTopologySerializer.ts`, `nodePresentation.ts` |

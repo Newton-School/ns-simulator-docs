@@ -1,0 +1,132 @@
+{
+  "version": "1.0",
+  "id": "async-sla",
+  "title": "Job-processing backend for a 15s SLA",
+  "difficulty": "advanced",
+  "type": "open-build",
+  "workloadCategory": "write-heavy",
+  "prompt": {
+    "text": "You are decoupling a synchronous request path that fails under spikes. You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.\n\nAccept jobs quickly at ingest, hand them to an asynchronous queue, and process them with a pool of scalable workers within the SLA. Ingest must not block on processing.\n\nTarget: p99 job completion under 15 s during spike load.\n\nTraffic: 50,000 jobs/min with bursty spikes (mostly writes).\n\nAt submission you will explain why using a queue meets the SLA better than a synchronous path, and what consistency trade-off you accept.",
+    "functionalRequirements": [
+      "Accept jobs at ingest without waiting for downstream processing.",
+      "Buffer jobs in an asynchronous queue and process them with scalable workers within the 15 s SLA."
+    ],
+    "nonFunctionalRequirements": [
+      {
+        "metric": "latency_p99",
+        "operator": "<",
+        "value": 15000,
+        "unit": "ms",
+        "description": "p99 job-completion latency under 15 s during spike load."
+      }
+    ],
+    "scale": {
+      "peakRps": 3000
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 12
+  },
+  "structuralRules": [
+    {
+      "id": "has-queue",
+      "kind": "requires_component",
+      "componentType": "queue",
+      "description": "An async queue separates ingest from processing"
+    },
+    {
+      "id": "has-workers",
+      "kind": "requires_component",
+      "componentType": "batch-worker",
+      "description": "Scalable workers process the queue"
+    },
+    {
+      "id": "single-source",
+      "kind": "requires_single_source",
+      "description": "Exactly one traffic source"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "ingest-through-queue",
+      "kind": "guardedPath",
+      "description": "Jobs must enter the queue before they reach workers",
+      "from": "microservice",
+      "guard": "queue",
+      "to": "batch-worker",
+      "points": 3,
+      "hardFail": false
+    }
+  ],
+  "suite": {
+    "name": "async-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "spike",
+        "description": "Spike load",
+        "workload": {
+          "baseRps": 3000,
+          "requestDistribution": [
+            {
+              "type": "write",
+              "weight": 1,
+              "sizeBytes": 1024
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "async-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "sla",
+        "kind": "simulation",
+        "description": "p99 job completion under 15 s",
+        "metric": "summary.latency.p99",
+        "op": "<",
+        "value": 15000,
+        "points": 3
+      },
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "_justify": [
+    {
+      "id": "why-async",
+      "decision": "Why does decoupling ingest from processing with a queue help under spike load compared with a synchronous path, and what consistency trade-off do you accept?",
+      "boundTo": {
+        "componentType": "queue"
+      },
+      "requires": {
+        "choice": true,
+        "number": true,
+        "tradeoff": true
+      }
+    }
+  ],
+  "family": "compute",
+  "domains": [
+    "compute"
+  ],
+  "concepts": [
+    "async-decoupling"
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "version": "1.0",
+  "id": "messaging-fanout",
+  "title": "Design an event-notification backbone",
+  "difficulty": "beginner",
+  "type": "open-build",
+  "workloadCategory": "connection-heavy",
+  "prompt": {
+    "text": "You are designing the notification backbone that delivers every domain event to several independent downstream services (analytics, search indexer, email). You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.\n\nOne producer publishes each event once. Each of the three downstream consumers must receive every event independently.\n\nTraffic: 5,000 events/sec from a single producer.\n\nAt submission you will explain your choice of messaging primitive and its delivery guarantee trade-off.",
+    "functionalRequirements": [
+      "Publish each event once from a single producer.",
+      "Deliver every event to all three independent consumers so each consumer sees the full stream."
+    ],
+    "nonFunctionalRequirements": [],
+    "scale": {
+      "peakRps": 5000
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 10
+  },
+  "structuralRules": [
+    {
+      "id": "has-broker",
+      "kind": "requires_component",
+      "componentType": "message-broker",
+      "description": "A broadcast broker is present"
+    },
+    {
+      "id": "single-source",
+      "kind": "requires_single_source",
+      "description": "Exactly one producer"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "fanout",
+      "kind": "fanout",
+      "description": "A broker fans out to 3 or more independent consumers; a single queue is wrong",
+      "broker": "message-broker",
+      "minConsumers": 3,
+      "forbiddenBroker": "queue",
+      "points": 5,
+      "hardFail": true
+    }
+  ],
+  "suite": {
+    "name": "fanout-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "baseline",
+        "description": "Nominal",
+        "workload": {
+          "baseRps": 1000
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "fanout-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "_justify": [
+    {
+      "id": "why-broker",
+      "decision": "Why does your messaging primitive deliver each event to all consumers rather than to just one, and what delivery guarantee trade-off (for example, at-least-once duplicates) do you accept?",
+      "boundTo": {
+        "componentType": "message-broker"
+      },
+      "requires": {
+        "choice": true,
+        "tradeoff": true
+      }
+    }
+  ],
+  "family": "storage",
+  "domains": [
+    "storage"
+  ],
+  "concepts": [
+    "pubsub-fanout"
+  ]
+}

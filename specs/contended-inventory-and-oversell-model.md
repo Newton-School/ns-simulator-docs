@@ -35,7 +35,7 @@ Built end-to-end, all 635 tests green, dual-topology validation passing.
   `resolveMetric` reaches both via its `getByPath` fallback — a rubric grades
   `reservations.oversells == 0` with no new switch case.
 - **Authored question** at
-  `system-design-simulator-questions/questions/flash-sale-booking/`
+  `examples/question-bank/flash-sale-booking/`
   (`question.json` + `reference-topology.json` + `gamed-topology.json`).
 
 **Dual-topology result** (injected 1200 rps of `book` over a 40-seat keyspace):

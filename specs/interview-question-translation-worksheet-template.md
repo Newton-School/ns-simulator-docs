@@ -200,9 +200,9 @@ This is the pre-JSON row manifest for the final `django-admin-assignment.md`.
 ## 14. Imported Reference Tables
 
 For the full imported reference tables from
-[evaluation-authoring-reference-manual.md](/Users/hritvikmohan/Desktop/HM25/ns-simulator-prod/ns-simulator-prod/ns-simulator-docs/specs/evaluation-authoring-reference-manual.md),
+[evaluation-authoring-reference-manual.md](evaluation-authoring-reference-manual.md),
 use the companion pack:
-[interview-question-translation-reference-pack.md](/Users/hritvikmohan/Desktop/HM25/ns-simulator-prod/ns-simulator-prod/ns-simulator-docs/specs/interview-question-translation-reference-pack.md).
+[interview-question-translation-reference-pack.md](interview-question-translation-reference-pack.md).
 
 That companion file is intended to stay in sync with the workbook reference tabs
 and the glossary sheet.
