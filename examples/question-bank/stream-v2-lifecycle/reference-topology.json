@@ -1,0 +1,119 @@
+{
+  "id": "stream-v2-reference",
+  "name": "Stream V2 Lifecycle Reference",
+  "version": "1.0.0",
+  "global": {
+    "simulationDuration": 1000,
+    "warmupDuration": 0,
+    "seed": "stream-v2-reference",
+    "timeResolution": "millisecond",
+    "defaultTimeout": 5000
+  },
+  "nodes": [
+    {
+      "id": "orders-api",
+      "type": "api-endpoint",
+      "category": "compute",
+      "role": "source",
+      "label": "Orders API",
+      "position": { "x": 0, "y": 120 },
+      "queue": { "workers": 200, "capacity": 10000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 0.2 }, "timeout": 5000 }
+    },
+    {
+      "id": "orders-stream",
+      "type": "stream",
+      "category": "messaging-and-streaming",
+      "role": "processor",
+      "label": "Orders Stream",
+      "position": { "x": 260, "y": 120 },
+      "queue": { "workers": 200, "capacity": 10000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 0.2 }, "timeout": 5000 },
+      "config": {
+        "streamBrokerEnabled": true,
+        "consumerGroupMode": true,
+        "partitionCount": 8,
+        "retentionMs": 60000,
+        "streamReplayIntervalMs": 250
+      }
+    },
+    {
+      "id": "search-indexer",
+      "type": "batch-worker",
+      "category": "compute",
+      "role": "processor",
+      "label": "Search Indexer",
+      "position": { "x": 540, "y": 60 },
+      "queue": { "workers": 100, "capacity": 10000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 1 }, "timeout": 5000 },
+      "config": { "consumerGroup": "search" }
+    },
+    {
+      "id": "email-worker",
+      "type": "batch-worker",
+      "category": "compute",
+      "role": "processor",
+      "label": "Email Worker",
+      "position": { "x": 540, "y": 200 },
+      "queue": { "workers": 100, "capacity": 10000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 1 }, "timeout": 5000 },
+      "config": { "consumerGroup": "email" }
+    }
+  ],
+  "edges": [
+    {
+      "id": "api-to-stream",
+      "source": "orders-api",
+      "target": "orders-stream",
+      "mode": "asynchronous",
+      "protocol": "tcp",
+      "latency": { "distribution": { "type": "constant", "value": 0.2 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 10000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "stream-to-search",
+      "source": "orders-stream",
+      "target": "search-indexer",
+      "mode": "streaming",
+      "protocol": "tcp",
+      "latency": { "distribution": { "type": "constant", "value": 0.2 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 10000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "stream-to-email",
+      "source": "orders-stream",
+      "target": "email-worker",
+      "mode": "streaming",
+      "protocol": "tcp",
+      "latency": { "distribution": { "type": "constant", "value": 0.2 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 10000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    }
+  ],
+  "workload": {
+    "sourceNodeId": "orders-api",
+    "pattern": "constant",
+    "baseRps": 500,
+    "requestDistribution": [
+      {
+        "type": "POST",
+        "weight": 1,
+        "sizeBytes": 512,
+        "metadata": {
+          "partitionKey": "tenant-a"
+        }
+      }
+    ]
+  },
+  "faults": [],
+  "invariants": [],
+  "scenarios": []
+}

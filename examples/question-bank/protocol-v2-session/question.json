@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "id": "protocol-v2-session",
+  "title": "Design an HTTP-aware L7 session edge",
+  "difficulty": "intermediate",
+  "type": "open-build",
+  "workloadCategory": "connection-heavy",
+  "prompt": {
+    "text": "Design an edge path for order traffic that teaches the difference between a live L7 session and a generic pass-through hop. The gateway must acknowledge HTTP requests and keep the session open for allowed order paths.",
+    "functionalRequirements": [
+      "Route order requests through an L7 gateway.",
+      "Keep the protocol session open for allowed paths.",
+      "Emit HTTP acknowledgement evidence at runtime."
+    ],
+    "nonFunctionalRequirements": [],
+    "scale": {
+      "peakRps": 500
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 6
+  },
+  "structuralRules": [
+    {
+      "id": "has-l7-gateway",
+      "kind": "requires_component",
+      "componentType": "api-gateway",
+      "description": "An API gateway is present on the edge path"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "runtime-session-open",
+      "kind": "stateTransition",
+      "description": "Runtime evidence shows the gateway opened a protocol session",
+      "match": {
+        "scope": "protocol",
+        "state": "session-open",
+        "nodeId": "edge-gateway",
+        "nodeType": "api-gateway",
+        "source": "trait"
+      },
+      "minCount": 1,
+      "points": 2,
+      "hardFail": true
+    },
+    {
+      "id": "runtime-http-ack",
+      "kind": "stateTransition",
+      "description": "Runtime evidence shows HTTP acknowledgement semantics at the gateway",
+      "match": {
+        "scope": "protocol",
+        "state": "http-acknowledged",
+        "nodeId": "edge-gateway",
+        "nodeType": "api-gateway",
+        "source": "trait"
+      },
+      "minCount": 1,
+      "points": 2,
+      "hardFail": true
+    }
+  ],
+  "suite": {
+    "name": "protocol-v2-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "allowed-order-request",
+        "description": "Allowed order request exercises open session and HTTP acknowledgement",
+        "workload": {
+          "baseRps": 2,
+          "requestDistribution": [
+            {
+              "type": "GET",
+              "weight": 1,
+              "sizeBytes": 256,
+              "metadata": {
+                "path": "/orders"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "protocol-v2-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "family": "network",
+  "domains": ["network"],
+  "concepts": ["protocol-semantics", "l4-vs-l7"]
+}

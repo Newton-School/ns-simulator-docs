@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "id": "replication-v2-quorum",
+  "title": "Design a quorum-replicated write store",
+  "difficulty": "advanced",
+  "type": "open-build",
+  "workloadCategory": "correctness-heavy",
+  "prompt": {
+    "text": "Design the write store for an order ledger that must survive one replica failure without acknowledging writes from a single volatile copy. The answer must use the simulator's replicated-log contract: durable replica membership, a leader, and quorum write acknowledgements.",
+    "functionalRequirements": [
+      "Accept order writes through a replicated relational store.",
+      "Acknowledge writes only after a quorum of replicas has durably recorded the log entry.",
+      "Expose deterministic leader and replica state in the simulation output."
+    ],
+    "nonFunctionalRequirements": [],
+    "scale": {
+      "peakRps": 1000
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 6
+  },
+  "structuralRules": [
+    {
+      "id": "has-replicated-store",
+      "kind": "requires_component",
+      "componentType": "relational-db",
+      "description": "A durable relational write store is present"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "runtime-quorum-commit",
+      "kind": "stateTransition",
+      "description": "Runtime evidence shows the replicated store commits by quorum acknowledgement",
+      "match": {
+        "scope": "replication",
+        "state": "quorum-committed",
+        "nodeId": "orders-db",
+        "nodeType": "relational-db",
+        "source": "trait"
+      },
+      "minCount": 1,
+      "points": 4,
+      "hardFail": true
+    }
+  ],
+  "suite": {
+    "name": "replication-v2-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "quorum-write",
+        "description": "Nominal write requires replicated quorum evidence",
+        "workload": {
+          "baseRps": 1,
+          "requestDistribution": [
+            {
+              "type": "write",
+              "weight": 1,
+              "sizeBytes": 512
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "replication-v2-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "family": "correctness",
+  "domains": ["storage", "correctness", "resilience"],
+  "concepts": ["replicated-log", "quorum", "consensus"]
+}
