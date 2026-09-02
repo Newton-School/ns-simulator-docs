@@ -1,0 +1,70 @@
+{
+  "id": "replication-v2-reference",
+  "name": "Replication V2 Quorum Reference",
+  "version": "1.0.0",
+  "global": {
+    "simulationDuration": 10,
+    "warmupDuration": 0,
+    "seed": "replication-v2-reference",
+    "timeResolution": "millisecond",
+    "defaultTimeout": 1000
+  },
+  "nodes": [
+    {
+      "id": "orders-api",
+      "type": "api-endpoint",
+      "category": "compute",
+      "role": "source",
+      "label": "Orders API",
+      "position": { "x": 0, "y": 120 },
+      "queue": { "workers": 10, "capacity": 1000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 0.2 }, "timeout": 1000 }
+    },
+    {
+      "id": "orders-db",
+      "type": "relational-db",
+      "category": "storage-and-data",
+      "role": "processor",
+      "label": "Orders Replicated DB",
+      "position": { "x": 260, "y": 120 },
+      "queue": { "workers": 10, "capacity": 1000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 1 }, "timeout": 1000 },
+      "config": {
+        "replicationEnabled": true,
+        "writeAckPolicy": "quorum",
+        "replicaMembers": "orders-db, orders-db-b, orders-db-c",
+        "consensusProtocol": "raft",
+        "conflictResolution": "leader-wins"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "api-to-db",
+      "source": "orders-api",
+      "target": "orders-db",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": { "distribution": { "type": "constant", "value": 0.2 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 1000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    }
+  ],
+  "workload": {
+    "sourceNodeId": "orders-api",
+    "pattern": "constant",
+    "baseRps": 1,
+    "requestDistribution": [
+      {
+        "type": "write",
+        "weight": 1,
+        "sizeBytes": 512
+      }
+    ]
+  },
+  "faults": [],
+  "invariants": [],
+  "scenarios": []
+}

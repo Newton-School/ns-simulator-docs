@@ -1,0 +1,94 @@
+{
+  "id": "protocol-v2-reference",
+  "name": "Protocol V2 Session Reference",
+  "version": "1.0.0",
+  "global": {
+    "simulationDuration": 1000,
+    "warmupDuration": 0,
+    "seed": "protocol-v2-reference",
+    "timeResolution": "millisecond",
+    "defaultTimeout": 1000
+  },
+  "nodes": [
+    {
+      "id": "client",
+      "type": "api-endpoint",
+      "category": "compute",
+      "role": "source",
+      "label": "Client Traffic",
+      "position": { "x": 0, "y": 120 },
+      "queue": { "workers": 10, "capacity": 1000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 0.2 }, "timeout": 1000 }
+    },
+    {
+      "id": "edge-gateway",
+      "type": "api-gateway",
+      "category": "network-and-edge",
+      "role": "router",
+      "label": "HTTP L7 Gateway",
+      "position": { "x": 260, "y": 120 },
+      "queue": { "workers": 10, "capacity": 1000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 0.5 }, "timeout": 1000 },
+      "config": {
+        "sessionOpen": true,
+        "sessionProtocol": "http2",
+        "httpAckMode": "on-response",
+        "allowedPaths": "/orders"
+      }
+    },
+    {
+      "id": "orders-service",
+      "type": "microservice",
+      "category": "compute",
+      "role": "processor",
+      "label": "Orders Service",
+      "position": { "x": 540, "y": 120 },
+      "queue": { "workers": 10, "capacity": 1000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 1 }, "timeout": 1000 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "client-to-gateway",
+      "source": "client",
+      "target": "edge-gateway",
+      "mode": "synchronous",
+      "protocol": "https",
+      "latency": { "distribution": { "type": "constant", "value": 0.2 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 1000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "gateway-to-service",
+      "source": "edge-gateway",
+      "target": "orders-service",
+      "mode": "synchronous",
+      "protocol": "https",
+      "latency": { "distribution": { "type": "constant", "value": 0.2 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 1000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    }
+  ],
+  "workload": {
+    "sourceNodeId": "client",
+    "pattern": "constant",
+    "baseRps": 2,
+    "requestDistribution": [
+      {
+        "type": "GET",
+        "weight": 1,
+        "sizeBytes": 256,
+        "metadata": {
+          "path": "/orders"
+        }
+      }
+    ]
+  },
+  "faults": [],
+  "invariants": [],
+  "scenarios": []
+}

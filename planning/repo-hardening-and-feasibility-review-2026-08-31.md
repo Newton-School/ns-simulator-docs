@@ -6,6 +6,20 @@ Scope: codebase robustness, simulator fidelity, UI/UX, authoring workflow, and q
 
 This document converts the current repo review into an actionable hardening plan. It intentionally holds a few product choices constant for now so the next steps stay focused.
 
+## 0. Implementation Status Addendum - 2026-09-02
+
+The original review was a point-in-time feasibility audit. Since then, the repo has moved several V2 items from "missing" to modeled runtime capability:
+
+- Stream completeness now has deterministic partition assignment, committed offsets, replay from group offsets, retention-expiry removals, group lag projection, consumer rebalancing, and broker failure/recovery delivery blocking.
+- Replicated-log semantics now include durable replica member state, write quorum acknowledgement, quorum-unavailable evidence, consensus protocol labels, deterministic leader promotion, conflict policy configuration, and replication output projections.
+- External reconciliation now has a modeled authoritative side-effect registry and adapter-style probe contract for unknown commit outcomes. It does not call live provider APIs.
+- Protocol/session behavior now includes session open/closed evidence, HTTP acknowledgement timing, L7 policy rejection, WebSocket-style flow-control rejection, and explicit L4 versus L7 divergence.
+- Justification grading now has a redesigned deterministic fairness baseline: graph-bound choice consistency plus substantive explanation, optional number citation, and tradeoff checks.
+- Canvas delivery now lazy-loads the always-heavy canvas shell, and graph history has targeted inverse operations for common edit/reorder/drag paths. Broad fallback snapshots remain only where no safe inverse operation has been derived.
+- Canonical repo-local V2 packs now exist for stream lifecycle, replicated quorum writes, protocol/session behavior, and modeled external reconciliation.
+
+Still intentionally not claimed as complete: physical packet-level multi-broker replication, live external-provider status probes, formal linearizability or exactly-once proofs, real Raft timing, Byzantine consensus, full TCP/TLS/HTTP implementation physics, and complete inverse-operation history for every possible canvas graph replacement.
+
 ## 1. Decisions Held Constant
 
 - Keep `SHOW_BLUEPRINTS_AND_LABS = false` for now. Labs and blueprints exist as concepts and sample assets, but they are not part of the immediate product surface.

@@ -1,0 +1,106 @@
+{
+  "id": "external-reconciliation-v2-gamed",
+  "name": "External Reconciliation V2 Gamed",
+  "version": "1.0.0",
+  "global": {
+    "simulationDuration": 1000,
+    "warmupDuration": 0,
+    "seed": "external-reconciliation-v2-gamed",
+    "timeResolution": "millisecond",
+    "defaultTimeout": 5
+  },
+  "nodes": [
+    {
+      "id": "payments-api",
+      "type": "api-endpoint",
+      "category": "compute",
+      "role": "source",
+      "label": "Payments API",
+      "position": { "x": 0, "y": 120 },
+      "queue": { "workers": 10, "capacity": 1000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 0.1 }, "timeout": 5 }
+    },
+    {
+      "id": "idempotency",
+      "type": "idempotency-manager",
+      "category": "auxiliary",
+      "role": "processor",
+      "label": "Idempotency Guard Without Probe",
+      "position": { "x": 260, "y": 120 },
+      "queue": { "workers": 10, "capacity": 1000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 0.1 }, "timeout": 5 },
+      "config": {
+        "dedupKeyField": "idempotencyKey",
+        "storeLookupMs": 0.1,
+        "commitOutcomeJournal": true,
+        "reconcileUnknownOutcomes": false,
+        "externalReconciliationMode": "modeled"
+      }
+    },
+    {
+      "id": "payment-gateway",
+      "type": "payment-gateway",
+      "category": "external-and-integration",
+      "role": "processor",
+      "label": "Payment Gateway",
+      "position": { "x": 540, "y": 120 },
+      "queue": { "workers": 1, "capacity": 1000, "discipline": "fifo" },
+      "processing": { "distribution": { "type": "constant", "value": 20 }, "timeout": 5 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "api-to-idempotency",
+      "source": "payments-api",
+      "target": "idempotency",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": { "distribution": { "type": "constant", "value": 0.1 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 1000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    },
+    {
+      "id": "idempotency-to-payment",
+      "source": "idempotency",
+      "target": "payment-gateway",
+      "mode": "synchronous",
+      "protocol": "tcp",
+      "latency": { "distribution": { "type": "constant", "value": 0.1 }, "pathType": "same-dc" },
+      "bandwidth": 1000,
+      "maxConcurrentRequests": 1000,
+      "packetLossRate": 0,
+      "errorRate": 0
+    }
+  ],
+  "workload": {
+    "sourceNodeId": "payments-api",
+    "pattern": "constant",
+    "baseRps": 4,
+    "requestDistribution": [
+      {
+        "type": "POST",
+        "weight": 1,
+        "sizeBytes": 512,
+        "metadata": {
+          "idempotencyKey": "payment-001",
+          "externalSideEffectCommitted": true
+        }
+      }
+    ]
+  },
+  "faults": [
+    {
+      "id": "payment-response-lost",
+      "targetId": "payment-gateway",
+      "faultType": "node-failure",
+      "timing": "deterministic",
+      "type": "node-failure",
+      "duration": "permanent",
+      "params": { "atMs": 0, "mode": "reject" }
+    }
+  ],
+  "invariants": [],
+  "scenarios": []
+}

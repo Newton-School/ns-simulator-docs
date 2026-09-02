@@ -1,0 +1,112 @@
+{
+  "version": "1.0",
+  "id": "stream-v2-lifecycle",
+  "title": "Design a replayable event stream",
+  "difficulty": "intermediate",
+  "type": "open-build",
+  "workloadCategory": "write-heavy",
+  "prompt": {
+    "text": "Design the event backbone for an order platform. Producers write each order event once. Search indexing and email delivery must consume independently, track progress with committed offsets, and remain replayable from the stream rather than from a generic work queue.\n\nTraffic: 2,000 order events/sec. Keep the design focused on the runtime stream contract: partitioning, consumer groups, and offset commits.",
+    "functionalRequirements": [
+      "Append order events to a partitioned stream.",
+      "Deliver one copy of each event to each independent consumer group.",
+      "Commit consumer offsets only after successful processing."
+    ],
+    "nonFunctionalRequirements": [],
+    "scale": {
+      "peakRps": 2000
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 8
+  },
+  "structuralRules": [
+    {
+      "id": "has-stream",
+      "kind": "requires_component",
+      "componentType": "stream",
+      "description": "A partitioned stream broker is present"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "runtime-partition-assigned",
+      "kind": "stateTransition",
+      "description": "Runtime evidence shows records are assigned to stream partitions",
+      "match": {
+        "scope": "broker",
+        "state": "partition-assigned",
+        "nodeType": "stream",
+        "source": "trait"
+      },
+      "minCount": 1,
+      "points": 2,
+      "hardFail": true
+    },
+    {
+      "id": "runtime-group-delivered",
+      "kind": "stateTransition",
+      "description": "Runtime evidence shows delivery to named consumer groups",
+      "match": {
+        "scope": "broker",
+        "state": "group-delivered",
+        "nodeType": "stream",
+        "source": "trait"
+      },
+      "minCount": 1,
+      "points": 2,
+      "hardFail": true
+    },
+    {
+      "id": "runtime-offset-committed",
+      "kind": "stateTransition",
+      "description": "Runtime evidence shows offsets commit after successful consumers",
+      "match": {
+        "scope": "broker",
+        "state": "offset-committed",
+        "nodeType": "stream",
+        "source": "trait"
+      },
+      "minCount": 1,
+      "points": 2,
+      "hardFail": true
+    }
+  ],
+  "suite": {
+    "name": "stream-v2-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "baseline",
+        "description": "Nominal stream lifecycle",
+        "workload": {
+          "baseRps": 500
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "stream-v2-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "family": "storage",
+  "domains": ["storage"],
+  "concepts": ["stream-partitions", "consumer-groups", "offset-commit"]
+}

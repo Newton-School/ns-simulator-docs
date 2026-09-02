@@ -1,0 +1,111 @@
+{
+  "version": "1.0",
+  "id": "external-reconciliation-v2",
+  "title": "Recover an unknown external payment outcome",
+  "difficulty": "advanced",
+  "type": "open-build",
+  "workloadCategory": "correctness-heavy",
+  "prompt": {
+    "text": "Design a payment write path where retries do not blindly repeat an external side effect after the first attempt times out. The idempotency guard must record intent, mark unknown outcomes, and reconcile against the modeled authoritative side-effect registry before deciding whether a retry is safe.",
+    "functionalRequirements": [
+      "Record idempotency intent before the payment side effect.",
+      "Mark timed-out side effects as outcome-unknown.",
+      "Probe the modeled authoritative side-effect registry before handling a retry."
+    ],
+    "nonFunctionalRequirements": [],
+    "scale": {
+      "peakRps": 200
+    }
+  },
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 6
+  },
+  "structuralRules": [
+    {
+      "id": "has-idempotency-guard",
+      "kind": "requires_component",
+      "componentType": "idempotency-manager",
+      "description": "An idempotency manager guards the external side-effect path"
+    }
+  ],
+  "semanticCriteria": [
+    {
+      "id": "runtime-outcome-unknown",
+      "kind": "stateTransition",
+      "description": "Runtime evidence shows the first interrupted payment becomes outcome-unknown",
+      "match": {
+        "scope": "commit-outcome",
+        "state": "outcome-unknown",
+        "nodeId": "idempotency",
+        "nodeType": "idempotency-manager",
+        "source": "trait"
+      },
+      "minCount": 1,
+      "points": 2,
+      "hardFail": true
+    },
+    {
+      "id": "runtime-reconciled-confirmed",
+      "kind": "stateTransition",
+      "description": "Runtime evidence shows a retry is handled after authoritative reconciliation confirms the side effect",
+      "match": {
+        "scope": "commit-outcome",
+        "state": "commit-confirmed",
+        "nodeId": "idempotency",
+        "nodeType": "idempotency-manager",
+        "source": "trait"
+      },
+      "minCount": 1,
+      "points": 3,
+      "hardFail": true
+    }
+  ],
+  "suite": {
+    "name": "external-reconciliation-v2-suite",
+    "visibleToStudent": false,
+    "cases": [
+      {
+        "id": "timed-out-payment-retry",
+        "description": "Repeated key times out once, then probes modeled external status on retry",
+        "workload": {
+          "baseRps": 4,
+          "requestDistribution": [
+            {
+              "type": "POST",
+              "weight": 1,
+              "sizeBytes": 512,
+              "metadata": {
+                "idempotencyKey": "payment-001",
+                "externalSideEffectCommitted": true
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "external-reconciliation-v2-rubric",
+    "passThreshold": 1,
+    "checks": [
+      {
+        "id": "no-invariants",
+        "kind": "invariant",
+        "description": "No invariant violations",
+        "metric": "invariantViolations.count",
+        "op": "==",
+        "value": 0,
+        "points": 1
+      }
+    ]
+  },
+  "author": "Hritvik-Mohan",
+  "family": "correctness",
+  "domains": ["correctness"],
+  "concepts": ["idempotency", "external-reconciliation", "commit-outcome"]
+}
