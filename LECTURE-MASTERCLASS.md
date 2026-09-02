@@ -957,11 +957,23 @@ Cold-start, health-aware routing, content routing, service-time overrides, and a
 planned failure-mode set (GC jitter, connection pool, cache stampede, data skew) —
 each a self-contained "aha" and often a whole new question class.
 
-**Grading-axis alignment (important rule):** correctness-style traits (idempotency
-dedup, lock lease) are graded by **topology + justification**, *not* a simulation
-metric — don't add a `summary.*` check for them. Performance traits (storage profile,
-connection pool, GC jitter) *are* graded by simulation metrics. (This is the
-performance/correctness boundary again — §16.)
+**The V2 distributed-systems traits** (`replication`, `streamBroker`,
+`protocolSession`, keyed `rateLimiter`, and `idempotencyDedup` with its
+commit-outcome journal) are built on shared state machines
+(`semantics/v2StateMachines.ts`) and coordinate through run-scoped `sharedState`.
+They emit `stateTimeline` transitions in their own scopes
+(`replication` / `broker` / `protocol` / `commit-outcome`), which is how their
+correctness lessons became gradeable — see §16 and
+`specs/replication-quorum-state-machine-walkthrough.md`.
+
+**Grading-axis alignment (updated rule):** correctness-style traits are graded by
+**topology + justification *and*, where the engine models the behavior, by runtime
+evidence** — a capability counter (`reservations.oversells`, `locks.contentions`,
+`rateLimit.breaches`) or a `stateTransition` criterion — *never* by a `summary.*`
+latency metric. Performance traits (storage profile, connection pool, GC jitter)
+*are* graded by `summary.*` simulation metrics. (This is the performance/correctness
+boundary again — §16: latency numbers never stand in for correctness, but the
+runtime state ledger legitimately can.)
 
 *Source: `traits/*`, `trait-integration-guide.md`, `node-behaviour/node-behaviour-specification.md`,
 `cache-aside-routing-split`.*
@@ -1419,15 +1431,24 @@ aren't.**
   *never* by a latency number.
 
 **The runtime-semantics carve-out.** A growing slice of correctness *is* now observable
-at runtime, because the engine records a per-request `stateTimeline` and specific traits
-stamp real decisions into it: the reservation store emits `committed` / `sold-out` /
-`oversold`, the idempotency store emits `deduped`, the lock lease emits `contended`. For
-those, a `stateTransition` criterion grades the property **directly** — "`reservation:
-oversold` never appears" is a true absence check, not a proxy. This is the honest
-boundary moving, not being faked: we grade at runtime *only* what the engine genuinely
-models (see `specs/support-ledger-and-runtime-semantics.md` for the ledger's tiers), and
-everything past that edge — commit-outcome consensus, partition ordering, quorum — stays
-`deferred` and is graded by topology + justification, exactly as before.
+at runtime, because the engine records a per-request `stateTimeline` (nine scopes) and
+traits stamp real decisions into it. The V2 landing widened this substantially — beyond
+reservation `oversold`, idempotency `deduped`, and lock `contended`, the engine now emits:
+**replication** (`quorum-committed` / `quorum-unavailable` / `leader-promoted` /
+`stale-read-possible`), **stream broker** (`partition-assigned` / `group-delivered` /
+`offset-committed` / `retention-expired`), **protocol** (`session-open` / `l7-rejected` /
+`flow-controlled`), and **commit-outcome** (`intent-recorded` / `commit-confirmed` /
+`outcome-unknown` / `replay-blocked`). For all of these a `stateTransition` criterion
+grades the property **directly** — "`replication: quorum-unavailable` never appears" is a
+true absence check, not a proxy. This is the honest boundary moving, not being faked: we
+grade at runtime *only* what the engine genuinely models (see
+`specs/support-ledger-and-runtime-semantics.md` for tiers and
+`specs/replication-quorum-state-machine-walkthrough.md` for a worked trace). What stays
+`deferred` — graded by topology + justification, exactly as before — is now a **narrower**
+set: **exactly-once commit *coordination* and formal linearizability, real Raft election
+timing / Byzantine consensus, physical cross-machine replication, and strict
+partition-ordering truth.** Quorum availability, leader failover, consumer-group delivery,
+and unknown-commit reconciliation crossed the line into `guided` runtime evidence.
 
 **Topology-as-proxy** is how we still grade the rest of the un-simulatable: "generate a unique code"
 isn't simulatable, but "a durable store sits on the write path" is a **structural
@@ -1591,7 +1612,7 @@ the single most useful thing to memorize.
 | **F2** | **Storage & state** | wrong store for the access pattern; fan-out; write saturation | pick the fitting store; broker 1→N; wide-column for writes | 🟡 **Structural/semantic** (stores are physically similar until `storageProfile`; broker doesn't truly broadcast yet) | **S** `storageFit` / `fanout` |
 | **F3** | **Network & edge** | connection/port exhaustion; bandwidth; geo-latency | multiplexers, CDN, multi-region | ❌ **Deferred (V2)** (edges have latency/bandwidth, but pool/geo traits unbuilt) | **T** + edge props (partial) |
 | **F4** | **Resilience & chaos** | cascading failure; retry storms; DC failover | circuit breaker, rate limiter, DR steering | 🟡 **Partial** (traits exist, fault-injection not fully wired) | **T** + **J** (justify) |
-| **F5** | **Correctness** | double-booking; exactly-once; ordering | distributed lock; idempotency key store; ledger | 🟡 **Topology + justification** (sim can't model contention/dedup — §16) | **T** `guardedPath` + **J** |
+| **F5** | **Correctness** | double-booking; exactly-once; ordering | distributed lock; idempotency key store; ledger; reservation store; replication | 🟡/✅ **Topology + justification + runtime evidence** (contention, dedup, quorum, and oversell are now modeled — grade `reservations.oversells` / `locks.contentions` / `rateLimit.breaches` or a `stateTransition`; only exactly-once *coordination* & ordering stay §16-deferred) | **T** `guardedPath` + **Σ** capability counters + **J** |
 | **F6** | **Cost / meta** | solve within a budget; brute force vs. elegance | one cache beats ten replicas | 🟡/❌ (live cost chip works; graded budget axis is v1 heuristic) | **$** budget |
 
 **The one rule that makes translation honest:** *grade the family the simulator can
@@ -1839,9 +1860,13 @@ Use these verbatim as your Q&A slides. Each is a real objection you *will* get.
 > slice. Well-founded DES/queueing theory: a calibrated instrument, not a cloud oracle.
 
 > **"Correctness (exactly-once, no double-book) can't be simulated."**
-> Correct — and we **don't fake it.** Hard boundary: performance → simulation;
-> correctness → the required guard on the topology + a justification prompt. Never a
-> correctness claim behind a latency number.
+> Partly — and we **don't fake the part we can't.** A real slice now *is* simulated:
+> no-double-book (`reservations.oversells`), dedup (idempotency), lock contention,
+> quorum availability, and rate-limit over-admission are modeled as runtime state and
+> graded by capability counters / `stateTransition` criteria. What genuinely can't be
+> simulated — exactly-once *coordination*, strict ordering, linearizability — stays on
+> the topology-guard + justification path. Hard rule either way: a correctness claim is
+> **never** graded behind a latency number.
 
 > **"Students will just game it / get lucky."**
 > Multi-axis grading + Dual-Topology validation. Each question is authored so a known
@@ -1894,12 +1919,15 @@ Teaching these builds credibility — they're consistent with the honesty doctri
    correct in code and tested, but undocumented as a first-class invariant. → propose
    `simulation-determinism-and-numerics.md`.
 4. **WFQ is FIFO.** The discipline union has 4 values; only 3 behaviors ship.
-5. **11 of 20 event types are stubs.** Circuit breakers, partitions, latency spikes, etc.
-   are reserved but not yet wired.
-6. **Fault injection isn't wired into the app yet.** The engine records outage windows
-   and the UI can shade them, but no app path defines faults, so the status timeline is
-   empty in-app until `topology.faults` → scheduled node-failure/recovery events + a
-   fault-authoring control are wired.
+5. **Some event types are still reserved.** Network partitions and latency spikes are
+   reserved but not yet wired. (Circuit breakers, node-failure/recovery, health-check,
+   broker failure/recovery, and the recurring `trait-tick` timer *are* wired.)
+6. **Fault injection is wired in the *engine*; only the canvas authoring UI is missing.**
+   `topology.faults` → scheduled `node-failure`/`node-recovery` events → `node.fail()/recover()`
+   run end-to-end (connection resets, status-timeline windows, replication + stream
+   rebalancing), and a `health-check-manager` probes with realistic detection latency so
+   routing reroutes only after detection. What's still missing is an in-app **fault-authoring
+   control** on the canvas — today faults are authored in the topology JSON.
 7. **Bank revamp is partial.** One question (cache-placement) is the fixed
    scaffold-pinned template; the remaining bank questions still need the same
    scaffold-pin migration so student palette builds (not just fixtures) discriminate.
@@ -1907,13 +1935,17 @@ Teaching these builds credibility — they're consistent with the honesty doctri
    endpoint, no body, no response code. So application-level nuance is narrative/justify
    context, never a simulation check (which is exactly the performance/correctness
    boundary in §16).
-9. **Runtime semantics is a first layer, not full distributed-systems semantics.** The
-   `stateTimeline` (§13.4, §16) genuinely records reservation/lock/dedup/delivery
-   decisions, but the boundary is explicit and enforced by the support ledger: configured
-   `exactly-once` is **downgraded to runtime `at-least-once`** (commit-outcome coordination
-   isn't modeled), and consumer-group offsets, partition ordering, and quorum/consensus are
-   `deferred`. Author correctness questions inside what the ledger marks `first-class` /
-   `guided`; grade the rest by topology + justification.
+9. **Runtime semantics is a strong layer now, but not full distributed-systems
+   semantics.** The `stateTimeline` (§13.4, §16) records nine scopes' worth of decisions —
+   reservation/lock/dedup/delivery **plus** the V2 additions replication, stream broker,
+   protocol/session, and commit-outcome. The boundary is explicit and enforced by the
+   support ledger: configured `exactly-once` is still **downgraded to runtime
+   `at-least-once`** (exactly-once *coordination* isn't modeled), and real Raft timing,
+   Byzantine consensus, physical cross-machine replication, and strict partition-ordering
+   remain `deferred`. But quorum availability, leader failover, consumer-group delivery,
+   offset commits, retention, and unknown-commit reconciliation are now `guided` runtime
+   evidence, not deferred. Author correctness questions inside what the ledger marks
+   `first-class` / `guided`; grade the rest by topology + justification.
 
 **Highest-leverage doc follow-ups:** (1) a determinism/numerics spec; (2) a dedicated
 sim-core spec for Modules 1–3; (3) split Part IV into a standalone skeptic-facing
@@ -1969,8 +2001,11 @@ one-pager for sales/keynote use.
 | Metrics & aggregation | `src/engine/metrics.ts`, `metrics/windowedLatencyAggregator.ts`, `analysis/{phaseTimeline,output,verdict}.ts` |
 | Grading — structural/semantic/rubric/justification | `src/engine/analysis/{structural,semanticCriteria,rubric,justification}.ts` |
 | LLM justification grading (provider-agnostic) | `src/engine/analysis/llmGrader.ts`; IPC in `src/main/index.ts` (`llm:gradeJustification`) |
-| Runtime semantics (state timeline, delivery) | `src/engine/core/simulationSemantics.ts`; support tiers `analysis/supportLedger.ts` |
+| Runtime semantics (state timeline, 9 scopes) | `src/engine/core/simulationSemantics.ts`; support tiers `analysis/supportLedger.ts` |
 | Coordination traits | `src/engine/traits/{reservationStore,lockLease,idempotencyDedup}.ts` |
+| V2 distributed-systems traits | `src/engine/traits/{replication,streamBroker,protocolSession,rateLimiter}.ts` |
+| V2 state machines | `src/engine/semantics/v2StateMachines.ts` (`ReplicatedLog`, `ReplicaCluster`, `ExternalOutcomeRegistry`) |
+| Runtime criteria + walkthrough | `specs/runtime-semantic-criteria.md`, `specs/replication-quorum-state-machine-walkthrough.md` |
 | Authoring validation | `authoringValidator.ts`; `scripts/validate-question-dir.ts` |
 | Environment profiles | `src/engine/analysis/environmentProfile.ts` |
 | Frontend | `src/renderer/src/{store,hooks,components}`, `useTopologySerializer.ts`, `nodePresentation.ts` |

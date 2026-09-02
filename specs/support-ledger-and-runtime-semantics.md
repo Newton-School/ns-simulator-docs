@@ -79,6 +79,8 @@ Current scopes:
 - `request`
 - `delivery`
 - `broker`
+- `replication`
+- `protocol`
 - `idempotency`
 - `commit-outcome`
 - `lock`
@@ -108,6 +110,27 @@ Current broker states include:
 
 - `partition-assigned`
 - `group-delivered`
+- `offset-committed`
+- `retention-expired`
+- `broker-unavailable`
+- `broker-recovered`
+
+Current replication states include:
+
+- `quorum-committed`
+- `quorum-unavailable`
+- `replica-read`
+- `stale-read-possible`
+- `leader-promoted`
+- `failover-in-progress`
+
+Current protocol states include:
+
+- `session-open`
+- `session-closed`
+- `http-acknowledged`
+- `l7-rejected`
+- `flow-controlled`
 
 Current commit-outcome states include:
 
@@ -152,8 +175,11 @@ The most important honesty rule today:
 
 - configured `exactly-once` is currently downgraded to runtime `at-least-once`
 
-because a full atomic end-to-end commit protocol and reconciliation are still
-not modeled.
+because a full atomic end-to-end commit *coordination* protocol is still not
+modeled. Note the commit-outcome journal and modeled external reconciliation
+(§3.2, `commit-outcome` scope) now cover unknown-outcome blocking and
+authoritative reconciliation probes — but that is a local journal, not
+distributed exactly-once consensus.
 
 ### 3.4 Coordination state markers
 
@@ -204,38 +230,46 @@ This is enough to support:
 
 without changing the core queueing engine shape.
 
-## 5. What this still does not do
+## 5. What now ships (V2) and what is still deferred
 
-This foundation is intentionally narrow.
+The V2 landing moved several previously-deferred behaviors into modeled,
+gradeable runtime state. **Now modeled** (see the per-scope states in §3.2 and
+the trait metrics in the capability matrix):
 
-It still does **not** provide:
+- **stream broker** (`broker` scope): deterministic partition assignment,
+  one-delivery-per-consumer-group, per-group offset commits, retention expiry,
+  replay reads, consumer rebalancing, broker availability
+- **replication** (`replication` scope): primary vs quorum write
+  acknowledgement, deterministic leader promotion, bounded replica-read
+  staleness, and a configured failover-unavailability window
+- **protocol/session** (`protocol` scope): connection open/close, HTTP ack mode,
+  L4-vs-L7 policy distinction, and WebSocket flow-control rejection
+- **commit-outcome** (`commit-outcome` scope): durable per-key intent, confirmed
+  commit, explicit unknown-outcome blocking, and modeled authoritative external
+  reconciliation probes
 
-- consumer-group offsets or rebalancing
-- partition ordering or retention truth
-- automatic reconciliation after an unknown commit outcome
-- quorum or replica acknowledgment semantics
-- linearizability
-- full L4 versus L7 behavioral divergence
-- full protocol-specific delivery semantics
+**Still deferred** (author with topology + justify, never a runtime check):
 
-So authors must still treat these carefully:
+- `exactly-once` commit **coordination** and formal linearizability proof
+- packet-level log replication, real Raft election timing, Byzantine consensus
+- physical broker replication across machines and strict partition-ordering truth
+- low-level transport physics (TCP handshake timing, TLS, HTTP/2 multiplexing)
 
-- `exactly-once` is not first-class
-- `consumer-groups` are guided: the simulator assigns deterministic partitions
-  and delivers one copy per configured group, but does not model offsets,
-  rebalances, or retention
-- `message-ordering` is not first-class
-- `quorum` and `consensus` are deferred
+Consult the support ledger (`supportLedger.ts`) for the authoritative tier of
+each concept — these V2 areas are `guided` (real, with declared boundaries), not
+`first-class`.
 
 ## 6. What to build next
 
-The next dependency-safe order remains:
+With V2 landed, the next dependency-safe order is:
 
 1. consume support-ledger truth in more authoring and UI surfaces
-2. extend delivery semantics into broker-specific behavior
-3. add commit-outcome semantics for correctness-heavy questions
-4. add replication and quorum behavior after that
-5. add protocol-specific semantics only after the above support truth is explicit
+2. offset-progression and retention *enforcement* as end-to-end runtime truth
+   (today they are recorded as markers, not enforced across the run)
+3. commit-outcome **coordination** toward honest exactly-once (beyond the local
+   journal)
+4. cross-node replication reconciliation and partition-ordering guarantees
+5. deeper protocol-specific transport semantics
 
 ## 7. Code map
 
@@ -249,8 +283,12 @@ The next dependency-safe order remains:
   - `src/engine/core/event-stream.ts`
   - `src/engine/engine.ts`
 - coordination markers:
-  - `src/engine/traits/idempotencyDedup.ts`
+  - `src/engine/traits/idempotencyDedup.ts` (dedup + commit-outcome + external reconciliation)
   - `src/engine/traits/lockLease.ts`
   - `src/engine/traits/reservationStore.ts`
+- V2 distributed-systems traits + state machines:
+  - `src/engine/traits/replication.ts`, `streamBroker.ts`, `protocolSession.ts`
+  - `src/engine/semantics/v2StateMachines.ts` (`ReplicatedLog`, `ReplicaCluster`, `ExternalOutcomeRegistry`, `reconcileExternalOutcome`, `routeSession`)
+  - worked trace: `specs/replication-quorum-state-machine-walkthrough.md`
 
 This is the current foundation, not the final semantics architecture.

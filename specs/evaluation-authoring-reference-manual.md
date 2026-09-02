@@ -265,10 +265,43 @@ A `rubric` check's `kind` is inferred from the metric prefix
 `reservations.oversells` · `reservations.commits` · `reservations.conflicts`
 (reservation-store — a double-book is `reservations.oversells > 0`) ·
 `locks.contentions` · `locks.acquires` · `locks.keyless` (distributed-lock) ·
-`retries.attempts` · `retries.budgetExhausted` (retry-backoff callers).
+`retries.attempts` · `retries.budgetExhausted` (retry-backoff callers) ·
+`rateLimit.breaches` · `rateLimit.admitted` · `rateLimit.rejected` ·
+`rateLimit.keyless` (rate-limiter — an over-admit is `rateLimit.breaches > 0`).
 These are `kind: "simulation"` checks. Any single trait counter is also reachable
 per node as `perNode.<nodeId>.traitCounters.<counter>`, but prefer the run-wide
 aggregate so the check does not depend on a node id the student can rename.
+
+**V2 distributed-systems trait counters (per-node only — no run-wide aggregate;
+grade via `perNode.<nodeId>.traitCounters.<counter>` OR, preferred, a runtime
+`stateTransition` criterion on the matching scope — see below):**
+
+- replication (`storage.replication-boundary` on `relational-db` / `nosql-db`):
+  `replicationQuorumWrites` · `replicationPrimaryAcks` · `replicationQuorumFailures` ·
+  `replicationLeaderPromotions` · `replicationFailoverRejects` ·
+  `replicationReplicaReads` · `replicationStaleReadsPossible`
+- stream broker (`stream.partitioned-broker` on `stream`):
+  `streamAppends` · `streamPartitionRoutes` · `streamGroupDeliveries` ·
+  `streamOffsetCommits` · `streamRetentionExpired` · `streamReplayReads` ·
+  `streamConsumerRebalances` · `streamBrokerFailures` · `streamBrokerRecoveries` ·
+  `streamBrokerUnavailable`
+- protocol/session (`protocol.session` on `load-balancer-l4` / `load-balancer-l7` /
+  `api-gateway`): `protocolL7Rejects` · `protocolFlowControlled` ·
+  `protocolSessionsOpened` · `protocolSessionsClosed` · `protocolHttpAcks`
+- idempotency + commit-outcome (`idempotency-dedup`): `idempotencyDuplicateHits` ·
+  `idempotencyUniqueKeys` · `idempotencyKeysMissing` · `idempotencyOutcomeUnknown` ·
+  `idempotencyReconciliations` · `idempotencySafeRetries` · `externalReconciliationProbes`
+
+**Runtime semantic criteria (`SEMANTIC_CRITERION`, kinds `stateTransition` /
+`stateSequence`)** grade the per-request `stateTimeline` directly — the cleanest
+way to check V2 distributed behavior. Scopes and their states:
+
+- `request` · `delivery` · `broker` · `replication` · `protocol` · `idempotency` ·
+  `commit-outcome` · `lock` · `reservation`
+- e.g. `{ "kind": "stateTransition", "match": { "scope": "replication", "state": "quorum-unavailable" }, "maxCount": 0, "hardFail": true }` — the write path never loses quorum.
+
+See `specs/runtime-semantic-criteria.md` for the full scope→state table and
+matcher/filter syntax.
 
 **Invariant:** `invariantViolations.count` · `sloBreaches.count` ·
 `conservation.unbalanced` · `littlesLaw.violations`

@@ -16,7 +16,9 @@ Key specs by area:
 - **Sizing:** [[resource-allocation-and-derived-concurrency]] · [[execution-profile-and-node-concurrency]]
 - **Edges/traits:** [[edge-properties-and-defaults]] · [[trait-integration-guide]]
 - **Cost:** [[cost-calculation-and-budgeting]]
-- **Grading:** [[evaluation-authoring-reference-manual]] · [[question-grading-model-and-anti-gaming]]
+- **Grading:** [[evaluation-authoring-reference-manual]] · [[question-grading-model-and-anti-gaming]] · [[test-case-catalog]]
+- **Authoring (start here):** [[test-case-authoring-handbook]] - ground-up teaching handbook for writing questions
+- **Runtime / V2 semantics:** [[runtime-semantic-criteria]] · [[support-ledger-and-runtime-semantics]] · [[replication-quorum-state-machine-walkthrough]] · [[rate-limiter-admission-and-breach-model]] · [[llm-backed-justification-grading]]
 - **Why it works:** [[why-this-works-math-tricks-and-skeptics-faq]]
 
 Full annotated index: [[curriculum|CURRICULUM.md]].

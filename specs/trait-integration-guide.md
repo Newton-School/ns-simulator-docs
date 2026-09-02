@@ -35,6 +35,38 @@ event timeline, the on-canvas node lens, and determinism.
 - `Blueprints` in the library now reuse the question-brief workflow for
   requirements-first scaffolds.
 
+**V2 distributed-systems landing** — four traits built on shared state machines
+(`src/engine/semantics/v2StateMachines.ts`: `ReplicatedLog`, `ReplicaCluster`,
+`ExternalOutcomeRegistry`):
+
+- `replication` (`storage.replication-boundary` on `relational-db`/`nosql-db`) —
+  primary/quorum ack, leader promotion, replica-read staleness, failover window.
+- `streamBroker` (`stream.partitioned-broker` on `stream`) — partition assignment,
+  one-delivery-per-group, offset commits, retention, replay, rebalancing, availability.
+- `protocolSession` (`protocol.session` on the LBs/`api-gateway`) — connection
+  lifecycle, HTTP ack mode, L4-vs-L7, WebSocket flow control.
+- `rateLimiter` — now keyed with token-bucket/fixed-window/sliding-window and a
+  cross-node breach oracle (`rateLimit.breaches`).
+- `idempotencyDedup` — extended with a commit-outcome journal and external
+  reconciliation probes.
+
+These use the same pipeline as every other trait (module under `traits/`,
+registered in `capabilityModules.ts`, attached via `appliesTo`); the new wrinkle
+is **run-scoped `sharedState`** for cross-node coordination and emitting
+`stateTimeline` transitions (new scopes `broker`/`replication`/`protocol`/
+`commit-outcome`) via the trait payload. See
+`specs/replication-quorum-state-machine-walkthrough.md` for a worked trace.
+
+**Hooks a trait can implement** (all optional, on `NodeBehaviourTrait`):
+`beforeArrival` · `beforeRouting` · `filterRoutes` · **`afterTerminal`** (per-request
+completion callback — fires with the final outcome after the request traverses the node;
+used by `streamBroker`/`idempotencyDedup`) · **`onTick` + `tickIntervalMs`** (a node-scoped
+**recurring timer** — when `tickIntervalMs(node)` returns a positive number the engine
+fires `onTick` every that-many ms via deterministic SYSTEM-priority `trait-tick` events,
+self-re-arming and bounded by the run end). `onTick` is request-less; surface metrics
+through `payload.metricCounters` as usual. First consumer: `windowing`. It's the
+substrate for autoscaling control loops and periodic sampling.
+
 ---
 
 ## The trait pipeline today

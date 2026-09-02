@@ -7,7 +7,7 @@ Date: 2026-09-01
 The runtime-semantics foundation (see
 `support-ledger-and-runtime-semantics.md`) records a per-request
 `stateTimeline` — the ordered transitions a request moves through across the
-`request`, `delivery`, `broker`, `idempotency`, `commit-outcome`, `lock`, and `reservation` scopes. That
+`request`, `delivery`, `broker`, `replication`, `protocol`, `idempotency`, `commit-outcome`, `lock`, and `reservation` scopes. That
 foundation *records* semantic evidence but does not *grade* it.
 
 This document defines the **authoring surface** that lets question authors grade
@@ -88,7 +88,7 @@ scope. Optional narrowing fields apply to every scope.
 
 | Field | Applies to | Meaning |
 | --- | --- | --- |
-| `scope` | all | one of `request`, `delivery`, `broker`, `idempotency`, `commit-outcome`, `lock`, `reservation` |
+| `scope` | all | one of `request`, `delivery`, `broker`, `replication`, `protocol`, `idempotency`, `commit-outcome`, `lock`, `reservation` |
 | `state` | all | a timeline state valid for that scope (below) |
 | `source` | all (optional) | which layer emitted the transition: `event`, `trait`, or `engine` |
 | `nodeId` | all (optional) | restrict to a specific node id |
@@ -102,7 +102,11 @@ Valid `state` per scope (from `simulationSemantics.ts`):
 - `delivery`: `producer-acked`, `released-to-consumer`,
   `redelivery-scheduled`, `dlq-routed`
 - `broker`: `partition-assigned`, `group-delivered`, `offset-committed`,
-  `retention-expired`
+  `retention-expired`, `broker-unavailable`, `broker-recovered`
+- `replication`: `quorum-committed`, `quorum-unavailable`, `replica-read`,
+  `stale-read-possible`, `leader-promoted`, `failover-in-progress`
+- `protocol`: `session-open`, `session-closed`, `http-acknowledged`,
+  `l7-rejected`, `flow-controlled`
 - `idempotency`: `recorded`, `deduped`, `key-missing`
 - `commit-outcome`: `intent-recorded`, `commit-confirmed`, `outcome-unknown`,
   `replay-blocked`
