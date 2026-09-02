@@ -140,20 +140,31 @@ The shape and wiring of the graph. Graded on the diagram — no simulation runs.
 **`STRUCTURAL_RULE: single-source`** — passes when the graph has **exactly one**
 traffic source (one faucet). Fails on zero or two-plus sources.
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "requires_single_source" }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "requires_single_source"
+}
 ```
 
 **`STRUCTURAL_RULE: connected-graph`** — passes when **every node is reachable**
 (no orphan/disconnected components).
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "requires_connected_graph" }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "requires_connected_graph"
+}
 ```
 
 **`STRUCTURAL_RULE: requires-component`** — passes when there are **≥ `minCount`
 nodes of `componentType`** (`minCount` defaults to 1). Use for "there must be a
 cache / a load balancer / 3 servers".
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "requires_component", "componentType": "microservice", "minCount": 3 }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "requires_component",
+  "componentType": "microservice",
+  "minCount": 3
+}
 ```
 
 **`STRUCTURAL_RULE: requires-category`** — passes when there are **≥ `minCount`
@@ -162,51 +173,88 @@ nodes in a category** (broader than a single type). Categories: `compute`,
 `orchestration-and-infra`, `security-and-identity`, `observability`,
 `devops-and-delivery`, `data-infra-and-analytics`.
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "requires_category", "category": "storage-and-data", "minCount": 1 }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "requires_category",
+  "category": "storage-and-data",
+  "minCount": 1
+}
 ```
 
 **`STRUCTURAL_RULE: max-component-count`** — passes when there are **≤ `maxCount`
 nodes of `componentType`**. Use to forbid over-provisioning ("at most one LB").
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "max_component_count", "componentType": "load-balancer", "maxCount": 1 }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "max_component_count",
+  "componentType": "load-balancer",
+  "maxCount": 1
+}
 ```
 
 **`STRUCTURAL_RULE: forbids-component`** — passes when the `componentType` is
 **absent**. Use to ban a component ("no in-memory cache as the store").
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "forbids_component", "componentType": "in-memory-cache" }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "forbids_component",
+  "componentType": "in-memory-cache"
+}
 ```
 
 **`STRUCTURAL_RULE: requires-redundancy`** — passes when a node of `componentType`
 is scaled to **≥ `minReplicas` instances** (checks the node's instance count, not the
 number of nodes). Use for "run this service with ≥ 3 replicas".
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "requires_redundancy", "componentType": "microservice", "minReplicas": 3 }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "requires_redundancy",
+  "componentType": "microservice",
+  "minReplicas": 3
+}
 ```
 
 **`STRUCTURAL_RULE: requires-edge`** — passes when a **direct edge** exists from
 `fromType` to `toType` (optionally with `mode`: `synchronous` / `asynchronous` / …).
 Use for "the LB connects directly to a server".
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "requires_edge", "fromType": "load-balancer", "toType": "microservice" }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "requires_edge",
+  "fromType": "load-balancer",
+  "toType": "microservice"
+}
 ```
 
 **`STRUCTURAL_RULE: requires-path`** — passes when **any directed path** (one or more
 hops) connects `fromType` to `toType`. Use for "the write path reaches the store".
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "requires_path", "fromType": "microservice", "toType": "relational-db" }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "requires_path",
+  "fromType": "microservice",
+  "toType": "relational-db"
+}
 ```
 
 **`STRUCTURAL_RULE: min-node-count`** — passes when the graph has **≥ `count` total
 nodes**. A coarse "build something non-trivial" floor.
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "min_node_count", "count": 4 }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "min_node_count",
+  "count": 4
+}
 ```
 
 **`STRUCTURAL_RULE: max-node-count`** — passes when the graph has **≤ `count` total
 nodes**. A coarse anti-kitchen-sink ceiling (also settable as `constraints.maxNodeCount`).
 ```json
-{ "type": "STRUCTURAL_RULE", "kind": "max_node_count", "count": 12 }
+{
+  "type": "STRUCTURAL_RULE",
+  "kind": "max_node_count",
+  "count": 12
+}
 ```
 
 ### placement / guardedPath / fanout — wiring `SEMANTIC_CRITERION` kinds
@@ -215,21 +263,45 @@ nodes**. A coarse anti-kitchen-sink ceiling (also settable as `constraints.maxNo
 path between** the two `between` types. Use for "the cache is between the service and
 the DB" (not dangling).
 ```json
-{ "type": "SEMANTIC_CRITERION", "kind": "placement", "componentType": "in-memory-cache", "between": ["microservice", "relational-db"], "points": 2 }
+{
+  "type": "SEMANTIC_CRITERION",
+  "kind": "placement",
+  "componentType": "in-memory-cache",
+  "between": [
+    "microservice",
+    "relational-db"
+  ],
+  "points": 2
+}
 ```
 
 **`SEMANTIC_CRITERION: guardedPath`** — passes when a path from `from` to `to` exists
 **AND no path bypasses the `guard`**. The write must always go through the guard.
 `hardFail: true` zeroes the whole question if bypassed.
 ```json
-{ "type": "SEMANTIC_CRITERION", "kind": "guardedPath", "from": "api-endpoint", "guard": "idempotency-manager", "to": "relational-db", "points": 3, "hardFail": true }
+{
+  "type": "SEMANTIC_CRITERION",
+  "kind": "guardedPath",
+  "from": "api-endpoint",
+  "guard": "idempotency-manager",
+  "to": "relational-db",
+  "points": 3,
+  "hardFail": true
+}
 ```
 
 **`SEMANTIC_CRITERION: fanout`** — passes when the `broker` fans out to **≥
 `minConsumers` independent consumers**; using the `forbiddenBroker` (queue semantics —
 one consumer wins) is the wrong answer. Use for pub/sub vs. work-queue.
 ```json
-{ "type": "SEMANTIC_CRITERION", "kind": "fanout", "broker": "message-broker", "minConsumers": 2, "forbiddenBroker": "message-queue", "points": 3 }
+{
+  "type": "SEMANTIC_CRITERION",
+  "kind": "fanout",
+  "broker": "message-broker",
+  "minConsumers": 2,
+  "forbiddenBroker": "message-queue",
+  "points": 3
+}
 ```
 
 ---
@@ -244,7 +316,23 @@ The *right kind* of component for the workload — graded on component choice, n
 must be one of: `point-lookup`, `time-series`, `append-only-ledger`,
 `transactional-relational`, `search-index`, `blob`.
 ```json
-{ "type": "SEMANTIC_CRITERION", "kind": "storageFit", "accessPattern": "point-lookup", "accept": ["kv-store", "nosql-db"], "partial": ["in-memory-cache"], "antiPattern": ["relational-db"], "points": 3, "hardFail": true }
+{
+  "type": "SEMANTIC_CRITERION",
+  "kind": "storageFit",
+  "accessPattern": "point-lookup",
+  "accept": [
+    "kv-store",
+    "nosql-db"
+  ],
+  "partial": [
+    "in-memory-cache"
+  ],
+  "antiPattern": [
+    "relational-db"
+  ],
+  "points": 3,
+  "hardFail": true
+}
 ```
 
 Same kind, different access patterns (the "scale-aware" variants — pick the pattern that
@@ -252,27 +340,87 @@ matches the workload the question injects):
 
 **`SEMANTIC_CRITERION: transactional-store`** — money/contended state needs ACID.
 ```json
-{ "type": "SEMANTIC_CRITERION", "kind": "storageFit", "accessPattern": "transactional-relational", "accept": ["relational-db"], "partial": ["nosql-db"], "antiPattern": ["in-memory-cache"], "points": 3, "hardFail": true }
+{
+  "type": "SEMANTIC_CRITERION",
+  "kind": "storageFit",
+  "accessPattern": "transactional-relational",
+  "accept": [
+    "relational-db"
+  ],
+  "partial": [
+    "nosql-db"
+  ],
+  "antiPattern": [
+    "in-memory-cache"
+  ],
+  "points": 3,
+  "hardFail": true
+}
 ```
 
 **`SEMANTIC_CRITERION: time-series-store`** — high-write append + range-by-time.
 ```json
-{ "type": "SEMANTIC_CRITERION", "kind": "storageFit", "accessPattern": "time-series", "accept": ["time-series-db"], "antiPattern": ["relational-db"], "points": 2 }
+{
+  "type": "SEMANTIC_CRITERION",
+  "kind": "storageFit",
+  "accessPattern": "time-series",
+  "accept": [
+    "time-series-db"
+  ],
+  "antiPattern": [
+    "relational-db"
+  ],
+  "points": 2
+}
 ```
 
 **`SEMANTIC_CRITERION: ledger-store`** — immutable append-only (payments/audit).
 ```json
-{ "type": "SEMANTIC_CRITERION", "kind": "storageFit", "accessPattern": "append-only-ledger", "accept": ["relational-db", "nosql-db"], "antiPattern": ["in-memory-cache"], "points": 2 }
+{
+  "type": "SEMANTIC_CRITERION",
+  "kind": "storageFit",
+  "accessPattern": "append-only-ledger",
+  "accept": [
+    "relational-db",
+    "nosql-db"
+  ],
+  "antiPattern": [
+    "in-memory-cache"
+  ],
+  "points": 2
+}
 ```
 
 **`SEMANTIC_CRITERION: search-store`** — full-text search.
 ```json
-{ "type": "SEMANTIC_CRITERION", "kind": "storageFit", "accessPattern": "search-index", "accept": ["search-index"], "antiPattern": ["relational-db"], "points": 2 }
+{
+  "type": "SEMANTIC_CRITERION",
+  "kind": "storageFit",
+  "accessPattern": "search-index",
+  "accept": [
+    "search-index"
+  ],
+  "antiPattern": [
+    "relational-db"
+  ],
+  "points": 2
+}
 ```
 
 **`SEMANTIC_CRITERION: blob-store`** — large immutable objects (media).
 ```json
-{ "type": "SEMANTIC_CRITERION", "kind": "storageFit", "accessPattern": "blob", "accept": ["object-storage"], "antiPattern": ["relational-db"], "points": 2 }
+{
+  "type": "SEMANTIC_CRITERION",
+  "kind": "storageFit",
+  "accessPattern": "blob",
+  "accept": [
+    "object-storage"
+  ],
+  "antiPattern": [
+    "relational-db"
+  ],
+  "points": 2
+}
 ```
 
 ---
@@ -286,57 +434,120 @@ add a `suite` to the `SIMULATOR_CONFIG` (§5).
 
 **`RUBRIC_CHECK: p99-latency`** — the tail latency must stay under the target.
 ```json
-{ "type": "RUBRIC_CHECK", "metric": "summary.latency.p99", "op": "<", "value": 100, "points": 3 }
+{
+  "type": "RUBRIC_CHECK",
+  "metric": "summary.latency.p99",
+  "op": "<",
+  "value": 100,
+  "points": 3
+}
 ```
 
 **`RUBRIC_CHECK: error-rate`** — the fraction of failed requests must stay low.
 ```json
-{ "type": "RUBRIC_CHECK", "metric": "summary.errorRate", "op": "<", "value": 0.05, "points": 2 }
+{
+  "type": "RUBRIC_CHECK",
+  "metric": "summary.errorRate",
+  "op": "<",
+  "value": 0.05,
+  "points": 2
+}
 ```
 
 **`RUBRIC_CHECK: throughput`** — the design must sustain a minimum completions/sec.
 ```json
-{ "type": "RUBRIC_CHECK", "metric": "summary.throughput", "op": ">=", "value": 150, "points": 2 }
+{
+  "type": "RUBRIC_CHECK",
+  "metric": "summary.throughput",
+  "op": ">=",
+  "value": 150,
+  "points": 2
+}
 ```
 
 **`RUBRIC_CHECK: max-utilization`** — no single node may be pinned at capacity (a
 bottleneck). `perNode.maxUtilization` is the busiest node's utilization.
 ```json
-{ "type": "RUBRIC_CHECK", "metric": "perNode.maxUtilization", "op": "<", "value": 0.9, "points": 1 }
+{
+  "type": "RUBRIC_CHECK",
+  "metric": "perNode.maxUtilization",
+  "op": "<",
+  "value": 0.9,
+  "points": 1
+}
 ```
 
 **`RUBRIC_CHECK: no-invariants`** — no physically-impossible states occurred. Invariant
 metric → set `kind: "invariant"`.
 ```json
-{ "type": "RUBRIC_CHECK", "kind": "invariant", "metric": "invariantViolations.count", "op": "==", "value": 0, "points": 1 }
+{
+  "type": "RUBRIC_CHECK",
+  "kind": "invariant",
+  "metric": "invariantViolations.count",
+  "op": "==",
+  "value": 0,
+  "points": 1
+}
 ```
 
 **`RUBRIC_CHECK: conservation`** — requests-in equals requests-out+rejected at every
 node (no requests vanish). Invariant metric.
 ```json
-{ "type": "RUBRIC_CHECK", "kind": "invariant", "metric": "conservation.unbalanced", "op": "==", "value": 0, "points": 1 }
+{
+  "type": "RUBRIC_CHECK",
+  "kind": "invariant",
+  "metric": "conservation.unbalanced",
+  "op": "==",
+  "value": 0,
+  "points": 1
+}
 ```
 
 **`RUBRIC_CHECK: no-double-book`** — correctness: a contended key was never committed by
 two reservation authorities (the reservation-store model).
 ```json
-{ "type": "RUBRIC_CHECK", "metric": "reservations.oversells", "op": "==", "value": 0, "points": 5 }
+{
+  "type": "RUBRIC_CHECK",
+  "metric": "reservations.oversells",
+  "op": "==",
+  "value": 0,
+  "points": 5
+}
 ```
 
 **`RUBRIC_CHECK: retry-budget`** — retries didn't amplify into give-ups (retry storms).
 ```json
-{ "type": "RUBRIC_CHECK", "metric": "retries.budgetExhausted", "op": "==", "value": 0, "points": 2 }
+{
+  "type": "RUBRIC_CHECK",
+  "metric": "retries.budgetExhausted",
+  "op": "==",
+  "value": 0,
+  "points": 2
+}
 ```
 
 **`RUBRIC_CHECK: lock-contention`** — distributed-lock contention stayed bounded.
 ```json
-{ "type": "RUBRIC_CHECK", "metric": "locks.contentions", "op": "<", "value": 500, "points": 2 }
+{
+  "type": "RUBRIC_CHECK",
+  "metric": "locks.contentions",
+  "op": "<",
+  "value": 500,
+  "points": 2
+}
 ```
 
 **`RUBRIC_CHECK: topology-count`** — a graph-count assertion graded as a rubric check
 (no sim). Topology metric → set `kind: "topology"`; metric must start with `topology.`.
 ```json
-{ "type": "RUBRIC_CHECK", "kind": "topology", "metric": "topology.componentCounts.microservice", "op": ">=", "value": 3, "points": 1 }
+{
+  "type": "RUBRIC_CHECK",
+  "kind": "topology",
+  "metric": "topology.componentCounts.microservice",
+  "op": ">=",
+  "value": 3,
+  "points": 1
+}
 ```
 
 **Every addressable verdict metric** (same `metric`/`op`/`value` pattern):
@@ -346,7 +557,43 @@ two reservation authorities (the reservation-store model).
 - **Per-node worst case:** `perNode.maxUtilization` · `perNode.maxErrorRate` · `perNode.maxLatencyP99`
 - **Invariant (`kind: "invariant"`):** `invariantViolations.count` · `sloBreaches.count` · `conservation.unbalanced` · `littlesLaw.violations`
 - **Topology (`kind: "topology"`):** `topology.nodeCount` · `topology.edgeCount` · `topology.sourceCount` · `topology.totalWorkers` · `topology.totalReplicas` · `topology.componentCounts.<type>` · `topology.categoryCounts.<category>`
-- **Capability counters:** `reservations.oversells` · `reservations.commits` · `reservations.conflicts` · `locks.acquires` · `locks.contentions` · `locks.keyless` · `retries.attempts` · `retries.budgetExhausted`
+- **Capability counters (run-wide):** `reservations.oversells` · `reservations.commits` · `reservations.conflicts` · `locks.acquires` · `locks.contentions` · `locks.keyless` · `retries.attempts` · `retries.budgetExhausted` · `rateLimit.breaches` · `rateLimit.admitted` · `rateLimit.rejected` · `rateLimit.keyless`
+- **V2 distributed-systems counters (per-node only — `perNode.<nodeId>.traitCounters.<counter>`, or grade via a runtime `stateTransition` criterion, below):**
+  - replication: `replicationQuorumWrites` · `replicationPrimaryAcks` · `replicationQuorumFailures` · `replicationLeaderPromotions` · `replicationFailoverRejects` · `replicationReplicaReads` · `replicationStaleReadsPossible`
+  - stream: `streamAppends` · `streamPartitionRoutes` · `streamGroupDeliveries` · `streamOffsetCommits` · `streamRetentionExpired` · `streamReplayReads` · `streamConsumerRebalances` · `streamBrokerFailures` · `streamBrokerRecoveries` · `streamBrokerUnavailable`
+  - protocol: `protocolL7Rejects` · `protocolFlowControlled` · `protocolSessionsOpened` · `protocolSessionsClosed` · `protocolHttpAcks`
+  - idempotency/commit-outcome: `idempotencyDuplicateHits` · `idempotencyUniqueKeys` · `idempotencyKeysMissing` · `idempotencyOutcomeUnknown` · `idempotencyReconciliations` · `idempotencySafeRetries` · `externalReconciliationProbes`
+
+### Runtime semantic criteria (`stateTransition` / `stateSequence`)
+
+`SEMANTIC_CRITERION` kinds that read the per-request `stateTimeline` instead of the graph — the preferred way to grade V2 behavior. Scopes → states:
+
+| scope | states |
+| --- | --- |
+| `request` | generated · admitted · queued · processing · forwarded · retry-scheduled · completed · timed-out · rejected · in-flight |
+| `delivery` | producer-acked · released-to-consumer · redelivery-scheduled · dlq-routed |
+| `broker` | partition-assigned · group-delivered · offset-committed · retention-expired · broker-unavailable · broker-recovered |
+| `replication` | quorum-committed · quorum-unavailable · replica-read · stale-read-possible · leader-promoted · failover-in-progress |
+| `protocol` | session-open · session-closed · http-acknowledged · l7-rejected · flow-controlled |
+| `idempotency` | recorded · deduped · key-missing |
+| `commit-outcome` | intent-recorded · commit-confirmed · outcome-unknown · replay-blocked |
+| `lock` | attempting · acquired · contended · held · released · key-missing |
+| `reservation` | committed · sold-out · oversold · key-missing |
+
+```json
+{
+  "type": "SEMANTIC_CRITERION",
+  "kind": "stateTransition",
+  "match": {
+    "scope": "replication",
+    "state": "quorum-unavailable"
+  },
+  "maxCount": 0,
+  "hardFail": true,
+  "points": 4
+}
+```
+Full matcher/filter syntax: `specs/runtime-semantic-criteria.md`.
 
 ---
 
@@ -358,17 +605,49 @@ Cost / anti-kitchen-sink. **Not a standalone row** — it's a `budget` field ins
 
 **Cost cap** — total provisioned $/hr must stay within the cap.
 ```json
-{ "type": "SIMULATOR_CONFIG", "budget": { "unit": "cost", "cap": 5 }, "suite": { "cases": [ { "workload": { "baseRps": 100, "requestDistribution": [ { "type": "GET" } ] } } ] } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "budget": {
+    "unit": "cost",
+    "cap": 5
+  },
+  "suite": {
+    "cases": [
+      {
+        "workload": {
+          "baseRps": 100,
+          "requestDistribution": [
+            {
+              "type": "GET"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
 ```
 
 **Node cap** — at most N nodes may be used.
 ```json
-{ "type": "SIMULATOR_CONFIG", "budget": { "unit": "nodes", "cap": 8 } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "budget": {
+    "unit": "nodes",
+    "cap": 8
+  }
+}
 ```
 
 **Edge cap** — at most N edges may be used.
 ```json
-{ "type": "SIMULATOR_CONFIG", "budget": { "unit": "edges", "cap": 10 } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "budget": {
+    "unit": "edges",
+    "cap": 10
+  }
+}
 ```
 
 ---
@@ -381,22 +660,47 @@ Optional wrapper. Add it to inject a workload (needed for any Simulation check),
 
 **`SIMULATOR_CONFIG: minimal`** — the whole thing, when you only need structural/semantic checks.
 ```json
-{ "type": "SIMULATOR_CONFIG" }
+{
+  "type": "SIMULATOR_CONFIG"
+}
 ```
 
 **`SIMULATOR_CONFIG: identity`** — `questionId` (defaults to a slug of the title); `questionType` is the task archetype — one of `open-build` · `fix` · `optimize` · `scaling` · `ha-chaos` · `tradeoff` · `build-budget` (default `open-build`); `difficulty` is `beginner` · `intermediate` · `advanced` · `expert`.
 ```json
-{ "type": "SIMULATOR_CONFIG", "questionId": "url-shortener", "questionType": "open-build", "difficulty": "advanced" }
+{
+  "type": "SIMULATOR_CONFIG",
+  "questionId": "url-shortener",
+  "questionType": "open-build",
+  "difficulty": "advanced"
+}
 ```
 
 **`SIMULATOR_CONFIG: lesson-metadata`** — `workloadCategory` (author-side hint for the dominant axis; not shown as the answer) is `read-heavy` · `write-heavy` · `connection-heavy` · `correctness-heavy` · `batch-heavy`; `entryFormat` (learner-entry shell) is `blank-canvas` · `requirements-first` · `partial-scaffold` · `broken-scaffold` · `baseline-optimize` · `locked-lab`; `domains` declares the lesson and **drives edit policy** (`network` unlocks edge editing, `cost` unlocks resource editing) — any of `compute` · `storage` · `network` · `resilience` · `correctness` · `cost`; `concepts` is free-form tags.
 ```json
-{ "type": "SIMULATOR_CONFIG", "workloadCategory": "read-heavy", "entryFormat": "requirements-first", "domains": ["storage", "compute"], "concepts": ["read-cache", "store-fit"] }
+{
+  "type": "SIMULATOR_CONFIG",
+  "workloadCategory": "read-heavy",
+  "entryFormat": "requirements-first",
+  "domains": [
+    "storage",
+    "compute"
+  ],
+  "concepts": [
+    "read-cache",
+    "store-fit"
+  ]
+}
 ```
 
 **`SIMULATOR_CONFIG: pass-threshold`** — `rubric.passThreshold` is a **fraction 0–1** (e.g. `0.71` = earn 71% of rubric points to pass); `rubric.id` is an optional label.
 ```json
-{ "type": "SIMULATOR_CONFIG", "rubric": { "id": "my-rubric", "passThreshold": 0.71 } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "rubric": {
+    "id": "my-rubric",
+    "passThreshold": 0.71
+  }
+}
 ```
 
 ### 5a. `scaffold` — the starting canvas
@@ -408,12 +712,51 @@ target for `baseline-optimize`.
 
 **`SIMULATOR_CONFIG: scaffold-empty`** — blank canvas (the default).
 ```json
-{ "type": "SIMULATOR_CONFIG", "scaffold": { "type": "empty" } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "scaffold": {
+    "type": "empty"
+  }
+}
 ```
 
 **`SIMULATOR_CONFIG: scaffold-partial`** — seed a design; here the source node is locked.
 ```json
-{ "type": "SIMULATOR_CONFIG", "scaffold": { "type": "partial", "lockedNodeIds": ["client"], "topology": { "id": "seed", "name": "seed", "version": "1.0.0", "global": { "seed": "s", "simulationDuration": 30000, "warmupDuration": 5000, "timeResolution": "millisecond", "defaultTimeout": 5000 }, "nodes": [ { "id": "client", "type": "api-endpoint", "category": "compute", "role": "source", "label": "Client", "position": { "x": 0, "y": 0 } } ], "edges": [] } } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "scaffold": {
+    "type": "partial",
+    "lockedNodeIds": [
+      "client"
+    ],
+    "topology": {
+      "id": "seed",
+      "name": "seed",
+      "version": "1.0.0",
+      "global": {
+        "seed": "s",
+        "simulationDuration": 30000,
+        "warmupDuration": 5000,
+        "timeResolution": "millisecond",
+        "defaultTimeout": 5000
+      },
+      "nodes": [
+        {
+          "id": "client",
+          "type": "api-endpoint",
+          "category": "compute",
+          "role": "source",
+          "label": "Client",
+          "position": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "edges": []
+    }
+  }
+}
 ```
 
 ### 5b. `constraints` — hard limits
@@ -424,12 +767,35 @@ target for `baseline-optimize`.
 
 **`SIMULATOR_CONFIG: constraints`** — cap the node count and ban a component.
 ```json
-{ "type": "SIMULATOR_CONFIG", "constraints": { "canModifyScaffold": true, "canRemoveScaffoldNodes": true, "maxNodeCount": 12, "maxTotalWorkers": 64, "forbiddenNodeTypes": ["in-memory-cache"] } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 12,
+    "maxTotalWorkers": 64,
+    "forbiddenNodeTypes": [
+      "in-memory-cache"
+    ]
+  }
+}
 ```
 
 **`SIMULATOR_CONFIG: constraints-whitelist`** — only these component types may be placed.
 ```json
-{ "type": "SIMULATOR_CONFIG", "constraints": { "canModifyScaffold": true, "canRemoveScaffoldNodes": true, "allowedNodeTypes": ["api-endpoint", "microservice", "relational-db", "in-memory-cache"] } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "allowedNodeTypes": [
+      "api-endpoint",
+      "microservice",
+      "relational-db",
+      "in-memory-cache"
+    ]
+  }
+}
 ```
 
 ### 5c. `suite` — the injected graded workload
@@ -446,22 +812,111 @@ edge conditions like `request.type === "read"`), `weight` (0–1, defaults to `1
 
 **`SIMULATOR_CONFIG: workload-constant`** — steady read-heavy mix.
 ```json
-{ "type": "SIMULATOR_CONFIG", "suite": { "cases": [ { "workload": { "baseRps": 2000, "pattern": "constant", "requestDistribution": [ { "type": "read", "weight": 0.99, "sizeBytes": 256 }, { "type": "write", "weight": 0.01, "sizeBytes": 512 } ] } } ] } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "suite": {
+    "cases": [
+      {
+        "workload": {
+          "baseRps": 2000,
+          "pattern": "constant",
+          "requestDistribution": [
+            {
+              "type": "read",
+              "weight": 0.99,
+              "sizeBytes": 256
+            },
+            {
+              "type": "write",
+              "weight": 0.01,
+              "sizeBytes": 512
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
 ```
 
 **`SIMULATOR_CONFIG: workload-spike`** — a traffic spike partway through the run.
 ```json
-{ "type": "SIMULATOR_CONFIG", "suite": { "cases": [ { "id": "peak-spike", "workload": { "baseRps": 1000, "pattern": "spike", "spike": { "spikeTime": 10000, "spikeRps": 5000, "spikeDuration": 3000 }, "requestDistribution": [ { "type": "GET" } ] } } ] } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "suite": {
+    "cases": [
+      {
+        "id": "peak-spike",
+        "workload": {
+          "baseRps": 1000,
+          "pattern": "spike",
+          "spike": {
+            "spikeTime": 10000,
+            "spikeRps": 5000,
+            "spikeDuration": 3000
+          },
+          "requestDistribution": [
+            {
+              "type": "GET"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
 ```
 
 **`SIMULATOR_CONFIG: workload-contended`** — a contended keyspace (reservation / no-double-book).
 ```json
-{ "type": "SIMULATOR_CONFIG", "workloadCategory": "correctness-heavy", "suite": { "cases": [ { "id": "on-sale-burst", "workload": { "baseRps": 1500, "requestDistribution": [ { "type": "book", "weight": 1.0, "keyspace": { "field": "seatId", "size": 40 } } ] } } ] } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "workloadCategory": "correctness-heavy",
+  "suite": {
+    "cases": [
+      {
+        "id": "on-sale-burst",
+        "workload": {
+          "baseRps": 1500,
+          "requestDistribution": [
+            {
+              "type": "book",
+              "weight": 1,
+              "keyspace": {
+                "field": "seatId",
+                "size": 40
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
 ```
 
 **`SIMULATOR_CONFIG: workload-idempotency`** — request `metadata` (e.g. an idempotency key).
 ```json
-{ "type": "SIMULATOR_CONFIG", "suite": { "cases": [ { "workload": { "baseRps": 500, "requestDistribution": [ { "type": "create-payment", "metadata": { "idempotencyKey": "pay-001" } } ] } } ] } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "suite": {
+    "cases": [
+      {
+        "workload": {
+          "baseRps": 500,
+          "requestDistribution": [
+            {
+              "type": "create-payment",
+              "metadata": {
+                "idempotencyKey": "pay-001"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
 ```
 
 ### 5d. `environmentProfile` — the mode + visibility + capabilities lens
@@ -476,13 +931,89 @@ is `network` (modeled edges) · `connector` (dumb wires); the other capabilities
 
 **`SIMULATOR_CONFIG: environment-assignment`** — the standard locked assignment lens.
 ```json
-{ "type": "SIMULATOR_CONFIG", "environmentProfile": { "mode": "ASSIGNMENT", "graded": true, "chromeDensity": "minimal", "visibility": { "prompt": true, "scaffoldSourceNodes": true, "gradingSuiteDetails": false, "liveMetrics": true, "rubricChecks": "LIVE_DURING_BUILD" }, "capabilities": { "edgeModel": "connector", "canEditEdges": false, "canEditResources": false, "canEditExecutionProfile": false, "canTriggerTestRuns": true } } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "environmentProfile": {
+    "mode": "ASSIGNMENT",
+    "graded": true,
+    "chromeDensity": "minimal",
+    "visibility": {
+      "prompt": true,
+      "scaffoldSourceNodes": true,
+      "gradingSuiteDetails": false,
+      "liveMetrics": true,
+      "rubricChecks": "LIVE_DURING_BUILD"
+    },
+    "capabilities": {
+      "edgeModel": "connector",
+      "canEditEdges": false,
+      "canEditResources": false,
+      "canEditExecutionProfile": false,
+      "canTriggerTestRuns": true
+    }
+  }
+}
 ```
 
 ### 5e. Full example — everything in one row
 
 ```json
-{ "type": "SIMULATOR_CONFIG", "questionId": "flash-sale-booking", "questionType": "open-build", "difficulty": "advanced", "workloadCategory": "correctness-heavy", "domains": ["storage", "correctness"], "concepts": ["atomic-reservation", "no-double-book"], "scaffold": { "type": "empty" }, "constraints": { "canModifyScaffold": true, "canRemoveScaffoldNodes": true, "maxNodeCount": 12 }, "budget": { "unit": "cost", "cap": 5 }, "suite": { "cases": [ { "id": "on-sale-burst", "workload": { "baseRps": 1500, "requestDistribution": [ { "type": "book", "weight": 1.0, "keyspace": { "field": "seatId", "size": 40 } } ] } } ] }, "rubric": { "id": "flash-sale-rubric", "passThreshold": 0.71 }, "environmentProfile": { "mode": "ASSIGNMENT", "graded": true, "chromeDensity": "minimal" } }
+{
+  "type": "SIMULATOR_CONFIG",
+  "questionId": "flash-sale-booking",
+  "questionType": "open-build",
+  "difficulty": "advanced",
+  "workloadCategory": "correctness-heavy",
+  "domains": [
+    "storage",
+    "correctness"
+  ],
+  "concepts": [
+    "atomic-reservation",
+    "no-double-book"
+  ],
+  "scaffold": {
+    "type": "empty"
+  },
+  "constraints": {
+    "canModifyScaffold": true,
+    "canRemoveScaffoldNodes": true,
+    "maxNodeCount": 12
+  },
+  "budget": {
+    "unit": "cost",
+    "cap": 5
+  },
+  "suite": {
+    "cases": [
+      {
+        "id": "on-sale-burst",
+        "workload": {
+          "baseRps": 1500,
+          "requestDistribution": [
+            {
+              "type": "book",
+              "weight": 1,
+              "keyspace": {
+                "field": "seatId",
+                "size": 40
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rubric": {
+    "id": "flash-sale-rubric",
+    "passThreshold": 0.71
+  },
+  "environmentProfile": {
+    "mode": "ASSIGNMENT",
+    "graded": true,
+    "chromeDensity": "minimal"
+  }
+}
 ```
 
 ---
@@ -521,6 +1052,28 @@ Partition Node → `partition-node`
 **Orchestration / Infra** — Discovery Service → `service-registry` ·
 Config Store → `config-store` · Secrets Manager → `secrets-manager` ·
 Feature Flag Service → `feature-flag-service`
+
+### 6a. Capability-carrying types (V2 distributed-systems traits)
+
+Placing these types (and enabling their config) turns on runtime state machines
+that emit the counters and `stateTimeline` scopes in §3:
+
+- **`stream`** → partitioned-broker: partition assignment, one-delivery-per-group,
+  offset commits, retention, replay, rebalancing, availability (`broker` scope).
+- **`relational-db` / `nosql-db`** with `replicationEnabled: true` → replication:
+  primary/quorum ack, leader promotion, replica-read staleness, failover window
+  (`replication` scope). Config: `writeAckPolicy` (`primary`|`quorum`),
+  `replicaMembers`, `consensusProtocol` (`raft`|`none`), `replicationLagMs`,
+  `failoverUntilMs`, `replicationRole`.
+- **`load-balancer-l4` / `load-balancer-l7` / `api-gateway`** → protocol/session:
+  connection lifecycle, HTTP ack mode, L4-vs-L7 policy, WebSocket flow control
+  (`protocol` scope). Config: `sessionProtocol` (`http`|`http2`|`tcp`|`websocket`).
+- **`rate-limiter` / `api-gateway` / `throttler`** → rate limiter: token-bucket /
+  fixed-window / sliding-window admission, keyed per client, with a cross-node
+  breach oracle (`rateLimit.breaches`). Config: `algorithm`, `limit`, `windowMs`,
+  `rateLimitKeyField`. See `specs/rate-limiter-admission-and-breach-model.md`.
+- **`idempotency-manager`** → dedup + commit-outcome journal + external
+  reconciliation (`idempotency` and `commit-outcome` scopes).
 
 **Observability** — Metrics Collector → `metrics-store` ·
 Log Collector / Centralized Logging → `centralized-logging` ·
