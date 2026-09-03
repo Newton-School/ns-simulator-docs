@@ -46,14 +46,8 @@
       "kind": "storageFit",
       "description": "200K writes/s time-series data should use wide-column, time-series, or suitable NoSQL storage - not relational",
       "accessPattern": "time-series",
-      "accept": [
-        "time-series-db",
-        "columnar-db",
-        "nosql-db"
-      ],
-      "antiPattern": [
-        "relational-db"
-      ],
+      "accept": ["time-series-db", "columnar-db", "nosql-db"],
+      "antiPattern": ["relational-db"],
       "points": 6,
       "hardFail": true
     }
@@ -69,7 +63,7 @@
           "baseRps": 3000,
           "requestDistribution": [
             {
-              "type": "write",
+              "type": "ingest",
               "weight": 0.95,
               "sizeBytes": 256
             },
@@ -123,10 +117,6 @@
     }
   ],
   "family": "storage",
-  "domains": [
-    "storage"
-  ],
-  "concepts": [
-    "store-fit"
-  ]
+  "domains": ["storage"],
+  "concepts": ["store-fit"]
 }

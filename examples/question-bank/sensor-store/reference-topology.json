@@ -145,7 +145,7 @@
     "baseRps": 3000,
     "requestDistribution": [
       {
-        "type": "write",
+        "type": "ingest",
         "weight": 0.95,
         "sizeBytes": 256
       },

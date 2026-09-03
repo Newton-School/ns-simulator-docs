@@ -30,11 +30,21 @@ Justification prompts are currently hidden in the Newton assignment UI and are n
 - `question_text`:
 
 ```html
-<p>You are designing the ingestion backend for a large IoT fleet that keeps sending time-stamped readings. You are designing the system architecture - placing, connecting, and sizing infrastructure components, not writing application code.</p>
-<p>Design an ingest path that sustains a very high write rate where new readings are only added, and supports range queries over recent time windows per sensor. Choose a storage engine whose access pattern matches time-series data.</p>
+<p>
+  You are designing the ingestion backend for a large IoT fleet that keeps sending time-stamped
+  readings. You are designing the system architecture - placing, connecting, and sizing
+  infrastructure components, not writing application code.
+</p>
+<p>
+  Design an ingest path that sustains a very high write rate where new readings are only added, and
+  supports range queries over recent time windows per sensor. Choose a storage engine whose access
+  pattern matches time-series data.
+</p>
 <p>Target: sustain the injected write throughput without dropping events.</p>
 <p>Traffic: 200,000 writes/sec, with about 5% reads for recent-window range queries.</p>
-<p>At submission you will explain your storage-engine choice for time-series data at this write rate.</p>
+<p>
+  At submission you will explain your storage-engine choice for time-series data at this write rate.
+</p>
 <h3>Functional Requirements</h3>
 <ul>
   <li>Ingest time-stamped readings at a sustained high write rate.</li>
@@ -74,12 +84,8 @@ Justification prompts are currently hidden in the Newton assignment UI and are n
 {
   "type": "SIMULATOR_CONFIG",
   "questionId": "sensor-store",
-  "domains": [
-    "storage"
-  ],
-  "concepts": [
-    "store-fit"
-  ],
+  "domains": ["storage"],
+  "concepts": ["store-fit"],
   "workloadCategory": "write-heavy",
   "constraints": {
     "maxNodeCount": 10
@@ -94,7 +100,7 @@ Justification prompts are currently hidden in the Newton assignment UI and are n
           "baseRps": 3000,
           "requestDistribution": [
             {
-              "type": "write",
+              "type": "ingest",
               "weight": 0.95
             },
             {
@@ -159,14 +165,8 @@ Justification prompts are currently hidden in the Newton assignment UI and are n
   "kind": "storageFit",
   "description": "200K writes/s time-series data should use wide-column, time-series, or suitable NoSQL storage - not relational",
   "accessPattern": "time-series",
-  "accept": [
-    "time-series-db",
-    "columnar-db",
-    "nosql-db"
-  ],
-  "antiPattern": [
-    "relational-db"
-  ],
+  "accept": ["time-series-db", "columnar-db", "nosql-db"],
+  "antiPattern": ["relational-db"],
   "points": 6,
   "hardFail": true
 }
