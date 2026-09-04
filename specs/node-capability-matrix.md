@@ -85,6 +85,7 @@ text, or not at all), so students couldn't learn it by running the sim.
 | `windowing` (`streaming-analytics`) | Processing-time tumbling windows: accumulate on arrival, emit a per-window aggregate on the recurring timer | First consumer of the `onTick` timer hook — one output per window, not per event. |
 | `fanoutQuery` (`search-service`/`search-index`) | Scatter-gather tail latency as the max of N per-shard samples (grows ≈ ln N) | Distributed-search tail: why more shards ≠ always faster. |
 | `autoscaler` (`microservice`/`serverless-function`) | A utilization-target control loop on `onTick` that resizes effective concurrency every cooldown (reaction-lagged) | Capacity follows demand — via the `onTick` timer + the new **dynamic-capacity** resize; scaling still costs money. |
+| `computeContention` (all instance-model nodes) | Two-tier service time: the sourced `cpuBoundFraction` of compute contends for physical cores (`vCPU × instances`), the rest multiplexes freely; service stretches by `max(1, activeWorkers·f / cores)`. Headline utilization becomes `max(worker-occupancy, CPU-occupancy)`. | Closes an active capacity overstatement: a 128-io-worker / 4-core store no longer reports headroom while its cores are pinned. Zero-regression for legacy (`f=0`) and cpu-bound (`c=cores`) nodes. See [`compute-contention-two-tier-model.md`](./compute-contention-two-tier-model.md). |
 
 ### Engine hooks a trait can use
 
@@ -110,7 +111,6 @@ substrate for autoscaling and periodic sampling).
 
 | Trait | What it models | Why it exists |
 |-------|----------------|---------------|
-| `computeContention` | CPU-core / thread-pool saturation + boot delay | Real services are bound by cores and pools, not an abstract "worker" count. Needed for accurate sizing and saturation. |
 | `consistencyModel` | one vs quorum vs strong → latency & staleness | The central distributed-data tradeoff; needed so stronger consistency costs latency. |
 | `persistentConnFanout` | Millions of long-lived connections + push fan-out | Real-time systems have a fundamentally different concurrency model from request/response. |
 | `telemetrySink` | Ingest cap + sampling + query cost (off request path) | Observability has its own load; needed to model sampling tradeoffs and telemetry back-pressure. |
@@ -129,13 +129,13 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 | Node | 📦 | Trait | Why this node needs it | Config → behavior |
 |------|----|-------|------------------------|-------------------|
 | `api-endpoint` | 📦 | ✅`source.workload` +🔧`requestMix` | 🟢 It's the traffic origin - its pattern & mix define the load everything else must survive | `sim.requestMix[]` → typed traffic; `sim.payloadBytes`; `sim.closedLoop`+`sim.thinkTimeMs` |
-| `microservice` | 📦 | ✅`retryBackoff` +🔧`computeContention` | Stateless handlers now express real caller-owned retries, but still saturate on abstract workers rather than explicit cores/threads | `resilience.retry.*`, future `sim.cpuBoundRatio`, `sim.threadPool`, `sim.dependencyFanout` |
+| `microservice` | 📦 | ✅`retryBackoff` +✅`computeContention` | Stateless handlers express real caller-owned retries, and now saturate on explicit physical cores (via the sourced `cpuBoundFraction`) rather than abstract workers | `resilience.retry.*`, `resources.workloadKind` (drives the CPU fraction), `sim.dependencyFanout` |
 | `batch-worker` | 📦 | ✅`retryBackoff` +🔧`batching` | Workers often own retry budget as well as batch size; retries now consume real worker capacity while true batching remains future work | `resilience.retry.*`, future `sim.batchSize`, `sim.prefetch`, `sim.parallelism` |
 | `sidecar` | 📦 | ✅`circuitBreaker` +✅`retryBackoff` | Proxies every call; breakers protect the mesh and retries now re-enter the caller instead of being prose-only | `resilience.circuitBreaker.*`, `resilience.retry.*`, `sim.proxyOverheadMs`, `sim.mtlsMs` |
 | `serverless-function` | 📦 | ✅`coldStart` +✅`retryBackoff` | Scales from zero and can now own retried downstream calls with real backoff cost | `sim.coldStartLatencyMs`,`sim.idleTimeoutMs`,`sim.maxConcurrency`, `resilience.retry.*` |
 | `faas-background` | | ➕`coldStart` +🔧`retryBackoff` | Event-triggered and retried async - same cold-start + retry concerns | `sim.triggerBatch`, `resilience.retry.*`, `sim.coldStartLatencyMs` |
-| `container` | | 🔧`computeContention` | Hard CPU/memory limits throttle it before the queue does | `resources.cpu/memory`, `sim.restartOnCrash` |
-| `vm-instance` | | 🔧`computeContention` | Slow to boot, so scale-out lags demand | `sim.bootMs`, `sim.noisyNeighborVariance` |
+| `container` | | ✅`computeContention` | Hard CPU limits throttle it before the queue does — now modeled via physical-core contention | `resources.instanceType/instanceCount`, `sim.restartOnCrash` |
+| `vm-instance` | | ✅`computeContention` | CPU-bound compute contends for real cores; boot delay remains future work | `resources.instanceType/instanceCount`, `sim.bootMs` |
 | `edge-compute` | 📦 | 🔧`geoLatency` | Runs at PoPs; distance to the user dominates its latency | `sim.popLatencyMs`, constrained `resources.*` |
 | `gpu-node` | | 🔧`batching` | Efficient only when inference is batched; VRAM caps concurrency | `sim.batchWindowMs`+`sim.maxBatch`, `sim.vramMB`, `sim.modelLoadMs` |
 | `auth-service` | 📦 | ✅`retryBackoff` +➕`cache` | Auth hops now express retry load amplification; a token cache is still the main missing differentiated path | `resilience.retry.*`, future `sim.tokenVerifyMs`, `sim.tokenCacheHitRate` |
