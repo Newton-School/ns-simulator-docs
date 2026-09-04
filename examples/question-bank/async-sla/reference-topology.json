@@ -28,8 +28,6 @@
         "instanceType": "m5.large",
         "instanceCount": 1,
         "workloadKind": "io-bound",
-        "workersPerInstance": 500,
-        "queueSlots": 99500,
         "perRequestMemMb": 0.04096
       },
       "processing": {
@@ -58,8 +56,6 @@
         "instanceType": "c5.large",
         "instanceCount": 1,
         "workloadKind": "io-bound",
-        "workersPerInstance": 80,
-        "queueSlots": 99920,
         "perRequestMemMb": 0.02048
       },
       "processing": {
@@ -88,8 +84,6 @@
         "instanceType": "m5.large",
         "instanceCount": 1,
         "workloadKind": "io-bound",
-        "workersPerInstance": 300,
-        "queueSlots": 99700,
         "perRequestMemMb": 0.04096
       },
       "processing": {
@@ -118,8 +112,6 @@
         "instanceType": "c5.large",
         "instanceCount": 1,
         "workloadKind": "io-bound",
-        "workersPerInstance": 100,
-        "queueSlots": 99900,
         "perRequestMemMb": 0.02048
       },
       "processing": {
@@ -148,8 +140,6 @@
         "instanceType": "m5.xlarge",
         "instanceCount": 1,
         "workloadKind": "io-bound",
-        "workersPerInstance": 60,
-        "queueSlots": 99940,
         "perRequestMemMb": 0.08192
       },
       "processing": {

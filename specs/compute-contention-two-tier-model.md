@@ -6,6 +6,13 @@ This is a **core change to `GGcKNode` service-time and concurrency semantics** �
 
 **Decision committed (Hritvik, 2026-09-03):** ship the *hard* version — two tiers, **CPU utilization as the single headline number**. No dual-utilization "caller picks" option; that reintroduces the ambiguity that is itself the doctrine problem. Spec first, no queue code, until §1 (the derivation question) resolves.
 
+**STATUS — SHIPPED & GATE-PASSED (2026-09-03).** Implemented in `GGcKNode` + `metrics.ts` + `resourceDerivation.ts`. Two refinements emerged during implementation and are now part of the model:
+
+1. **Headline utilization = `max(worker-occupancy, CPU-occupancy)`**, not CPU-occupancy alone. A pure-I/O node has CPU-occupancy 0, so a bare "CPU utilization" headline would read 0% while its connection pool is maxed — itself a lie. `max()` reports the *binding* resource: it collapses to worker-occupancy for legacy/pure-I/O nodes (zero regression) and to the identical value for cpu-bound nodes (`c = cores`), and only diverges upward when a compute-heavy node pins its cores while the worker pool looks idle. This is stricter-honest than the original §5 wording and supersedes it.
+2. **The workloadKind-consistency rule (`effectiveCpuBoundFraction`).** The fraction must be consistent with the execution profile that derived `effectiveC`. A node's per-type `cpuBoundFraction` (§ sourcing doc) applies only when its `workloadKind` matches the type default. On an **override**: cpu-bound override → `1.0` (all on-core); **io-bound override on a cpu-bound type → a locked `IO_BOUND_OVERRIDE_CPU_FRACTION = 0.1`**, NOT the type's `1.0`. Without this, a `microservice` deliberately modelled io-bound (an app server that mostly waits on a downstream store — common in the question bank) would pair io-bound concurrency (64 workers) with cpu-bound contention (fraction 1.0, 2 cores) and be *falsely pinned*. This rule fixed 5 false reference regressions the migration gate caught.
+
+**Migration gate result** (spec §8, `scripts/compute-contention-migration.ts`): `flipped: 0, drift-only: 17, unchanged: 11` across all 28 bank topologies — every reference still passes, every gamed still fails (discrimination preserved). Drift landed correctly: modest on app servers (io-override 0.1), large on the data tier (`db +84pp`, `tsdb +75pp` — stores honestly showing the CPU utilization they were hiding). 779 unit tests pass.
+
 ---
 
 ## Table of Contents
