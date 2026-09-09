@@ -389,6 +389,45 @@ Base fields on every rule: `kind` (required) plus `id` and `description` (both
 | `requires_connected_graph` | - | every node reachable (undirected BFS) |
 | `requires_single_source` | - | exactly one source node (no inbound edge) |
 
+### 5.4 Learner-created components (Service Builder / Custom Node Builder)
+
+Learners can now **compose** nodes with the Service Builder and Custom Node Builder
+instead of only dragging palette items. This does **not** change the grading engine —
+but it changes how you must author targeting. See the builder spec
+`custom-node-and-service-definition-spec.md` §15.1 for the full contract.
+
+**Creation is transparent to grading.** Every created node serializes to a real
+`componentType` — a built *service* becomes `microservice` / `serverless-function` /
+`batch-worker`; a built *custom node* becomes its backing type (`in-memory-cache`,
+`relational-db`, `queue`, `api-endpoint`, …). All rules above match on that resolved
+`componentType`, never on the learner's label or the builder's declared contract. So a
+learner's "URL Shortening Service" satisfies a `requires_component: microservice` rule
+automatically.
+
+Four authoring rules follow:
+
+1. **Target component-type *sets*, not a single type, when the runtime is a free
+   choice.** The Service Builder lets a service run as `microservice`, `serverless-function`,
+   or `batch-worker`. A rule pinning one type will fail a valid alternative. Prefer
+   `requires_category`, or `storage_fit.accept[]`/`partial[]`, or a `requires_path`
+   that does not over-constrain the exact node type. (Extends the multiple-valid-
+   solutions guidance.)
+2. **Gate creation with `allowedNodeTypes` / `forbiddenNodeTypes`** (SIMULATOR_CONFIG,
+   §11.4). These operate on the **resolved componentType**, so they already apply to
+   created nodes — use them so a learner can't simply *conjure* the exact node the
+   question is testing (e.g. forbid the anti-pattern store types).
+3. **Never grade the declared contract.** The builder's operations, capabilities, and
+   per-operation dependencies are documentation-only and invisible to grading. A
+   `requires_edge` / `requires_path` / guarded-path check needs the learner's **actual
+   edge**, not a *declared* dependency. (A renderer-side advisory lint flags declared-
+   but-unwired dependencies as feedback — it never touches grading.)
+4. **Label-independence is a feature.** A `microservice` mislabeled "Redis Cache" still
+   fails `requires_component: in-memory-cache`. No need to defend rules against naming.
+
+**Current limitation.** There is no per-question *builder* policy yet (allow/deny each
+builder, cap runtime templates or node classes). You can only gate at the
+`componentType` level via `allowedNodeTypes` / `forbiddenNodeTypes`.
+
 ---
 
 ## Section 6 - Justifications, Tradeoffs & Cost Constraints
@@ -610,6 +649,11 @@ Every customizable property across the DSL. **Scope** names the containing objec
 - **Read/write mix is JSON-only** - not settable on the canvas or a source node
   (both `Omit` `requestDistribution`); and it only affects the sim when the topology
   routes on `request.type`.
+- **Learner-created nodes grade by resolved `componentType`, not by their builder
+  contract** - a built service is a `microservice`/`serverless-function`/`batch-worker`;
+  a built custom node is its backing type. Target component-type *sets* when the runtime
+  is a free choice, gate creation with `allowedNodeTypes`/`forbiddenNodeTypes`, and never
+  grade the declared operations/capabilities/dependencies (§5.4).
 - **Omitted edge latency is now deterministic by default** - a bare edge resolves to
   a path-type-derived **constant** median latency, not an implicit log-normal. If a
   question needs network jitter, author it explicitly.
