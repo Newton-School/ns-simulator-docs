@@ -120,3 +120,67 @@ received** — the gap is the writes that skipped the cache.
   from cache, but at 1% write volume the distortion is negligible.
 - **Leaner path:** the API Server is an extra hop that only adds latency; route the
   source straight into the URL Shortening Service if you don't need it.
+
+---
+
+## Full reference topology (the canonical design)
+
+The section above is the minimal cache-aside build. This is the complete reference from
+the interview write-up (`URL shortener.pdf`), split into the write path and the read
+path, with the ID generator and async analytics. This is the "correct" diagram.
+
+```
+Client (Request source)
+   │  GET /{key} visit 99%  ·  POST /shorten create 1%
+   ▼
+API Gateway  (TLS · auth · rate-limit; content-routing by method)
+   ├──(POST create)──►  Write Service (microservice)
+   │                        ├──► ID Generator   (get ID block)
+   │                        └──► KV Store (NoSQL DB)   (store mapping)
+   └──(GET /{key})───►  Redirect Service (microservice, N pods)
+                            └──► Redis (Distributed cache) ──► KV Store (miss → fetch)
+   Redirect Service ──async──► Event Queue (Event stream) ──► Analytics (Data warehouse)
+```
+
+### Nodes
+
+| Node | Simulator component | Key config |
+|---|---|---|
+| Client | Custom Node → Network → **Request source** | Arrival: Base RPS (peak read), pattern; ops `visit` GET 99% / `shorten` POST 1% |
+| API Gateway | palette **API Gateway** | routing rules: GET→Redirect, POST→Write; rate-limit trait |
+| Write Service | Service Builder → **Long-running service** | stateless microservice |
+| Redirect Service | Service Builder → **Long-running service** | Capacity → instance count = N |
+| **ID Generator** | palette **ID Generator** (Compute) | **Kind = Range allocator, Block = 1000** (off hot path). Flip to **Central** to demo the write-spike bottleneck |
+| KV Store | palette **NoSQL DB** | partitioned by short_key; replication is a justify point |
+| Redis | Custom Node → Storage → **Distributed cache** | Cache hit rate 0.95 |
+| Event Queue | Custom Node → Messaging → **Event stream** | async boundary |
+| Analytics | palette **Data warehouse** | sink |
+
+### Edges
+
+```
+Client              → API Gateway
+API Gateway         → Write Service        (rule: method POST)
+API Gateway         → Redirect Service     (rule: method GET)
+Write Service       → ID Generator
+Write Service       → KV Store
+Redirect Service    → Redis → KV Store     (cache-aside; miss falls through)
+Redirect Service    → Event Queue → Analytics   (async click path)
+```
+
+### The two design decisions this topology makes gradeable
+
+- **Cache offload (read path):** Redis hit rate ~0.95 → the KV store sees ~5% of reads.
+  Measured: KV received collapses; cache p50 sub-ms. (Built + verified earlier.)
+- **ID allocation (write path):** the **ID Generator** kind/mode is a real simulated
+  knob. **Range allocator / block 1000** → the allocator's mean service time is
+  ~0.05 ms and it stays idle. Flip to **Central counter** → every create pays ~2 ms
+  coordination, so under a POST spike the allocator's p99 climbs and it becomes the write
+  bottleneck. That is the "pre-allocated ranges avoid contention" argument turned into a
+  measured difference, per `specs/id-sequence-generator-node.md`.
+
+### Where the reference is still justification (not simulated)
+Per the overcoming-notes: KV **replication under fault** (needs fault authoring +
+replicas field), **read-your-write** staleness, and **cache single-flight / stampede**
+remain topology + justification until those surfaces ship. Everything else above is a
+measured metric.

@@ -37,8 +37,10 @@ change simulation output:
 | retry-timeout | `maxRetries` | `sim.retry.maxAttempts` | **no (gap)** |
 | rate-limiting | `limitPerSecond` | `sim.maxTokens` + `sim.refillRatePerSecond` | yes |
 | external-dependency | `errorRate` | `sim.nodeErrorRate` | yes |
+| external-dependency | `latencyMs` | `sim.processing` (constant service time) | yes |
 | cache | `cacheHitRate` | `sim.cacheHitRate` | yes (distributed-cache template) |
 | cache | `cacheHitLatencyMs` | `sim.cacheHitLatencyMs` | yes (distributed-cache template) |
+| arrival | `baseRps`, `pattern` | `sim.source.defaultWorkload.baseRps` / `.pattern` | yes (request-source template) |
 
 Everything else the builder collects — **all capabilities**, **all operations and
 their input/output fields**, **all per-operation dependencies**, and the
@@ -402,8 +404,9 @@ condition (§0.2 rule 3).
 | Serverless lifecycle | `coldStartLatencyMs`, `idleTimeoutMs`, `maxConcurrency` | `sim.coldStartLatencyMs` / `idleTimeoutMs` / `maxConcurrency` | serverless-function |
 | Retry and timeout | `timeoutMs`, `maxRetries` | `sim.processing.timeout` / `sim.retry` | services + relational datastore |
 | Rate limiting | `limitPerSecond` | `sim.maxTokens` + `sim.refillRatePerSecond` | long-running service |
-| External dependency | `errorRate` | `sim.nodeErrorRate` | external-dependency |
+| External dependency | `latencyMs`, `errorRate` | `sim.processing` (service time) / `sim.nodeErrorRate` | external-dependency |
 | **Cache** | `cacheHitRate`, `cacheHitLatencyMs` | `sim.cacheHitRate` / `sim.cacheHitLatencyMs` | **distributed-cache** |
+| **Arrival** | `baseRps`, `pattern` | `sim.source.defaultWorkload` | **request-source** (its operations also drive the request mix) |
 
 **Not present (removed in V1, no engine mapping):** `circuit-breaker`, `idempotency`,
 `async-emission`. Do not reintroduce them as toggles until they map to `sim.*`. A field
