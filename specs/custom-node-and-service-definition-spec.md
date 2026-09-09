@@ -37,6 +37,8 @@ change simulation output:
 | retry-timeout | `maxRetries` | `sim.retry.maxAttempts` | **no (gap)** |
 | rate-limiting | `limitPerSecond` | `sim.maxTokens` + `sim.refillRatePerSecond` | yes |
 | external-dependency | `errorRate` | `sim.nodeErrorRate` | yes |
+| cache | `cacheHitRate` | `sim.cacheHitRate` | yes (distributed-cache template) |
+| cache | `cacheHitLatencyMs` | `sim.cacheHitLatencyMs` | yes (distributed-cache template) |
 
 Everything else the builder collects — **all capabilities**, **all operations and
 their input/output fields**, **all per-operation dependencies**, and the
@@ -383,26 +385,37 @@ Allowed service runtimes:
 The service builder should default to `long-running-service`, but the user may
 change it when the question policy allows.
 
-### 6.5 Service traits
+### 6.5 Trait packs (executable set — both builders)
 
-The Service Builder should offer trait packs, not raw JSON.
+Both builders offer trait packs, not raw JSON. This is the **complete** set of packs
+that exist, each shown only on the runtime templates where it applies (`RUNTIME_TEMPLATES[*].traitPacks`).
 
-Legend: **exec** = mapped to `sim.*` and changes simulation output; **contract** =
-documentation/validation only (per §0.2 rule 1 it must be labeled as such in the UI).
+Legend: **exec** = mapped to `sim.*` in `applyDefinitionTraits` and changes simulation
+output; **contract** = documentation/validation only (per §0.2 rule 1 it must be
+labeled as such in the UI). Every pack here has a real mapping — that is the entry
+condition (§0.2 rule 3).
 
-| Trait pack | Executable fields (mapped) | Contract-only fields | Applies when |
+| Trait pack | Executable fields (mapped) | → `sim.*` | Applies on templates |
 |---|---|---|---|
-| Capacity | `workloadKind`, `workersPerInstance`, `instanceCount`, `queueSlots` | `instanceType` | Long-running and worker services |
-| Workload profile | `serviceTimeMs` | `payloadSizeClass` | All service runtimes |
-| Serverless lifecycle | `coldStartLatencyMs`, `idleTimeoutMs`, `maxConcurrency` | — | Serverless runtime |
-| Retry and timeout | `timeoutMs`, `maxRetries` | `backoffMs` | Services that call dependencies |
-| Rate limiting | `limitPerSecond` | `burst`, `rejectPolicy` | Public-facing or abuse-sensitive services |
-| Async emission | — (not yet mapped) | all | Services that enqueue/publish events |
+| Capacity | `workloadKind`, `workersPerInstance`, `instanceCount`, `queueSlots` | `sim.resources.*` | long-running service, worker, all storage/messaging |
+| Workload profile | `serviceTimeMs` | `sim.processing` | every template |
+| Serverless lifecycle | `coldStartLatencyMs`, `idleTimeoutMs`, `maxConcurrency` | `sim.coldStartLatencyMs` / `idleTimeoutMs` / `maxConcurrency` | serverless-function |
+| Retry and timeout | `timeoutMs`, `maxRetries` | `sim.processing.timeout` / `sim.retry` | services + relational datastore |
+| Rate limiting | `limitPerSecond` | `sim.maxTokens` + `sim.refillRatePerSecond` | long-running service |
+| External dependency | `errorRate` | `sim.nodeErrorRate` | external-dependency |
+| **Cache** | `cacheHitRate`, `cacheHitLatencyMs` | `sim.cacheHitRate` / `sim.cacheHitLatencyMs` | **distributed-cache** |
 
-`circuit-breaker` and `idempotency` are **removed** from V1 (no engine mapping); do
-not reintroduce them as toggles until they map to `sim.*`. A field is shown in the
-builder only if it is executable **or** explicitly rendered under a "contract" label
-(§0.2 rules 2–3).
+**Not present (removed in V1, no engine mapping):** `circuit-breaker`, `idempotency`,
+`async-emission`. Do not reintroduce them as toggles until they map to `sim.*`. A field
+is shown in the builder only if it is executable **or** explicitly rendered under a
+"contract" label (§0.2 rules 2–3).
+
+Growing the list is a fixed recipe (see the `cache` pack as the reference): add the
+`TraitPackId`, a field editor, a mapping in `applyDefinitionTraits`, list it in the
+relevant template's `traitPacks` (and default-enable it in `createDefaultTraits` where
+sensible), then a unit test asserting the `sim.*` projection. Type-specific packs
+(cache hit rate, replication, keyed rate-limiter) must be gated to the templates whose
+backing `componentType` actually consumes them — never shown generically.
 
 ## 7. Custom Node Builder Modal
 
@@ -985,3 +998,54 @@ Runtime traits enabled: <list>
   `ns-simulator-docs/specs/request-flow-direction-and-topology-rules.md`.
 - Resource behavior must align with
   `ns-simulator-docs/specs/resource-allocation-and-derived-concurrency.md`.
+
+## 21. Contract ⇄ graph reconciliation lint (feedback, not credit)
+
+The declared contract (§0.1, §15.1) is documentation — it never earns credit and never
+changes the simulation. But it is a useful **formative signal**: when a learner
+declares a dependency in the builder but never wires the matching edge, we can nudge
+them. This section specs that lint.
+
+> Status: implemented in V1 (declared → unwired direction). Advisory only; it lives
+> renderer-side and never touches `analysis/` (grading).
+
+### 21.1 What it checks
+
+For a selected node that carries a `customDefinition`, reconcile each operation's
+declared `dependencies[]` against the node's **actual outgoing reachability** in the
+canvas graph:
+
+- A declared dependency implies the node calls something downstream, so we compute the
+  set of `componentType`s **reachable via outgoing edges** (BFS from the node,
+  excluding itself).
+- Each dependency's `targetRole` maps to a set of acceptable `componentType`s
+  (`cache → in-memory-cache | kv-store`, `database → relational-db | nosql-db | …`,
+  etc.). Role `any` matches anything and is skipped.
+- **Finding (`declared-unwired`):** the dependency's role has **no** reachable node of
+  a matching type → *"Operation X declares a `read` on a **cache** but no edge from
+  this node reaches a cache node."*
+
+### 21.2 Guardrails (why it is safe)
+
+- **Advisory only.** Rendered as a hint in the properties panel; never affects score.
+  Grading still keys off actual edges + runtime evidence.
+- **Reachability, not direct edges.** A dependency reached through an intermediary
+  (service → gateway → cache) is satisfied — reduces false positives.
+- **Role → type is heuristic.** Unusual-but-valid backends may not match; the wording
+  suggests ("did you forget to wire it?"), never asserts an error. Learners can
+  dismiss it.
+- **Free-text `target` is ignored for matching** — only the `targetRole` enum drives
+  the check, so renaming a node never breaks it.
+
+### 21.3 Not in V1
+
+- The inverse direction (**wired-but-undeclared**: an edge to a typed backend with no
+  matching declared dependency) — deferred to avoid noise on partial contracts.
+- Auto-materialization (drawing the missing edge) — that is the deferred operation→edge
+  work (§0.3 C5). This lint is the stepping stone: flag the mismatch first.
+
+### 21.4 Source
+
+- Pure reconciliation: `src/engine/catalog/contractReconciliation.ts`
+  (`reconcileContractWithGraph`, role→type map).
+- Surfaced in `src/renderer/src/components/properties/CustomDefinitionSection.tsx`.

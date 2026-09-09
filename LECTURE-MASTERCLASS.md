@@ -544,6 +544,19 @@ reverse-proxy, …), *messaging* (queue, message-broker, pub-sub, stream), and
 *sources* (api-endpoint, serverless-function). Each type is a **preset** — it seeds
 sensible defaults so a freshly-dragged node behaves plausibly without any tuning.
 
+**Composing over the palette (the builders).** Learners can also *build* a node with
+the **Service Builder** ("create a URL Shortening Service") or the **Custom Node
+Builder** ("create a Lambda / partner API"), instead of dragging a raw type. This is a
+naming-and-composition layer, **not** a new engine primitive: every built node resolves
+to one of the existing component types — a service becomes `microservice` /
+`serverless-function` / `batch-worker`; a custom node becomes its backing type
+(`in-memory-cache`, `relational-db`, `queue`, …). The runtime traits the learner sets
+(capacity, service time, retry, …) map onto `sim.*`; everything else they type
+(operations, capabilities, declared dependencies) is **documentation only** — it does
+not simulate and, crucially, is never graded (see §14). The honest one-liner for the
+lecture: *"You can name a component anything and describe it in full, but the engine
+only ever runs the known type underneath — and only grades that."*
+
 ### 5.2 Service-time distribution & the tail
 
 A node's `processing.distribution` decides how long one request takes:
@@ -1335,6 +1348,8 @@ This split is already how the engine works: `QuestionSuiteCase` carries `global`
 | Wrong-but-passes-sim | workload **derived from scale numbers** so load genuinely stresses it |
 | Copy a reference diagram | **randomize scale numbers per attempt** + novel prompts |
 | Decorative/disconnected nodes | connectivity/`direction`; unwired nodes cost but give no metric benefit |
+| Mislabel a node ("call my microservice a Cache") | grading matches **resolved componentType**, never the label |
+| Declare a dependency instead of wiring it | the builder's declared contract is documentation-only and **never graded** — checks need the real edge + runtime evidence (§5.1). A renderer-side lint flags declared-but-unwired deps as feedback, not credit. |
 
 ### 14.3 The Dual-Topology Rule — an *executable definition of a good question*
 
@@ -1946,6 +1961,16 @@ Teaching these builds credibility — they're consistent with the honesty doctri
    offset commits, retention, and unknown-commit reconciliation are now `guided` runtime
    evidence, not deferred. Author correctness questions inside what the ledger marks
    `first-class` / `guided`; grade the rest by topology + justification.
+10. **The builders are a naming layer; per-question builder policy is unbuilt.** The
+    Service / Custom Node builders let learners compose named components, but each
+    resolves to a known component type and only the runtime traits simulate — the
+    declared operations/capabilities/dependencies are documentation-only and never
+    graded (§5.1, §14.2). Authoring consequence: target component-type *sets* when the
+    runtime is a free choice, and gate creation with `allowedNodeTypes` /
+    `forbiddenNodeTypes` — that is the *only* lever today. A richer per-question
+    `BuilderPolicy` (allow/deny each builder, cap runtime templates or node classes) is
+    specced but **not implemented**. A renderer-side lint flags declared-but-unwired
+    dependencies as feedback, keeping the "declaration ≠ credit" boundary honest.
 
 **Highest-leverage doc follow-ups:** (1) a determinism/numerics spec; (2) a dedicated
 sim-core spec for Modules 1–3; (3) split Part IV into a standalone skeptic-facing

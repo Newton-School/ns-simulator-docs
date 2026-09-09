@@ -82,6 +82,15 @@ allowed values. (`SIMULATOR_CONFIG` keys are in §5.)
 - **`between`** — a two-element array `[typeA, typeB]` for `placement`: the component
   must sit on a directed path from A to B.
 
+> **Learner-*created* nodes match these keys by their resolved `componentType`, never
+> by label or builder contract.** A Service-Builder "URL Shortening Service" is a
+> `microservice`; a Custom-Node "My Cache" is its backing type. Two consequences: (1)
+> when the runtime is a free learner choice (service = `microservice` /
+> `serverless-function` / `batch-worker`), prefer `category` or an `accept[]` set over a
+> single `componentType` so a valid alternative isn't failed; (2) the builder's declared
+> operations/dependencies are documentation-only and **never** graded — a `requires_edge`
+> / `guardedPath` needs the learner's real edge, not a declared dependency.
+
 ### `category` — a component category (value from the category list in §6)
 
 - **`category`** — used by `requires_category`. e.g. `"storage-and-data"`,
@@ -764,6 +773,14 @@ target for `baseline-optimize`.
 `canModifyScaffold` / `canRemoveScaffoldNodes` are booleans (default `true`, auto-filled);
 `maxNodeCount` / `maxTotalWorkers` are int caps (graded); `maxBudget` is a $/hr cap;
 `allowedNodeTypes` is a whitelist and `forbiddenNodeTypes` a blacklist of component types.
+
+> **Applies to learner-created nodes too.** Nodes built with the Service Builder /
+> Custom Node Builder serialize to a real component type (a service → `microservice` /
+> `serverless-function` / `batch-worker`; a custom node → its backing type), so
+> `allowedNodeTypes` / `forbiddenNodeTypes` gate them exactly like palette-placed nodes.
+> This is the *only* per-question lever over creation today — there is no builder-level
+> policy yet. Use it so a learner can't simply *build* the exact node the question tests
+> (e.g. forbid the anti-pattern store on a "pick the right storage" question).
 
 **`SIMULATOR_CONFIG: constraints`** — cap the node count and ban a component.
 ```json
