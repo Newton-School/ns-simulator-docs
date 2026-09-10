@@ -93,8 +93,52 @@ TTL eviction. **No open gap.**
 | # | Gap | Kind | Designs | Status |
 |---|---|---|---|---|
 | **1** | **Connection-server node + node-level `maxConnections` capacity** | node + capacity primitive | Chat, Google Docs | **V1 implemented** → `connection-tier-capacity.md` (Connection Server palette node + derived capacity) |
-| **2** | Fan-out amplification (1 event → N writes from a set/social-graph) | behavior/primitive | News Feed, Chat | open; storm is workaround-able via authored rate |
-| **3** | Fault-injection authoring UI + datastore `replicas` field | authoring surface | all four (failover) | open; engine already runs faults + replica promotion |
+| **2** | Fan-out amplification (1 event → N writes from a set/social-graph) | behavior/primitive | News Feed, Chat | **V1 implemented** → edge `fanoutFactor` (see §3.2) |
+| ~~**3**~~ | ~~Fault-injection authoring UI + datastore `replicas` field~~ | authoring surface | all four (failover) | **closed** — already shipped (see §3.1) |
+
+### 3.1 GAP 3 correction — the failover authoring surface already exists
+
+A closer read of the engine (not a grep) shows GAP 3 was mis-registered as open. Both
+pieces are shipped and the availability/failover story runs end-to-end:
+
+- **Fault-injection UI** — `SimulationTab.tsx` › *Chaos* section: target dropdown, four
+  fault modes (`blackhole` / `hang` / `reject` / `degraded`), fail-at, recover-after.
+  Faults flow scenario → `topologyCanvasAdapter` → `engine.scheduleConfiguredFaults`,
+  which schedules `node-failure` / `node-recovery` events. The `degraded` mode's
+  `fraction` and `serviceTimeMultiplier` are now **author-editable** (previously hardcoded
+  `0.3` / `10×` — a hidden dial; fixed for honesty).
+- **Datastore replication** — the `replicationCapabilityModule` (config §, on `relational-db`
+  + `nosql-db`) exposes enable, topology, role, replica lag, write-ack policy
+  (primary/quorum), failover window, replica members, consensus, and conflict resolution —
+  richer than a bare `replicas` field. Rendered generically via `getNodeConfigSections`.
+- **End-to-end failover** — a fault sets the node `failed`; `replicationTrait.beforeArrival`
+  then calls `cluster.fail()` + `elect()`, emitting `replicationLeaderPromotions` and a
+  bounded `replica_failover_in_progress` unavailability window.
+
+Residual (optional, not a design-coverage gap): the Chaos UI authors a **single** fault
+(`faults[0]`) while the engine loops over N — cascading/multi-node fault scenarios can't be
+authored from the UI yet. Each of the four designs needs only one failover fault, which is
+supported today.
+
+### 3.2 GAP 2 — fan-out amplification (V1 implemented)
+
+An **edge-level `fanoutFactor`** (`EdgeDefinition.fanoutFactor`) makes each request
+delivered over that edge amplify into N recipient deliveries. The engine expands the route
+into N copies (`expandFanoutRoutes`, capped at 5000/edge) and reuses the existing branch-fork
+machinery, so the downstream target genuinely receives N× the write load and can saturate —
+the honest write-storm model, not a faked number. The extra deliveries are recorded on the
+source node as `fanoutAmplifiedWrites` (gradable). Authoring lives on the edge properties
+panel ("Fan-out factor"); use an **asynchronous** edge so the caller does not block on all N
+deliveries. Ledger: `routing.fanout-amplification` = `guided`.
+
+- **News Feed** — fan-out-on-write: post → feed-cache edge with `fanoutFactor ≈ avg followers`.
+  Combine with a content-route on request `type` (`celebrity` 1% vs `normal` 99%) so only the
+  push path amplifies (hybrid push/pull).
+- **Chat** — group fan-out: message → connection-tier/feed edge with `fanoutFactor = group size`.
+
+Honesty boundary: the factor is a configured constant, not derived from a live
+subscriber/follower set; per-recipient routing/filtering is not modeled (each delivery is an
+identical branch to the same target). Deriving N from an actual social-graph store is V2.
 
 ## 4. Correctly deferred — do NOT build
 
