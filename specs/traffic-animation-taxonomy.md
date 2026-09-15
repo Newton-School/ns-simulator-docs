@@ -153,18 +153,20 @@ the motion — is legible at a glance.
   `countsByEdgeId`) **plus** a node-card `Distributes: <mechanism>` label
   (`describeDistribution`, 2026-09-15) **plus** a per-edge **weight-share %** badge
   on weighted-routing edges (2026-09-15, guarded so it only shows when the source
-  actually routes by weight). Remaining nicety: a canvas legend / live run readout.
+  actually routes by weight) **plus a canvas legend** (2026-09-15) that documents
+  edge thickness, dot speed, weight %, color-by-key, and node-effect glyphs.
 - **C** ✅ edge mode → `strokeDasharray` (line style).
 - **D** ◑ node effects now surface as **runtime markers on the card** (2026-09-15):
   `describeNodeEffects(metrics)` → `RuntimeNodeMetrics` shows badges for the
   *hidden* effects — `⚡ cache X%` (short-circuit), `↻ N retries`, `⇉ replicated`,
   `⋔ scatter/gather`, `⊘ N dupes blocked`. Drops/timeouts stay in the
-  Rejected/Timed-out cell (not duplicated). Still no on-edge animation for these
-  (e.g. a dot visibly bouncing back from a cache).
+  Rejected/Timed-out cell (not duplicated). **On-edge cache bounce-back added
+  2026-09-15** — the hit-ratio share of a cache's inbound dots visibly return.
 - **E** ✅ failure pulses colored by cause; failing link stroke turns red.
 - **F** ✅ stroke width = volume; **dot speed now also scales with `pathType`
   latency** (2026-09-15, `latencySpeedFactor`) — cross-region dots visibly crawl
-  vs same-rack. (Bandwidth backpressure still not visualized.)
+  vs same-rack. **Backpressure** (2026-09-15): an edge hitting its concurrency cap
+  (recent `connection_refused`) additionally slows/bunches its dots.
 - **G** ◑ authoring landed 2026-09-11; **"color dots by key" mode shipped
   2026-09-15** — `EdgeFlowEvent.key` (engine `affinityKeyOf`: __key / partitionKey
   / shardKey / sessionId / clientIp) + a `colorDotsByKey` display toggle tint each
@@ -178,12 +180,24 @@ Axis-B mechanism label + per-edge weight-share %; Axis-D node-effect markers;
 Axis-F latency-driven dot speed; Axis-G color-dots-by-key (all 2026-09-15).
 **Every axis is now legible to at least ◑.**
 
-**Deliberately deferred (rework disproportionate to payoff):**
-- **On-edge D animation** (a dot bouncing back from a cache / splitting at a
-  replicator): needs per-node return-path animation; the card markers already name
-  every hidden effect, so this is polish, not a gap.
-- **True per-request dots**: the success stream is synthetic (count/speed from
-  aggregate rate) for performance at high RPS; color-by-key samples real keys per
-  edge, which already conveys the pattern. Exact per-request dots would be a costly
-  animation rework with little added insight.
-- **Bandwidth backpressure** viz and a **canvas legend**: minor niceties.
+Bandwidth backpressure and the canvas legend shipped 2026-09-15.
+
+**On-edge D bounce-back shipped 2026-09-15** — a cache's measured `cacheHitRatio`
+share of the inbound edge's dots now travel to the cache and return (triangle
+wave, primary accent) instead of passing through; the miss share passes through.
+Renderer-only, driven by real hit-ratio data (no engine change). Replicator/split
+return-paths remain deferred (same mechanism, lower value).
+
+**Causal request tracer shipped 2026-09-15 — the "living / causal" goal.** Rather
+than making the aggregate stream per-request (no perceptible gain for reading
+*patterns*), we deliver causality as a **follow-a-request tracer**: from a Results
+row, "▶ Follow on canvas" sets `tracedRequestId`; `RequestTraceOverlay` (inside
+the ReactFlow provider) replays that one real request as a single dot travelling
+its actual node path (from the request's `stateTimeline`), pausing at each hop
+with a plain-language cause and ending in its terminal status/reason. This is the
+"this happened *because* of that" story — the aggregate stream stays synthetic for
+ambient flow; the tracer is the per-request, causal view.
+
+**Still deferred — turning the whole ambient stream into per-request dots:** adds
+no pattern-reading insight over sampled color-by-key, and would be sparse at low
+trace-sample rates. The tracer covers the causal-narrative need instead.
