@@ -9,10 +9,33 @@ cache-offloaded, writes bypass the cache and go straight to the DB.
 > (`question.json`, `reference-topology.json`, …) are the authored-question version
 > of the same scenario and are unrelated to these steps.
 
+## The problem
+
+> **Design a URL shortener (TinyURL / Bitly).** Given a long URL, return a short alias;
+> visiting the alias redirects to the original. The defining trait is an **extreme
+> read-heavy workload over essentially immutable data**.
+>
+> **Functional**
+> - Create a short URL from a long URL (optionally accept a custom alias and an expiry date).
+> - Redirect a short URL to the original long URL (HTTP 301/302).
+> - Short links are effectively permanent unless an expiry is set or the owner deletes them.
+> - Optional: per-link analytics (click counts, referrers).
+>
+> **Non-functional**
+> - High availability for redirects — a dead redirect breaks every link ever shared.
+> - Low latency: redirect adds minimal overhead (target < 50 ms server-side) — it sits in the click path.
+> - Short keys; no collisions (a key maps to exactly one URL, forever).
+>
+> **Scale to design against**
+> - 100M new URLs/month → ~40 writes/sec avg.
+> - Read:write ≈ 100:1 → ~4,000 reads/sec avg, ~40K/sec peak.
+> - 5-year retention → ~6B URLs; ~1KB/record → ~6 TB (→ ~18 TB replicated).
+> - Read working set is Zipfian (~20% of keys serve ~80% of reads).
+
 ## Final topology
 
 ```
-Input Source → API Server → URL Shortening Service → API Gateway
+Traffic Source → API Server → URL Shortening Service → API Gateway
                                                         ├─(GET 99%)→ Distributed Cache → (miss ~5%) → SQL DB
                                                         └─(POST 1%)────────────────────────────────→ SQL DB
 ```
@@ -40,15 +63,15 @@ Input Source → API Server → URL Shortening Service → API Gateway
 
 Drag onto the canvas from the library:
 
-- **Input Source** (Templates)
+- **Traffic Source** (Templates)
 - **API Server** (Compute) — optional extra hop; can be omitted for a leaner path
 - **API Gateway** (Network) — **not** a plain Load Balancer / L4
 - **Distributed Cache** (Data Stores)
 - **SQL DB** (Data Stores)
 
-## Part 3 — Configure the Input Source (the request mix)
+## Part 3 — Configure the Traffic Source (the request mix)
 
-1. Select **Input Source** → **CONFIG**.
+1. Select **Traffic Source** → **CONFIG**.
 2. **Workload** → Pattern `constant`, Base RPS `100`.
 3. **Request Templates** → **Requests**:
    - Row 1: type `resolve`, weight **99** %, Method `GET`, Path `/{code}`
@@ -64,7 +87,7 @@ Drag onto the canvas from the library:
 ## Part 5 — Wire the edges
 
 ```
-Input Source           → API Server
+Traffic Source           → API Server
 API Server             → URL Shortening Service
 URL Shortening Service  → API Gateway
 API Gateway            → Distributed Cache      (read path)
@@ -101,7 +124,7 @@ received** — the gap is the writes that skipped the cache.
 ## Why it's built this way (gotchas we hit)
 
 - **Operation intents on the service are documentation only.** The real read/write
-  split comes from the **Input Source request mix** (Part 3), not the service's
+  split comes from the **Traffic Source request mix** (Part 3), not the service's
   operations.
 - **A plain service or API Server cannot route by request type.** Only an
   **API Gateway / L7 Load Balancer / Ingress Controller** can content-route, which is
