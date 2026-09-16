@@ -54,6 +54,14 @@ Sender ─(WSS: send)→ Connection Servers ─1·deliver→ Presence/Session Re
 
 ---
 
+> **Prerequisite — set Edge model = Network.** This build configures edges (async mode,
+> WebSocket protocol, **Fan-out factor**). Those fields only exist when the edge model is
+> **Network**. If your edge panel shows only *Label / Protocol / Interaction / Route
+> appearance* and says "only change its canvas presentation," you're in **Connector** mode
+> (dumb wires, no physics). Switch it at **Settings → Environments → Edge model → Network**,
+> then reopen the edge to see Protocol (transport), Interaction (sync/async), Fan-out factor,
+> bandwidth, and latency.
+
 ## Part 1 — Place the nodes
 
 Search each term in the Component Library (left panel), drag onto the canvas, then rename:
@@ -126,14 +134,32 @@ one WebSocket connection (Method stays unset; the transport is the edge protocol
 The connection tier's capacity is measured in **concurrent held connections**, a
 dimension distinct from RPS — this is GAP 1 (`specs/connection-tier-capacity.md`).
 
+> **How the capacity math works.** The Connection Server ships with **offered = 0**, so it
+> reads **0% used** until *you* declare a target held-connection count (it never claims a
+> utilization for a load you never specified). Once you enter **Offered connections**, the
+> readout is pure config-time arithmetic (no run needed):
+>
+> ```
+> fleet capacity     = maxConnectionsPerInstance × instanceCount
+> utilization        = offeredConnections ÷ fleet capacity     (>100% ⇒ saturated + refusals)
+> required instances = ceil(offeredConnections ÷ maxConnectionsPerInstance)
+> ```
+>
+> So if you set offered = 100,000 at 1 instance you'll see **154% used** (35K refused) —
+> bump **Service Instances** to the **Required instances** the readout shows (2 here, ~154 for
+> the 10M target) to go green. Dropping instances *below* required is how you deliberately
+> demo saturation + `connectionsRefused`.
+
 1. Select **Connection Servers** → **CONFIG** → **Connection capacity**:
-   - **Max connections / instance** = `65000`
-   - **Offered connections** = `10000000` (10M concurrent — the scale target)
+   - **Max connections / instance** = `65000` (keep)
+   - **Offered connections** = your target held connections. Use `10000000` for the full
+     10M-concurrent scale, or a smaller number for a quick run.
    - **Heartbeat interval ms** = `30000`
    - **Session protocol** = `WebSocket`
-2. Read the derived readout: **Required instances ≈ 154** (10M ÷ 65K), fleet capacity,
-   utilization, and `connectionsRefused` if you under-provision. Set **Resources →
-   instance count** to ~154 for a healthy tier (or fewer to demo saturation).
+2. Set **Resources → Service Instances** to the **Required instances** the readout shows
+   (`ceil(offered ÷ 65000)`): **2** for the default 100K, **~154** for the 10M scale target.
+   The badge turns green and `Held / refused` shows `… / 0` once fleet capacity ≥ offered.
+   (Leave instances *below* the required count to deliberately demo saturation + refusals.)
 3. **Declare the transport as WebSocket** (this is where "these are WebSocket connections"
    lives — *not* on the request rows):
    - **Connection Servers → CONFIG → Protocol Session → Protocol** = `websocket`. This drives
@@ -150,9 +176,38 @@ dimension distinct from RPS — this is GAP 1 (`specs/connection-tier-capacity.m
 durability guarantee comes from the *edge order*: Message Service → Cassandra is a
 **synchronous** edge, so the ACK only returns after the write commits.
 
-**Cassandra:** **CONFIG** → **Replication** → **Enable replication** ✓, role **leader**
-(add a second NoSQL DB as **follower** + a leader→follower edge to show the replicated,
-ordered history store).
+**Content-route by frame type (so you don't persist/fan-out everything).** Not every frame
+should hit Cassandra or Pub/Sub — persisting `typing`/`presence`/`ack` and fanning them out
+inflates load massively (it's a big chunk of the failure cascade if you skip this).
+
+There is **no "content-aware" strategy dropdown** — content routing on an api-gateway
+(the Connection Server's backing type) is its **own section**: **Connection Servers → CONFIG
+→ Content Routing → Routing Rules → + Add rule**.
+
+**How it behaves (important):** a rule that *matches* a request **filters it to that single
+target** (dropping the other outgoing edges); a request that matches **no** rule **forks to
+all** outgoing edges as normal. So add rules **only for the frames you want to divert** —
+leave `send-*` unmatched so they keep forking to both Message Service (persist) *and*
+Presence (deliver):
+- **Match field `type`, value `typing`** → target **Presence Registry**
+- **`type` = `presence`** → target **Presence Registry**
+
+Now `typing`/`presence` go **only** to Presence Registry (they skip Message Service →
+Cassandra, so they're not persisted) while still flowing Presence → Pub/Sub → recipient
+(delivered, not stored). Unmatched `send-direct` / `send-group` / `ack` fork normally to
+persist + deliver. (Content routing is available on **api-gateway / load-balancer-l7 /
+ingress-controller** only — a plain microservice can't do it.)
+
+**Cassandra:** **CONFIG** → **Replication** → **Enable replication** ✓, role **leader**,
+then set **Replica members** = `db-a, db-b, db-c`. That's the whole cluster — quorum,
+leader promotion, and the failover window all live on **this one node's** config.
+- **Do NOT** add a second "follower" NoSQL DB with a `leader → follower` request edge. The
+  engine models replication *inside* a single datastore node (via Replica members), not by
+  wiring two nodes. A physical leader→follower edge just **forwards client writes** into the
+  second node, so it double-processes writes (both cards then show "⇉ replicated" and both
+  take write load) — that's request forwarding, not replication.
+- (Optional) set **Write acknowledgement** = `quorum` to make writes wait for the member
+  quorum, and a **Failover window** to demo the bounded unavailability during promotion.
 
 **Presence Registry (Distributed Cache):** **CONFIG** → **Caching** → **Cache hit rate**
 `0.95` — most "which server holds the recipient?" lookups hit the in-memory registry.
@@ -229,6 +284,46 @@ This is the concrete version of the earlier point: **one client, two request kin
 transports** — live frames over WebSocket to the Connection Servers, history over HTTPS to
 the API Gateway. The `type` decides the path; the edge decides the transport.
 
+## Advanced / realistic topology (refinements)
+
+The core build above is faithful to the interview design. Three refinements make it match a
+real production chat system more closely — each is buildable in the simulator.
+
+### 1. Keep Connection Servers "dumb" — add a Chat Router Service
+In the core build the Connection Servers orchestrate the fork (persist + presence + delivery),
+which loads the stateful, hard-to-scale tier with business logic. Move that off:
+
+- Place an **API Server** (`microservice`), rename **Chat Router**.
+- Rewire: **Connection Servers → Chat Router**, then **Chat Router → Message Service**,
+  **Chat Router → Presence Registry** (and the content-routing rules for `typing`/`presence`
+  move onto the **Chat Router** if you keep it an api-gateway, or stay on the gateway tier).
+- Now the Connection Servers only **hold sockets + forward**; the stateless Chat Router does
+  the orchestration and scales freely.
+- **Measured payoff:** the connection tier's utilization/errors drop (this is the honest fix
+  for the "Connection Servers needs attention" signal); the Chat Router becomes the busy,
+  horizontally-scalable node.
+
+### 2. Media path — object store + CDN, never through Pub/Sub
+Pushing 1.5 MB image/video payloads through the Pub/Sub Bus saturates it. Real systems upload
+media out-of-band and pass only a URL through the real-time pipeline:
+
+- Add an **Object Storage** node. Wire a **separate** media-upload edge (client →
+  Object Storage) — set that edge's request **size** to the media bytes (e.g. `1500000`).
+- On the messaging path, the `send-*` frame carries only the **metadata/URL** — keep its
+  request **size** tiny (e.g. `512` B). Media bytes never touch Pub/Sub.
+- **Measured payoff:** the Pub/Sub Bus stops saturating on payload size; bandwidth moves to
+  the object store. (The pre-signed-URL handshake itself stays justification.)
+
+### 3. History sync on reconnect — HTTP API Gateway → Message Service
+When an offline user returns they **pull** missed messages (pagination), not via the push
+pipeline. This is the **REST history/setup channel** above — a separate HTTPS API Gateway →
+Cassandra path for `GET /conversations/{id}/messages?before=…&limit=50`. Keep it off the
+WebSocket tier.
+
+> **Latency note:** validate the *online* path (`Sender → … → Recipient Conn Server`, and the
+> persist-ACK leg) against a **sub-second** SLA; the offline push (APNs/FCM) is explicitly
+> outside that budget. See the split SLAs in `test-cases.md` (§3.1a / §3.1b).
+
 ## Why it's built this way (gotchas)
 
 - **Persist-before-ACK is an edge-order property, not a checkbox.** Keep
@@ -253,7 +348,7 @@ the API Gateway. The `type` decides the path; the edge decides the transport.
 | Sender | **Traffic Source** | msg mix: `send-direct` 80% / `send-group` 20% |
 | Connection Servers | **Connection Server** | `sim.connection`: 65K/instance, 10M offered, 30s heartbeat, WebSocket; instances ≈154 |
 | Message Service | **API Server** | stateless; sync edge to Cassandra = persist-before-ACK |
-| Cassandra | **NoSQL DB** | replication leader (+ follower); partition conv_id, clustering msg_id |
+| Cassandra | **NoSQL DB** | replication on one node: leader + `Replica members` (quorum/failover live here); partition conv_id, clustering msg_id |
 | Presence Registry | **Distributed Cache** | hit rate 0.95 (which server holds recipient) |
 | Pub/Sub Bus | **Pub/Sub** | one-to-many routing to recipient's server |
 | Offline Inbox | **Message Queue** | per-user store-and-forward (async) |

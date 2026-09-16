@@ -55,6 +55,12 @@ Viewer ─(GET /feed)→ Feed Service ──► Feed Cache (read precomputed tim
 
 ---
 
+> **Prerequisite — set Edge model = Network.** This build configures edges (async mode and
+> the **Fan-out factor** on the push edge). Those fields only exist in **Network** edge mode.
+> If your edge panel shows only presentation fields ("only change its canvas presentation"),
+> you're in **Connector** mode — switch it at **Settings → Environments → Edge model →
+> Network**, then reopen the edge.
+
 ## Part 1 — Place the nodes
 
 | Diagram box | Search / palette node | componentType | Rename to |
@@ -87,11 +93,16 @@ Viewer ─(GET /feed)→ Feed Service ──► Feed Cache (read precomputed tim
 **Post Service → Fan-out Service** edge: **Mode = asynchronous** (the "new-post event" is
 off the uploader's path).
 
-**Fan-out Service content-routing (push vs pull):** Fan-out Service must only push for
-normal authors. Give it routing that sends `normal-post` down the fan-out edge and drops
-`celebrity-post`:
-- Set Fan-out Service **routing strategy → content-aware**, rule: `type == normal-post`
-  → **Feed Cache**. (Celebrity posts have no push edge — they are pulled at read time.)
+**Push vs pull split (conditional edge — not node content-routing):** the Fan-out Service is a
+`microservice`, which **cannot** content-route (that's an **api-gateway / load-balancer-l7 /
+ingress-controller** feature only). Put the condition on the **edge** instead: open the
+**Fan-out Service → Feed Cache** edge → **Mode = conditional**, **Condition =
+`request.type == "normal-post"`**. Only normal posts traverse the push edge; `celebrity-post`
+doesn't match, so it's never pushed (celebrities are pulled at read time).
+> If you want the push to also be **async at high fan-out** (conditional edges are evaluated
+> as a routing gate, not a fire-and-forget branch), front the Fan-out Service with an
+> **api-gateway** that content-routes `normal-post` → Fan-out Service, and keep the
+> Fan-out Service → Feed Cache edge **asynchronous + Fan-out factor**.
 
 **Fan-out amplification (GAP 2):** on the edge **Fan-out Service → Feed Cache**, open the
 edge panel and set **Fan-out factor** = `300` (avg followers), **Mode = asynchronous**.
@@ -139,10 +150,11 @@ normal-post rate × 300** (celebrity posts do not fan out), while the read path 
 
 ## Why it's built this way (gotchas)
 
-- **Hybrid = content-routing on author type.** The push/pull split is a routing decision on
-  request `type` (`normal-post` vs `celebrity-post`), authored on the Fan-out Service — not
-  a hard-coded branch. Only nodes that can content-route (gateway/L7/service with
-  content-aware strategy) can do it.
+- **Hybrid = a routing decision on author `type`.** The push/pull split routes on request
+  `type` (`normal-post` vs `celebrity-post`) — not a hard-coded branch. Express it with a
+  **conditional edge** (`request.type == "normal-post"`) on the push edge, or with **node
+  content-routing** on an **api-gateway / L7 / ingress** (a plain microservice can't
+  content-route).
 - **Fan-out must be async and on the write edge.** Put `fanoutFactor` on
   `Fan-out Service → Feed Cache` with **Mode = asynchronous** so the uploader never blocks
   on ~300 feed writes.

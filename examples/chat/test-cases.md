@@ -153,10 +153,26 @@ delivery path, not dangling.
 
 ## 3 · Behavior under load — `RUBRIC_CHECK`
 
-**3.1 sub-second delivery p95** — online end-to-end latency stays low.
+**3.1a persist-ACK p95 (durability leg)** — end-to-end p95 stays sub-second; because the
+`send-*` ACK only returns after the synchronous Cassandra write, this end-to-end number *is*
+the persist-before-ACK latency for the common case.
 ```json
 { "type": "RUBRIC_CHECK", "metric": "summary.latency.p95", "op": "<", "value": 1000, "points": 3 }
 ```
+
+**3.1b online-delivery p95 (no hop blows the budget)** — the worst single node's p99 stays
+sub-second, so the delivery leg (Presence → Pub/Sub → Recipient Conn Server) isn't the tail.
+```json
+{ "type": "RUBRIC_CHECK", "metric": "perNode.maxLatencyP99", "op": "<", "value": 1000, "points": 2 }
+```
+> **Why two rows (and their limit).** The requirement is *sub-second online delivery*, but the
+> rubric vocabulary exposes **end-to-end** latency (`summary.latency.*`) and the **worst-node**
+> tail (`perNode.maxLatencyP99`), not a per-path number. So 3.1a bounds the end-to-end online
+> path (dominated by the sync persist-ACK leg) and 3.1b bounds the worst hop (catches a slow
+> delivery/recipient tier). The **offline push (APNs/FCM)** is deliberately *outside* this SLA
+> — it's the 1000 ms+ tail and is allowed to be slow; don't let it pollute these checks (grade
+> it separately, or exclude it by asserting `perNode.<recipient>.*` once per-node latency
+> metrics are addressable).
 
 **3.2 error rate < 2%** — accepted messages are not dropped.
 ```json
