@@ -53,6 +53,12 @@ Editor B ─(OP baseRevision · cursor)→        (routes by docId)             
 
 ---
 
+> **Prerequisite — set Edge model = Network.** This build configures edges (WebSocket
+> protocol, sync/async mode). Those fields only exist in **Network** edge mode. If your edge
+> panel shows only presentation fields ("only change its canvas presentation"), you're in
+> **Connector** mode — switch it at **Settings → Environments → Edge model → Network**, then
+> reopen the edge.
+
 ## Part 1 — Place the nodes
 
 | Diagram box | Search / palette node | componentType | Rename to |
@@ -127,9 +133,14 @@ coordination node if you want to show owner election + failover explicitly.
 ## Part 4 — Configure durability (op log + snapshots)
 
 **Op Log + Snapshots (NoSQL DB):** **CONFIG** → **Replication** → **Enable replication** ✓,
-role **leader** (add a **follower** + leader→follower edge). The op log is append-only and
-ordered; replication + failover is the "recover by replaying the log onto a new owner"
-story. Keep **Session Server → Op Log** **synchronous** (append the ordered op before ACK).
+role **leader**, then set **Replica members** = `log-a, log-b, log-c`. The whole cluster —
+quorum, leader promotion, and the failover window — lives on **this one node's** config; the
+op log is append-only and ordered, and replication + failover is the "recover by replaying
+the log onto a new owner" story. Keep **Session Server → Op Log** **synchronous** (append the
+ordered op before ACK).
+- **Do NOT** wire a separate "follower" node with a `leader → follower` request edge —
+  replication is modeled inside the single node (Replica members), and such an edge would
+  just forward client writes into the second node (double-processing), not replicate.
 
 > Note: full **op-log replay cost** (replay N ops since last snapshot) is modeled by the
 > `logReplay` trait on the `event-sourcing-store` component type. If your palette build
@@ -163,7 +174,7 @@ Click **Run**.
 | Availability / errors | all | healthy |
 
 To demonstrate **failover**: use the fault-injection UI (Settings → Chaos) to fail the
-Op Log leader mid-run; the follower is promoted (`replicationLeaderPromotions`) and a
+Op Log leader mid-run; a replica member is promoted (`replicationLeaderPromotions`) and a
 bounded `replica_failover_in_progress` window appears — "recover by replaying the log onto
 a new owner."
 
@@ -208,7 +219,7 @@ snapshot/history over HTTPS. The `type` decides the path; the edge decides the t
 | Editors | **Traffic Source** | `op` 90% / `cursor` 10%; keyspace `docId` |
 | WS Layer | **Connection Server** | `sim.connection` WebSocket; routing key-based by docId |
 | Session Server | **API Server** | one owner per doc via sticky docId routing; OT transform (justify) |
-| Op Log + Snapshots | **NoSQL DB** (or Event Sourcing store) | replication leader (+ follower); append-only, sync |
+| Op Log + Snapshots | **NoSQL DB** (or Event Sourcing store) | replication on one node: leader + `Replica members` (quorum/failover here); append-only, sync |
 | Doc Metadata | **NoSQL DB** | owner/ACL/title; low-churn relational concern |
 
 ### The design decisions this topology makes gradeable
