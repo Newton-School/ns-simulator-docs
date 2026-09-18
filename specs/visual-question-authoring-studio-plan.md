@@ -1,7 +1,9 @@
 # Visual Question Authoring Studio — Product and Implementation Plan
 
-**Status:** Proposed  
-**Date:** 2026-09-16  
+**Status:** Proposed — revised after architecture review
+
+**Date:** 2026-09-18
+
 **Scope:** Planning only; no implementation is implied by this document.
 
 ## 1. Executive decision
@@ -75,8 +77,23 @@ total. Their most common authoring primitives are:
 - invariant checks: 13 uses
 - p99 checks: 5 uses
 
-This suggests an MVP can cover the real bank with a small set of well-designed
-composers, while uncommon schema options remain behind progressive disclosure.
+This is a prioritization signal, not proof of end-to-end coverage. A preliminary
+field audit already shows why the distinction matters: all 14 source packages carry
+a `family` field outside the runtime-facing `QuestionPackage` interface, and 9 carry
+legacy `_justify` data. The common composer set appears to cover the normalized
+runtime grading shapes, but exact source-pack fidelity is not yet proven.
+
+Phase 0 must therefore publish a coverage matrix with two separate numbers:
+
+1. **Normalized runtime coverage:** questions whose parsed `QuestionPackage`, rows,
+   grading behavior, and reference/gamed outcomes round-trip equivalently.
+2. **Exact authoring-pack fidelity:** questions whose source metadata and auxiliary
+   authoring fields can be imported and re-exported without loss.
+
+No MVP coverage claim should be made from discriminator counts alone. The audit
+must answer, for every canonical question, whether the proposed vertical slice can
+recreate it end to end without manual JSON repair, and identify the precise blocker
+when it cannot.
 
 ## 3. Product principles
 
@@ -484,46 +501,134 @@ a third source of truth.
 
 ### 7.5 State ownership
 
-| State                              | Owner                          | Notes                                                     |
-| ---------------------------------- | ------------------------------ | --------------------------------------------------------- |
-| Authoring draft and history        | `useQuestionAuthoringStore`    | Separate from learner/runtime topology state              |
-| Active canvas nodes/edges          | existing topology store        | One authoring topology loaded at a time in V1             |
-| Scaffold/reference/gamed snapshots | authoring store                | Snapshot canvas before switching tabs                     |
-| Compilation result                 | derived selector/service       | Never hand-edited or persisted as canonical state         |
-| Field validation                   | local/derived                  | Immediate feedback                                        |
-| Package diagnostics                | compiler                       | Schema + authoring validator + support ledger             |
-| Verification runs                  | authoring worker orchestration | Persist only digest/signatures needed to detect staleness |
-| Exported files                     | file service                   | Web and Electron targets                                  |
+| State                              | Owner                          | Notes                                                                             |
+| ---------------------------------- | ------------------------------ | --------------------------------------------------------------------------------- |
+| Authoring draft and history        | `useQuestionAuthoringStore`    | Separate from learner/runtime topology state                                      |
+| Active canvas nodes/edges          | existing topology store        | One authoring topology loaded at a time in V1                                     |
+| Scaffold/reference/gamed snapshots | authoring store                | Snapshot canvas before switching tabs                                             |
+| Compilation result                 | derived selector/service       | Never hand-edited or persisted as canonical state                                 |
+| Field validation                   | local/derived                  | Immediate feedback                                                                |
+| Package diagnostics                | compiler                       | Schema + authoring validator + support ledger                                     |
+| Verification runs                  | authoring worker orchestration | Production-parity auto-routing; persist versioned proof digest and resolved modes |
+| Exported files                     | file service                   | Web and Electron targets                                                          |
 
 For V1, reusing the global topology store is acceptable if the editor explicitly
 snapshots the active topology before changing scaffold/reference/gamed tabs. If the
 product later needs side-by-side editable canvases, move React Flow state behind a
 scoped store provider rather than creating parallel globals.
 
+### 7.6 Engine-owned authoring capability registry
+
+“Schema-backed” must not mean a second set of renderer constants that someone must
+remember to update. The obligation gallery, metric selector, component selector,
+support badges, examples, and evaluation-mode warnings must derive from engine-owned
+registries.
+
+```ts
+interface AuthoringCapabilityDefinition<TDraft, TCompiled> {
+  id: string
+  label: string
+  category: 'structural' | 'semantic' | 'rubric'
+  supportTier: SupportTier
+  evidenceModes: Array<'question' | 'discrete' | 'analytic'>
+  fields: readonly AuthoringFieldDefinition[]
+  compile(draft: TDraft): TCompiled
+  decompile(compiled: TCompiled): TDraft
+}
+```
+
+The registry composes existing engine sources rather than replacing them:
+
+- structural and semantic discriminants from their canonical contracts
+- rubric metrics and valid operators from an engine metric registry
+- component types and labels from the component catalogue
+- domain, concept, component, and trait honesty from the support ledger
+- evidence availability under discrete and analytic evaluation
+
+Complex kinds may still use a dedicated renderer, but registration, compilation,
+decompilation, support status, and mode compatibility remain engine-owned. CI must
+fail when a schema discriminator, public metric, or catalogue component is added or
+removed without reconciling the authoring registry. The renderer must not maintain
+its own hand-written list of supported primitives.
+
+### 7.7 Verification execution policy
+
+Authoring verification must use the same `runSimulation(..., { mode: 'auto' })`
+route as worker, CLI, and production grading. The studio must not silently select a
+faster engine path that the deployed question will not use.
+
+Before running, a verification preflight computes the full matrix:
+
+```text
+(reference + gamed designs) × suite cases
+```
+
+For each run it shows:
+
+- resolved mode: discrete or analytic
+- estimated discrete-event count
+- whether every linked obligation has authoritative evidence in that mode
+- current progress and cancellation state
+
+The authoritative proof uses `auto`. An optional forced-discrete diagnostic may be
+offered when affordable, but it cannot mark the question verified if production
+`auto` would resolve differently. If an obligation requires per-request evidence
+that the analytic path cannot authoritatively provide, verification must block with
+an actionable explanation; it must not treat representative traces as proof.
+
+`VerificationSnapshot` records the compiled package hash, topology hashes, engine
+build/version, compiler version, router policy/version, resolved mode for every
+design/case pair, and result digest. Proof becomes stale when any of these inputs
+change. Runs execute in a cancellable, bounded worker queue so the browser cannot
+spawn an unbounded design × scenario fan-out.
+
+### 7.8 Grading-scope evolution seam
+
+The current contract has different scopes: structural checks are question-level,
+rubric checks apply across the suite, and some runtime semantic criteria can filter
+by `caseId`. The authoring model must represent scope explicitly rather than burying
+“all scenarios” in UI copy.
+
+```ts
+type AuthoringObligationScope =
+  | { kind: 'question' }
+  | { kind: 'all-cases' }
+  | { kind: 'case-ids'; caseIds: string[] }
+  | { kind: 'phase'; phaseIds: string[] }
+```
+
+V1 only enables scope variants the current compiler can express. Unsupported
+case-specific or phase-specific choices remain unavailable and explain which engine
+contract is missing. When per-scenario or per-phase grading becomes canonical, it
+can be added through a compiler/project version without redesigning every obligation
+card. Scope support and migration behavior must be covered by registry contract
+tests.
+
 ## 8. Screen-to-component mapping
 
 The studio should be a sibling of `WorkspaceLayout`, selected by a small app shell,
 rather than adding more conditional branches to the already large runtime layout.
 
-| Screen/area          | Proposed component         | Responsibility                                                                  | Reuse                                      |
-| -------------------- | -------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------ |
-| App surface selector | `AppShell`                 | Choose simulator workspace or Question Studio in AUTHOR mode; deep-link support | new, mounts existing `WorkspaceLayout`     |
-| Studio frame         | `QuestionStudioShell`      | header, stage rail, workspace, diagnostics rail, navigation guards              | new                                        |
-| Project header       | `AuthoringHeader`          | project name, save state, import, learner preview, export                       | file service, branding/theme controls      |
-| Stage rail           | `AuthoringStageRail`       | progress and error counts by stage                                              | new                                        |
-| Diagnostics          | `AuthoringReadinessPanel`  | actionable errors, warnings, proof status                                       | existing diagnostics + new compiler output |
-| Frame                | `LessonFrameEditor`        | metadata, lesson statement, domains, concepts, intended bad design              | support ledger, catalogue metadata         |
-| Brief                | `QuestionBriefEditor`      | structured prompt, FR/NFR/scale cards, learner preview                          | question prompt types                      |
-| Starting state       | `LearnerStartEditor`       | entry format, scaffold canvas, locks, constraints, assignment preview           | `FlowCanvas`, library, properties panel    |
-| Scenarios            | `ScenarioSuiteEditor`      | scenario list and visibility                                                    | new container                              |
-| Scenario card        | `ScenarioComposer`         | workload, request mix, global config, fault timeline                            | simulation controls model/defaults         |
-| Workload visual      | `WorkloadShapePreview`     | small deterministic pattern chart                                               | new pure visualization                     |
-| Grading              | `TraceabilityBoard`        | requirements and linked obligations                                             | new                                        |
-| Rule gallery         | `ObligationGallery`        | choose structural, semantic, runtime, or metric template                        | schema-backed templates                    |
-| Rule card            | `ObligationSentenceEditor` | kind-specific controlled inputs and compiled sentence                           | new per-kind editors                       |
-| Proof                | `DiscriminationLab`        | reference/gamed tabs, run orchestration, result matrix                          | canvas, worker, grader                     |
-| Export               | `PublishReview`            | readiness summary and generated artifacts                                       | compiler/row codec                         |
-| JSON display         | `GeneratedArtifactViewer`  | read-only formatted copy/download                                               | new                                        |
+| Screen/area          | Proposed component         | Responsibility                                                                  | Reuse                                        |
+| -------------------- | -------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------- |
+| App surface selector | `AppShell`                 | Choose simulator workspace or Question Studio in AUTHOR mode; deep-link support | new, mounts existing `WorkspaceLayout`       |
+| Studio frame         | `QuestionStudioShell`      | header, stage rail, workspace, diagnostics rail, navigation guards              | new                                          |
+| Project header       | `AuthoringHeader`          | project name, save state, import, learner preview, export                       | file service, branding/theme controls        |
+| Stage rail           | `AuthoringStageRail`       | progress and error counts by stage                                              | new                                          |
+| Diagnostics          | `AuthoringReadinessPanel`  | actionable errors, warnings, proof status                                       | existing diagnostics + new compiler output   |
+| Frame                | `LessonFrameEditor`        | metadata, lesson statement, domains, concepts, intended bad design              | support ledger, catalogue metadata           |
+| Brief                | `QuestionBriefEditor`      | structured prompt, FR/NFR/scale cards, learner preview                          | question prompt types                        |
+| Starting state       | `LearnerStartEditor`       | entry format, scaffold canvas, locks, constraints, assignment preview           | `FlowCanvas`, library, properties panel      |
+| Scenarios            | `ScenarioSuiteEditor`      | scenario list and visibility                                                    | new container                                |
+| Scenario card        | `ScenarioComposer`         | workload, request mix, global config, fault timeline                            | simulation controls model/defaults           |
+| Workload visual      | `WorkloadShapePreview`     | small deterministic pattern chart                                               | new pure visualization                       |
+| Grading              | `TraceabilityBoard`        | requirements and linked obligations                                             | new                                          |
+| Rule gallery         | `ObligationGallery`        | choose structural, semantic, runtime, or metric template                        | engine-owned authoring capability registry   |
+| Rule card            | `ObligationSentenceEditor` | kind-specific controlled inputs and compiled sentence                           | new per-kind editors                         |
+| Proof                | `DiscriminationLab`        | reference/gamed tabs, run orchestration, result matrix                          | canvas, worker, grader                       |
+| Proof preflight      | `VerificationRunPlan`      | design × case count, resolved modes, estimated cost, evidence blockers          | `resolveEvaluationMode`, capability registry |
+| Export               | `PublishReview`            | readiness summary and generated artifacts                                       | compiler/row codec                           |
+| JSON display         | `GeneratedArtifactViewer`  | read-only formatted copy/download                                               | new                                          |
 
 ## 9. Validation and readiness model
 
@@ -606,30 +711,63 @@ panel and block lossy re-export until handled.
 
 ### Phase 0 — Contract foundation
 
-This phase is mandatory before UI work.
+This phase is mandatory before UI work and is a shippable deliverable on its own.
+Even if the studio UI is delayed, a reconciled row codec, coverage matrix, and
+golden fixtures immediately reduce risk in the current manual authoring workflow.
+
+#### QAS-000 — Audit canonical authoring coverage and drift
+
+Build a field-level matrix for all canonical question packs. Record package fields,
+row fields, auxiliary metadata, rule kinds, metric paths, scenario features,
+reference/gamed outcomes, and whether each value survives current import/export.
+
+**Acceptance:** publish both normalized runtime coverage and exact authoring-pack
+fidelity; state exactly how many questions the proposed vertical slice can reproduce
+unmodified; classify every gap as intentional normalization, unsupported UI, parser
+loss, exporter loss, or engine-contract mismatch.
 
 #### QAS-001 — Extract and type the Newton row codec
 
 **Targets:** new engine-side authoring module, `newtonGamePlayground.ts`, Django
 guide generator.
 
-**Acceptance:** import and export use one implementation; all existing Newton row
-tests remain green.
+**Acceptance:** import and export use one implementation. Extraction is allowed to
+reveal existing drift; every discovered mismatch is added to the QAS-000 register
+and either reconciled or preserved as an explicit compatibility case before the
+codec becomes authoritative.
 
 #### QAS-002 — Add golden package/row round-trip fixtures
 
-Use all 14 canonical question-bank packages plus focused minimal rows.
+Use all 14 canonical question-bank packages plus focused minimal rows. First add
+characterization fixtures for current behavior, then reconcile intentional
+differences, and only then promote equality failures to blocking tests.
 
 **Acceptance:** normalized package equality, deterministic output, preserved stable
-IDs, and friendly error paths.
+IDs, friendly error paths, unchanged reference/gamed grading behavior, and an
+explicit policy for source-only fields such as `family` and legacy `_justify`.
 
-#### QAS-003 — Define `QuestionAuthoringProject` and compiler
+#### QAS-003 — Define the project, capability registry, and compiler
 
 Include schema versioning, migrations, requirement traceability, topology assets,
-and pure generated outputs.
+pure generated outputs, and the engine-owned authoring capability registry.
 
 **Acceptance:** incomplete drafts parse as drafts; complete drafts compile through
-the existing strict package and authoring validators.
+the existing strict package and authoring validators. Exhaustiveness tests fail when
+public rule kinds, metric selectors, component types, support-ledger entries, or
+evaluation-mode evidence change without authoring-registry reconciliation.
+
+#### Phase 0 release gate
+
+Phase 0 may ship when:
+
+- the coverage/drift report is checked in
+- the shared codec is used by runtime import and guide export
+- golden fixtures cover the canonical bank
+- unresolved incompatibilities are explicit, versioned, and non-lossy
+- CI prevents new package/row/registry drift
+
+The release notes should treat drift discovered during extraction as a successful
+output of the phase, not as unexpected schedule failure.
 
 ### Phase 1 — Thin vertical slice
 
@@ -658,7 +796,8 @@ simulation-control normalization.
 
 #### QAS-008 — Core obligation composers
 
-First support the current bank's common set:
+Use QAS-000 to freeze the exact vertical-slice coverage target. The current
+candidate set is:
 
 - structural: `requires_component`, `requires_single_source`, `requires_path`
 - semantic: `placement`, `guardedPath`, `fanout`, `storageFit`,
@@ -666,6 +805,8 @@ First support the current bank's common set:
 - rubric: current catalogue of simulation/invariant metric selectors
 
 Other supported structural kinds can follow as small sentence-editor additions.
+The ticket is not complete until the coverage matrix names which canonical
+questions are fully reproducible with this set and which still require Phase 2.
 
 #### QAS-009 — Live compilation and diagnostics
 
@@ -675,7 +816,9 @@ ledger notes, and implement readiness states.
 #### QAS-010 — Discrimination lab
 
 Build reference/gamed topology tabs, deterministic batch verification, expected
-discriminator matching, stale-proof detection, and the results matrix.
+discriminator matching, stale-proof detection, and the results matrix. Add the
+design × case preflight, production-parity auto-routing, evidence-mode checks,
+bounded worker queue, cancellation, and resolved-mode recording defined in §7.7.
 
 #### QAS-011 — Review and export
 
@@ -741,6 +884,12 @@ mutating the reviewed question.
   compiled package.
 - Exported artifacts can be pasted into the current Django workflow with no manual
   JSON editing.
+- The Phase 0 coverage report proves the advertised canonical-bank coverage; the
+  UI does not claim support based only on rule-kind counts.
+- Authoring galleries and selectors reflect the current engine registries without
+  a separately maintained renderer list.
+- Verification uses the same auto-routed execution path as production grading and
+  records the resolved mode for every design and case.
 
 ### Accessibility
 
@@ -756,6 +905,8 @@ mutating the reviewed question.
 - Field editing remains immediate; strict compilation is debounced or moved off the
   interaction-critical path.
 - Verification runs in the worker and can be cancelled.
+- Verification preflight shows the total run matrix, resolved execution modes, and
+  evidence incompatibilities before consuming work.
 - Large topology snapshots are stored structurally, not duplicated in undo history
   on every keystroke.
 
@@ -767,16 +918,25 @@ mutating the reviewed question.
 - authoring project schema and migration tests
 - deterministic compiler output snapshots
 - every sentence-editor option compiles to a valid typed rule
+- schema/metric/catalogue changes fail exhaustiveness checks until the authoring
+  capability registry is reconciled
+- evidence-mode declarations are tested against discrete and analytic outputs
+- current grading-scope variants compile, and unsupported case/phase scopes are
+  rejected explicitly
 - diagnostic paths map to stable UI targets
 - question-text generator escapes user content
 
 ### Fixture tests
 
-- import and re-export all 14 canonical question-bank packages
+- report normalized runtime coverage and exact source-pack fidelity separately for
+  all 14 canonical question-bank packages
+- import and re-export every package included in the declared MVP coverage target
 - reference passes and gamed fails remain unchanged after round-trip
 - row order is always config → structural → semantic → rubric
 - stable authored IDs are preserved
 - derived IDs are collision-safe and deterministic
+- `family`, `_justify`, and any other source-only fields follow the explicit QAS-002
+  preservation policy
 
 ### Component tests
 
@@ -784,6 +944,8 @@ mutating the reviewed question.
 - percentage and unit conversions
 - scenario pattern conditional fields
 - support-ledger advisories
+- registry-driven gallery updates and unsupported-mode warnings
+- verification preflight, progress, cancellation, and partial-result handling
 - stale-verification state after relevant edits
 - unsaved project guard
 - export gate and warning acknowledgement
@@ -797,6 +959,11 @@ mutating the reviewed question.
 4. Partial scaffold → lock nodes/edges → confirm ASSIGNMENT preview cannot edit them.
 5. Invalid metric/support promise → navigate from diagnostic to corrective control.
 6. Save project in web and Electron → reopen with identical compiled output.
+7. High-load suite → verification resolves analytic mode and records it in proof.
+8. Per-request-only obligation under analytic routing → publish proof blocks with an
+   actionable evidence explanation.
+9. Change router threshold/compiler/engine version → prior verification becomes
+   stale.
 
 ### Manual author review
 
@@ -809,18 +976,23 @@ mutating the reviewed question.
 
 ## 14. Risks and mitigations
 
-| Risk                                                  | Mitigation                                                                                              |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| UI, package, and Django rows drift                    | One shared compiler/row codec and golden round-trip fixtures                                            |
-| Incomplete drafts do not fit strict runtime schemas   | Separate versioned draft schema; strict compile only at validation/export boundaries                    |
-| A generic form exposes engine jargon                  | Intent-based sentence editors and curated galleries                                                     |
-| Authors overfit checks to one reference design        | Multiple gamed designs, intended-misconception labels, and accidental-failure reporting                 |
-| Unsupported concepts are presented as simulated       | Support-ledger badges and blocking alignment diagnostics for false promises                             |
-| Existing imported fields are lost                     | Preserve unsupported fields and block lossy re-export                                                   |
-| Multiple topology variants corrupt the canvas state   | Explicit snapshot/load controller in V1; scoped canvas stores if side-by-side editing is later required |
-| Question Studio bloats `WorkspaceLayout`              | Sibling application surface with dedicated authoring store and components                               |
-| Raw HTML creates preview/security issues              | Structured prompt authoring, escaped HTML generation, sandboxed advanced preview                        |
-| Client-side grading is mistaken for secure assessment | Keep a visible deployment warning; server re-grade is a separate platform milestone                     |
+| Risk                                                  | Mitigation                                                                                                                     |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| UI, package, and Django rows drift                    | One shared compiler/row codec and golden round-trip fixtures                                                                   |
+| Incomplete drafts do not fit strict runtime schemas   | Separate versioned draft schema; strict compile only at validation/export boundaries                                           |
+| A generic form exposes engine jargon                  | Intent-based sentence editors and curated galleries                                                                            |
+| Authors overfit checks to one reference design        | Multiple gamed designs, intended-misconception labels, and accidental-failure reporting                                        |
+| Unsupported concepts are presented as simulated       | Support-ledger badges and blocking alignment diagnostics for false promises                                                    |
+| Existing imported fields are lost                     | Preserve unsupported fields and block lossy re-export                                                                          |
+| Multiple topology variants corrupt the canvas state   | Explicit snapshot/load controller in V1; scoped canvas stores if side-by-side editing is later required                        |
+| Question Studio bloats `WorkspaceLayout`              | Sibling application surface with dedicated authoring store and components                                                      |
+| Raw HTML creates preview/security issues              | Structured prompt authoring, escaped HTML generation, sandboxed advanced preview                                               |
+| Client-side grading is mistaken for secure assessment | Keep a visible deployment warning; server re-grade is a separate platform milestone                                            |
+| Codec extraction reveals existing package/row drift   | Treat the drift register as a Phase 0 deliverable; characterize before reconciling and do not assume day-one green round trips |
+| Grading gains per-case or per-phase scopes            | Keep scope explicit in the draft/registry, enable only compilable variants, and migrate through versioned compiler contracts   |
+| Verification cost grows as designs × cases            | Preflight the matrix, use production `auto` routing, run a bounded cancellable queue, and persist resolved modes               |
+| Analytic routing cannot prove per-request evidence    | Registry declares evidence modes; block authoritative proof rather than accepting representative traces                        |
+| Engine primitives evolve faster than the studio UI    | Engine-owned capability registries plus CI exhaustiveness checks; no independent renderer list                                 |
 
 ## 15. Recommended delivery cut
 
@@ -837,9 +1009,13 @@ Frame lesson
   → export valid Django rows
 ```
 
-Complete the shared compiler and row codec first, then ship this loop using the
-rule kinds already dominant in the question bank. That gives authors an immediate
-no-JSON workflow and establishes the architecture needed for advanced rule kinds,
+Ship Phase 0 first as **Authoring Contract Foundation**, with its own release note
+and acceptance gate. It provides value without UI by proving the package/row seam,
+documenting real bank coverage, exposing existing drift, and preventing new drift.
+
+Only after that gate should the team ship the visual loop using the exact primitive
+set justified by the coverage audit. That gives authors an immediate no-JSON
+workflow and establishes the architecture needed for advanced rule kinds,
 templates, and direct Django publishing without rework.
 
 ## 16. Success measures
@@ -852,6 +1028,9 @@ Capture a baseline from the current manual workflow, then track:
 - percentage of gradeable requirements linked to checks
 - percentage of questions with current dual-topology proof
 - row/package drift incidents
+- normalized runtime coverage and exact authoring-pack fidelity, tracked separately
+- authoring-registry reconciliation failures caught in CI before release
+- verification runs by resolved mode, median matrix size, and cancellation rate
 - number of review cycles before publish readiness
 - successful import/export rate for existing canonical questions
 
