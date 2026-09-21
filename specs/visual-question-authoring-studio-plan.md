@@ -68,20 +68,21 @@ This creates four predictable failures:
 The 14 canonical questions are all `open-build` and currently use 14 suite cases in
 total. Their most common authoring primitives are:
 
-- `requires_component`: 12 uses
-- `requires_single_source`: 10 uses
-- `requires_path`: 1 use
-- `stateTransition`: 8 uses
-- `storageFit`: 5 uses
-- `guardedPath` and `placement`: 3 uses each
-- invariant checks: 13 uses
-- p99 checks: 5 uses
+- structural — `requires_component`: 12, `requires_single_source`: 10,
+  `requires_path`: 1
+- semantic — `stateTransition`: 8, `storageFit`: 5, `guardedPath`: 3, `placement`: 3,
+  `fanout`: 2, `forbidUnjustified`: 1
+- rubric — `invariant`: 13, `simulation`: 9 (of which p99 checks: 5)
 
-This is a prioritization signal, not proof of end-to-end coverage. A preliminary
-field audit already shows why the distinction matters: all 14 source packages carry
-a `family` field outside the runtime-facing `QuestionPackage` interface, and 9 carry
-legacy `_justify` data. The common composer set appears to cover the normalized
-runtime grading shapes, but exact source-pack fidelity is not yet proven.
+This is a prioritization signal, not proof of end-to-end coverage. A field audit run
+against the bank on 2026-09-19 confirms the counts above and shows why the
+runtime-versus-source distinction matters: all 14 source packages carry a `family`
+field outside the runtime-facing `QuestionPackage` interface, and 9 of 14 carry
+legacy `_justify` data (`async-sla`, `cargo-cult-cdn`, `flash-sale-booking`,
+`messaging-fanout`, `news-feed`, `ride-hailing`, `sensor-store`, `url-shortener`,
+`web-crawler`). The common composer set covers the normalized runtime grading shapes,
+but exact source-pack fidelity for `family`/`_justify` is still unproven until the
+QAS-000 round-trip register lands.
 
 Phase 0 must therefore publish a coverage matrix with two separate numbers:
 
@@ -1004,10 +1005,17 @@ Frame lesson
   → write brief
   → create one scenario
   → add common check cards
-  → build reference and one gamed design
-  → prove discrimination
   → export valid Django rows
 ```
+
+The **Prove / discrimination** step (Stage 6, QAS-010) is **deferred past the first
+MVP release**. Its engine (`questionAuthoringVerification`), schema (reference and
+gamed topology assets), and `DiscriminationLab` UI are built and tested, but the
+stage is hidden from the authoring flow: it adds a heavy reference-plus-gamed
+canvas-and-simulation workflow that the first no-JSON release does not need. The
+MVP ships without empirical dual-topology proof; re-add the stage to
+`QUESTION_STUDIO_STAGES` to bring the built feature back. Until then, "publish
+ready" is defined by valid + traceable, not verified.
 
 Ship Phase 0 first as **Authoring Contract Foundation**, with its own release note
 and acceptance gate. It provides value without UI by proving the package/row seam,
@@ -1026,14 +1034,17 @@ Capture a baseline from the current manual workflow, then track:
 - percentage of questions authored without raw JSON edits
 - schema/metric errors caught before Django preview
 - percentage of gradeable requirements linked to checks
-- percentage of questions with current dual-topology proof
 - row/package drift incidents
 - normalized runtime coverage and exact authoring-pack fidelity, tracked separately
 - authoring-registry reconciliation failures caught in CI before release
-- verification runs by resolved mode, median matrix size, and cancellation rate
 - number of review cycles before publish readiness
 - successful import/export rate for existing canonical questions
 
+Deferred until the Prove stage ships (see §15): percentage of questions with current
+dual-topology proof, and verification runs by resolved mode, median matrix size, and
+cancellation rate.
+
 The strongest initial success criterion is binary: a non-engineering content author
-can produce a Newton-ready, validated, discriminatory question and its JSON rows
-without learning the JSON DSL.
+can produce a Newton-ready, validated question and its JSON rows without learning the
+JSON DSL. Empirical discrimination proof (reference passes, gamed design fails) is a
+post-MVP criterion that arrives with the Prove stage.
