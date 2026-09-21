@@ -7,11 +7,8 @@ headroom** budget? Ends in a fully honest model where the run is **computed
 analytically** (you cannot draw a million dots) and the canvas animation is labelled
 as representative.
 
-> This is the interactive-builder walkthrough. The authored-question version of the
-> same scenario lives at `src/engine/analysis/fixtures/quickcart-flash-sale.question.json`
-> and is graded by the same engine.
->
-> To recreate the question with the current visual authoring flow, use the
+> This is the interactive-builder walkthrough. To recreate the same scenario with
+> the visual authoring flow, use the
 > [Question Studio walkthrough](question-studio-walkthrough.md).
 
 ## The problem
@@ -182,7 +179,7 @@ Open the **Workload** panel (click **Run**) and scroll to **STOP CONDITION**:
 ## Why it's built this way (gotchas we hit)
 
 - **You can't draw a million dots — and you don't need to.** At this scale the run is
-  computed with the fluid model (`fluidModel.ts`): traffic is treated as a *rate*,
+  computed with the analytic/fluid model: traffic is treated as a *rate*,
   each node's utilization is `offered ÷ capacity`, and the answer is exact and
   instant. The canvas dots are cosmetic and labelled "1 dot ≈ N req/s"; never read a
   metric off the dot count — the real numbers are in the results.

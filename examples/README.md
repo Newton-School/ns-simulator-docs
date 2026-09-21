@@ -26,6 +26,10 @@ Each design has a **builder walkthrough** (how to build it) and a **test-cases**
 The URL Shortener folder additionally carries the full authoring pack (`question.json`,
 `reference-topology.json`, `gamed-topology.json`) — see its [README](url-shortener/README.md).
 
+## Question Studio walkthrough
+
+- **QuickCart Flash Sale** — [author the complete question in Question Studio](quickcart-flash-sale/question-studio-walkthrough.md), including the blank-canvas contract, 1,000,000 req/s scenario, 80% headroom invariant, grading rules, preview, and Django export.
+
 ## How the two files per design fit together
 
 - The **walkthrough** ends in a *"gradeable decisions (measured)"* vs *"still justification
