@@ -6,6 +6,7 @@
 > `django-admin-assignment.md` shape.
 >
 > **Primary outputs.** For each translated assignment part:
+>
 > 1. rewritten `question_text` HTML
 > 2. ordered Django test-case rows (`SIMULATOR_CONFIG`, `STRUCTURAL_RULE`,
 >    `SEMANTIC_CRITERION`, `RUBRIC_CHECK`)
@@ -13,6 +14,7 @@
 >    or dropped
 >
 > **Grounding examples.** Existing exemplars live in:
+>
 > - [url-shortener/django-admin-assignment.md](../examples/question-bank/url-shortener/django-admin-assignment.md)
 > - [messaging-fanout/django-admin-assignment.md](../examples/question-bank/messaging-fanout/django-admin-assignment.md)
 > - [news-feed/django-admin-assignment.md](../examples/question-bank/news-feed/django-admin-assignment.md)
@@ -147,14 +149,14 @@ The author must also be able to explain:
 Before writing `question_text` or rows, convert the source prompt into a
 classification table.
 
-| Bucket | Meaning | Typical output |
-|--------|---------|----------------|
-| `Structural` | The graph must contain a component, path, edge, count, or redundancy shape. | `STRUCTURAL_RULE` |
-| `Semantic` | The graph must express the right *meaning* for the workload. | `SEMANTIC_CRITERION` |
-| `Simulation` | The design must satisfy latency / throughput / error / invariant targets under injected load. | `RUBRIC_CHECK` |
+| Bucket          | Meaning                                                                                                         | Typical output                       |
+| --------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `Structural`    | The graph must contain a component, path, edge, count, or redundancy shape.                                     | `STRUCTURAL_RULE`                    |
+| `Semantic`      | The graph must express the right *meaning* for the workload.                                                    | `SEMANTIC_CRITERION`                 |
+| `Simulation`    | The design must satisfy latency / throughput / error / invariant targets under injected load.                   | `RUBRIC_CHECK`                       |
 | `Justification` | The student should explain a decision, but the engine should not decide correctness from runtime metrics alone. | prompt prose today; future `justify` |
-| `Narrative` | Framing, product realism, context, or discussion prompts that are not graded. | `question_text` only |
-| `Split Trigger` | A sign that this statement belongs in a separate assignment part. | new part |
+| `Narrative`     | Framing, product realism, context, or discussion prompts that are not graded.                                   | `question_text` only                 |
+| `Split Trigger` | A sign that this statement belongs in a separate assignment part.                                               | new part                             |
 
 ### 4.1 Structural examples
 
@@ -220,8 +222,8 @@ which collects a glossary plus the reusable authoring tables imported from
 
 Break the source into atomic statements:
 
-| ID | Source statement | Inferred meaning | Bucket | Keep / Split / Drop | Reason |
-|----|------------------|------------------|--------|---------------------|--------|
+| ID  | Source statement | Inferred meaning | Bucket | Keep / Split / Drop | Reason |
+| --- | ---------------- | ---------------- | ------ | ------------------- | ------ |
 
 The author should be able to point to every line in the final assignment and say
 which source statement it came from.
@@ -230,17 +232,17 @@ which source statement it came from.
 
 For each resulting assignment part:
 
-| Field | Definition |
-|-------|------------|
-| `partTitle` | The specific slice name |
-| `studentAction` | What the student is being asked to build or fix |
-| `domains` | 1-2 dominant bottleneck domains |
-| `concepts` | 1-3 specific concepts |
-| `workloadCategory` | dominant traffic character |
-| `questionType` | usually `open-build`, sometimes `fix` or `tradeoff` |
-| `entryFormat` | the learner-entry shell: `blank-canvas`, `requirements-first`, `partial-scaffold`, `broken-scaffold`, `baseline-optimize`, or `locked-lab` |
-| `intendedBadDesign` | the most plausible wrong answer |
-| `proofOfDiscrimination` | why the wrong answer should fail |
+| Field                   | Definition                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `partTitle`             | The specific slice name                                                                                                                    |
+| `studentAction`         | What the student is being asked to build or fix                                                                                            |
+| `domains`               | 1-2 dominant bottleneck domains                                                                                                            |
+| `concepts`              | 1-3 specific concepts                                                                                                                      |
+| `workloadCategory`      | dominant traffic character                                                                                                                 |
+| `questionType`          | usually `open-build`, sometimes `fix` or `tradeoff`                                                                                        |
+| `entryFormat`           | the learner-entry shell: `blank-canvas`, `requirements-first`, `partial-scaffold`, `broken-scaffold`, `baseline-optimize`, or `locked-lab` |
+| `intendedBadDesign`     | the most plausible wrong answer                                                                                                            |
+| `proofOfDiscrimination` | why the wrong answer should fail                                                                                                           |
 
 ### 5.3.1 Choose `questionType` and `entryFormat` separately
 
@@ -251,14 +253,14 @@ For each resulting assignment part:
 
 Use this matrix:
 
-| `entryFormat` | Use when | Typical companion `questionType` |
-|---------------|----------|----------------------------------|
-| `blank-canvas` | The student should design from scratch with no starter topology. | `open-build`, sometimes `tradeoff` |
-| `requirements-first` | The student should start from explicit FR/NFR/scale decomposition, wizard steps, or blueprint scaffolding before touching the canvas. | `open-build`, `build-budget`, `tradeoff` |
-| `partial-scaffold` | The topology should start half-built so the student completes a bounded design. | `open-build`, `scaling`, `ha-chaos` |
-| `broken-scaffold` | The student must repair a flawed starter topology. | `fix` |
-| `baseline-optimize` | The student must improve a working but weak baseline and usually compare against a prior verdict. | `optimize` |
-| `locked-lab` | The student should manipulate parameters on a fixed topology rather than edit architecture shape. | lab-style lessons; the stored `questionType` may still be `open-build` |
+| `entryFormat`        | Use when                                                                                                                              | Typical companion `questionType`                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `blank-canvas`       | The student should design from scratch with no starter topology.                                                                      | `open-build`, sometimes `tradeoff`                                     |
+| `requirements-first` | The student should start from explicit FR/NFR/scale decomposition, wizard steps, or blueprint scaffolding before touching the canvas. | `open-build`, `build-budget`, `tradeoff`                               |
+| `partial-scaffold`   | The topology should start half-built so the student completes a bounded design.                                                       | `open-build`, `scaling`, `ha-chaos`                                    |
+| `broken-scaffold`    | The student must repair a flawed starter topology.                                                                                    | `fix`                                                                  |
+| `baseline-optimize`  | The student must improve a working but weak baseline and usually compare against a prior verdict.                                     | `optimize`                                                             |
+| `locked-lab`         | The student should manipulate parameters on a fixed topology rather than edit architecture shape.                                     | lab-style lessons; the stored `questionType` may still be `open-build` |
 
 Authoring rule:
 
@@ -270,12 +272,12 @@ Authoring rule:
 
 For each part, create a final traceability table:
 
-| Final item | Source statement(s) | Bucket | Output location |
-|------------|---------------------|--------|-----------------|
-| prompt paragraph | S1, S2 | Narrative | `question_text` |
-| "exactly one source" | S3 | Structural | row `STRUCTURAL_RULE: single-source` |
-| "point lookup store" | S4 | Semantic | row `SEMANTIC_CRITERION: store-fit` |
-| "p99 < 100 ms" | S5 | Simulation | row `RUBRIC_CHECK: p99` |
+| Final item           | Source statement(s) | Bucket     | Output location                      |
+| -------------------- | ------------------- | ---------- | ------------------------------------ |
+| prompt paragraph     | S1, S2              | Narrative  | `question_text`                      |
+| "exactly one source" | S3                  | Structural | row `STRUCTURAL_RULE: single-source` |
+| "point lookup store" | S4                  | Semantic   | row `SEMANTIC_CRITERION: store-fit`  |
+| "p99 < 100 ms"       | S5                  | Simulation | row `RUBRIC_CHECK: p99`              |
 
 This table is the best defense against drift and accidental cargo-cult authoring.
 
@@ -324,13 +326,13 @@ then it should normally split.
 
 ### 6.4 Typical split patterns
 
-| Source prompt shape | Better simulator split |
-|---------------------|------------------------|
-| `Design Twitter` | feed write fanout, feed read path, maybe notifications |
-| `Design Uber` | trip-match hot path, durable payment/correctness path |
-| `Design Dropbox` | metadata/write path, read/download path |
-| `Design YouTube` | upload pipeline, read delivery path |
-| `Design WhatsApp` | delivery fanout, presence/state synchronization |
+| Source prompt shape | Better simulator split                                 |
+| ------------------- | ------------------------------------------------------ |
+| `Design Twitter`    | feed write fanout, feed read path, maybe notifications |
+| `Design Uber`       | trip-match hot path, durable payment/correctness path  |
+| `Design Dropbox`    | metadata/write path, read/download path                |
+| `Design YouTube`    | upload pipeline, read delivery path                    |
+| `Design WhatsApp`   | delivery fanout, presence/state synchronization        |
 
 ### 6.5 Example: "Design Twitter"
 
@@ -406,24 +408,24 @@ Guidelines:
 
 ### 7.3 Domain selection guidance
 
-| If the lesson is mainly about... | Use domain(s) |
-|----------------------------------|---------------|
-| overloaded services, sync blocking, saturation | `compute` |
-| point lookup vs scan, write throughput, fanout storage shape | `storage` |
-| geo latency, bandwidth, explicit edge tuning | `network` |
-| retries, failover, resilience controls | `resilience` |
-| exactly-once, idempotency, no-double-book | `correctness` |
-| fixing within a money cap | `cost` |
+| If the lesson is mainly about...                             | Use domain(s) |
+| ------------------------------------------------------------ | ------------- |
+| overloaded services, sync blocking, saturation               | `compute`     |
+| point lookup vs scan, write throughput, fanout storage shape | `storage`     |
+| geo latency, bandwidth, explicit edge tuning                 | `network`     |
+| retries, failover, resilience controls                       | `resilience`  |
+| exactly-once, idempotency, no-double-book                    | `correctness` |
+| fixing within a money cap                                    | `cost`        |
 
 ### 7.4 Workload category guidance
 
-| Prompt shape | `workloadCategory` |
-|--------------|--------------------|
-| mostly reads | `read-heavy` |
-| mostly writes | `write-heavy` |
-| broker / shared-state / fanout lesson | `connection-heavy` |
+| Prompt shape                                         | `workloadCategory`  |
+| ---------------------------------------------------- | ------------------- |
+| mostly reads                                         | `read-heavy`        |
+| mostly writes                                        | `write-heavy`       |
+| broker / shared-state / fanout lesson                | `connection-heavy`  |
 | correctness / duplicate suppression / double-booking | `correctness-heavy` |
-| pipelines / crawler / async jobs | `batch-heavy` |
+| pipelines / crawler / async jobs                     | `batch-heavy`       |
 
 ### Step 4. Convert the source into explicit FR / NFR / Scale
 
@@ -730,7 +732,7 @@ Before shipping a translated assignment, verify:
 
 ## Appendix A. Canonical `django-admin-assignment.md` Skeleton
 
-~~~~md
+````md
 # Django Admin Setup: <Question Title>
 
 This authoring shape is for Newton assignment mode only.
@@ -910,7 +912,7 @@ Justification prompts are currently hidden in the Newton assignment UI and are n
   "points": 3
 }
 ```
-~~~~
+````
 
 ## Appendix B. Prompt Contract for the Future Skill
 

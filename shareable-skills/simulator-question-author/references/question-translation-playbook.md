@@ -131,8 +131,8 @@ Choose the lesson domains, not every technology named.
 ### Concepts
 
 Use short kebab-case lesson labels such as `read-cache`, `store-fit`,
-`horizontal-scaling`, `async-decoupling`, or `capacity-headroom`. Verify current
-support in `supportLedger.ts` when available.
+`horizontal-scaling`, `async-decoupling`, or `capacity-headroom`. Confirm that the
+concept fits the support boundaries in the bundled feasibility reference.
 
 ## 7. Design the shared contract
 

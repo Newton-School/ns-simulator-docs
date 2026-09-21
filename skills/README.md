@@ -26,7 +26,7 @@ This directory contains reusable Codex skills for working on the DSDS simulator 
 
 | Skill | Primary Use | Path |
 |---|---|---|
-| `simulator-question-author` | Translate interview-style prompts into simulator-ready assignment packages. | `skills/simulator-question-author/SKILL.md` |
+| `simulator-question-author` | Turn a system-design prompt into paired learner-builder and Question Studio Markdown walkthroughs, backed by feasible simulator grading. | `skills/simulator-question-author/SKILL.md` |
 | `component-taxonomy-selector` | Map requirements to valid DSDS component types and categories. | `skills/component-taxonomy-selector/SKILL.md` |
 | `topology-json-author` | Produce and validate simulator-ready `TopologyJSON`. | `skills/topology-json-author/SKILL.md` |
 | `scenario-composer` | Build deterministic workload/fault/invariant scenario bundles. | `skills/scenario-composer/SKILL.md` |
