@@ -602,7 +602,7 @@ two reservation authorities (the reservation-store model).
   "points": 4
 }
 ```
-Full matcher/filter syntax: `specs/runtime-semantic-criteria.md`.
+Full matcher/filter syntax: [`specs/runtime-semantic-criteria.md`](./runtime-semantic-criteria.md).
 
 ---
 
@@ -1088,7 +1088,7 @@ that emit the counters and `stateTimeline` scopes in §3:
 - **`rate-limiter` / `api-gateway` / `throttler`** → rate limiter: token-bucket /
   fixed-window / sliding-window admission, keyed per client, with a cross-node
   breach oracle (`rateLimit.breaches`). Config: `algorithm`, `limit`, `windowMs`,
-  `rateLimitKeyField`. See `specs/rate-limiter-admission-and-breach-model.md`.
+  `rateLimitKeyField`. See [`specs/rate-limiter-admission-and-breach-model.md`](./rate-limiter-admission-and-breach-model.md).
 - **`idempotency-manager`** → dedup + commit-outcome journal + external
   reconciliation (`idempotency` and `commit-outcome` scopes).
 

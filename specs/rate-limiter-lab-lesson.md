@@ -16,7 +16,7 @@ and the capstone are graded; stages 4–5 are simulate-and-justify.
 ## What is gradeable (settled)
 
 Backed by the rate-limiter admission & breach model
-(`specs/rate-limiter-admission-and-breach-model.md`):
+([`specs/rate-limiter-admission-and-breach-model.md`](./rate-limiter-admission-and-breach-model.md)):
 
 - placement (limiter on the path) — **T**
 - counter store is a shared in-memory store, not a per-instance local store and
@@ -175,8 +175,8 @@ valid question — do not ship the capstone until all four run this way.
 
 ## Code / spec map
 
-- Engine model + metric: `specs/rate-limiter-admission-and-breach-model.md`
+- Engine model + metric: [`specs/rate-limiter-admission-and-breach-model.md`](./rate-limiter-admission-and-breach-model.md)
   (`rateLimit.breaches`, `src/engine/traits/rateLimiter.ts`)
-- Contended-key workload primitive: `specs/contended-inventory-and-oversell-model.md`
-- DSL row reference: `specs/evaluation-authoring-reference-manual.md`, `specs/test-case-catalog.md`
+- Contended-key workload primitive: [`specs/contended-inventory-and-oversell-model.md`](./contended-inventory-and-oversell-model.md)
+- DSL row reference: [`specs/evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md), [`specs/test-case-catalog.md`](./test-case-catalog.md)
 - Grading axes: `LECTURE-MASTERCLASS.md` §13, §16

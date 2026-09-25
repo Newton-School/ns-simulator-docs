@@ -10,3 +10,4 @@ capacity. Steady-state math alone misses it.
 **Leads to:** [[concepts/queueing/queue-depth-is-a-leading-indicator-of-latency|Queue depth is a leading indicator of latency]]
 **Seen in:** [[p05-live-voting|Problem 5 - Live Voting]]
 **Taught in:** [[m11-workload-scale|M11 - Workload & Scale]] · [[m03-queueing-model|M03 - Queueing]]
+**Map:** [[maps/performance|Performance Engineering]]

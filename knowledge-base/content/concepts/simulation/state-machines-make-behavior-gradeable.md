@@ -17,3 +17,4 @@ checkable one.
 **Seen in:** [[p08-flash-sale|Problem 8 - Flash Sale]]
 **Taught in:** [[m08-traits|M08 - Traits]]
 **Spec:** [[replication-quorum-state-machine-walkthrough|replication-quorum-state-machine-walkthrough.md]]
+**Map:** [[maps/distributed-systems|Distributed Systems]]

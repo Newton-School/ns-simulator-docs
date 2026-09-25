@@ -1,6 +1,6 @@
 # Connection tier — a stateful connection-server node with connection-count capacity
 
-> Status: V1 implemented (GAP 1 in `system-design-coverage-gaps.md`). A **Connection
+> Status: V1 implemented (GAP 1 in [`system-design-coverage-gaps.md`](./system-design-coverage-gaps.md)). A **Connection
 > Server** palette node (Network category, backed by `api-gateway`) now carries a
 > derived `sim.connection` capacity model: fleet capacity, utilization, refused overflow,
 > required instances, and heartbeat load. Runtime heartbeat-arrival injection and a
@@ -108,7 +108,7 @@ sim.connection = {
 
 ## 4. Why a node (not a trait) and why a new capacity dimension
 
-Per the node-vs-property doctrine (`custom-node-and-service-definition-spec.md`): a
+Per the node-vs-property doctrine ([`custom-node-and-service-definition-spec.md`](./custom-node-and-service-definition-spec.md)): a
 connection server *is* a distinct deployable box with a capacity dimension no existing
 node has (held connections ≠ RPS). It recurs in two designs. That clears the bar for a
 new node. The capacity dimension is genuinely new — it is a *held* resource over time,

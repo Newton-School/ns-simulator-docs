@@ -513,7 +513,7 @@ Any new stochastic behavior must:
 - quantize or otherwise stabilize any scheduled duration
 - add regression tests proving repeatability
 
-This is already called out in `specs/trait-integration-guide.md`.
+This is already called out in [`specs/trait-integration-guide.md`](./trait-integration-guide.md).
 
 ---
 

@@ -2,7 +2,7 @@
 
 This reference pack accompanies the interview-question translation worksheet.
 It pulls glossary help plus the reusable authoring tables from
-`evaluation-authoring-reference-manual.md` into one place so authors can keep
+[`evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md) into one place so authors can keep
 the worksheet and the reference material side by side.
 
 ## Glossary

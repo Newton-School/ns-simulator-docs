@@ -2,9 +2,9 @@
 
 > Ready-to-paste **`QuestionPackage` JSON** for each canonical question. Paste one
 > into a GAME question's **`initial_game_state`** field (see
-> `authoring-a-simulator-game-question-runbook.md`). Each is built against the
-> alignment contract in `question-simulation-alignment.md` and the grading model
-> in `question-grading-model-and-anti-gaming.md`.
+> [`authoring-a-simulator-game-question-runbook.md`](./authoring-a-simulator-game-question-runbook.md)). Each is built against the
+> alignment contract in [`question-simulation-alignment.md`](./question-simulation-alignment.md) and the grading model
+> in [`question-grading-model-and-anti-gaming.md`](./question-grading-model-and-anti-gaming.md).
 >
 > **Authoring notes (read once):**
 > - **Metric keys are real verdict paths:** `summary.latency.p99`,

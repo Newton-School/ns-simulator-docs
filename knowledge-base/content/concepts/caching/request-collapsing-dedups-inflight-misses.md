@@ -10,3 +10,4 @@ downstream call - the survival trait for a viral cold key.
 **Because:** [[caching/cache-stampede-is-a-thundering-herd|A cache stampede is a thundering herd]]
 **Seen in:** [[p11-celebrity-upload|Problem 11 - Celebrity Upload]]
 **Taught in:** [[m08-traits|M08 - Traits]]
+**Map:** [[maps/distributed-systems|Distributed Systems]]

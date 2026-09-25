@@ -10,3 +10,4 @@ shows 64-128 "workers/connections" while a compute service shows 2.
 **Contrast:** [[compute/cpu-bound-is-one-worker-per-vcpu|CPU-bound gets one worker per vCPU]]
 **Taught in:** [[m06-execution-profiles|M06 - Execution Profiles]]
 **Spec:** [[execution-profile-and-node-concurrency|execution-profile-and-node-concurrency.md]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

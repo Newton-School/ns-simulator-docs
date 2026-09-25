@@ -5,8 +5,8 @@
 > crucially - **what the ns-simulator can actually model today**. Part 2 is the concrete
 > V1 action plan for the 9 shipped questions.
 >
-> Companion to `node-capability-matrix.md` (per-node physics + trait roadmap),
-> `trait-integration-guide.md` (how to add the missing physics), and the budget docs.
+> Companion to [`node-capability-matrix.md`](./node-capability-matrix.md) (per-node physics + trait roadmap),
+> [`trait-integration-guide.md`](./trait-integration-guide.md) (how to add the missing physics), and the budget docs.
 
 ## Legend - simulator status
 
@@ -227,7 +227,7 @@ panel. The student's only levers: drag nodes, change storage types, scale worker
 
 **3. Strip the budget (done).** `budget` already removed from `async-sla` / `sensor-store`;
 `BudgetMeter` auto-hides (renders only when a question declares a budget). V2 redesign in
-`budget-feature-implementation-v3.md`.
+[`budget-feature-implementation-v3.md`](./budget/budget-feature-implementation-v3.md).
 
 **4. Confirm each rubric grades three axes.** Every V1 question should carry:
   - **Simulation:** `summary.latency.p99` or `summary.throughput` - proves the node
@@ -255,4 +255,4 @@ panel. The student's only levers: drag nodes, change storage types, scale worker
 
 **Result:** the 9 V1 questions become a clean, gaming-resistant experience focused purely
 on **node and data architecture**. Network, edge, resilience, correctness-physics, and cost
-are cleanly deferred to V2 behind the traits catalogued in `node-capability-matrix.md`.
+are cleanly deferred to V2 behind the traits catalogued in [`node-capability-matrix.md`](./node-capability-matrix.md).

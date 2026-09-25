@@ -9,3 +9,4 @@ not edge tuning" mode used in graded assignments.
 
 **Contrast:** [[network/latency-is-dominated-by-path-type|Edge latency is dominated by path type]]
 **Taught in:** [[m07-edges|M07 - Edges]] · [[m13-environment-profiles|M13 - Environment Profiles]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

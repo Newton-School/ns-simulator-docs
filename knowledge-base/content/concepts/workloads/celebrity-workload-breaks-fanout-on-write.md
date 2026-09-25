@@ -10,3 +10,4 @@ is a hybrid: push for the many, pull for the few celebrities.
 **Because:** [[workloads/fanout-on-write-vs-on-read|Fanout-on-write vs on-read]]
 **Seen in:** [[p13-taylor-swift-news-feed|Problem 13 - News Feed]]
 **Taught in:** [[m11-workload-scale|M11 - Workload & Scale]]
+**Map:** [[maps/distributed-systems|Distributed Systems]]

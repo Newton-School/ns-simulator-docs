@@ -9,3 +9,4 @@ patterns like localized WebSocket proxies.
 
 **Seen in:** [[p07-live-sports-scoreboard|Problem 7 - Live Sports Scoreboard]]
 **Taught in:** [[m07-edges|M07 - Edges]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

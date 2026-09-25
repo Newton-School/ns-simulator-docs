@@ -23,3 +23,7 @@ tags: [moc]
 - [[m12-grading-dsl|M12]] · [[m13-environment-profiles|M13]] · [[m15-newton-integration|M15]]
 ## Problems
 - [[p08-flash-sale|P08]] · [[p12-ps5-restock|P12]]
+
+## More notes in this map
+
+- [[concepts/grading/five-orthogonal-axes-resist-gaming|Five orthogonal grading axes resist gaming]]

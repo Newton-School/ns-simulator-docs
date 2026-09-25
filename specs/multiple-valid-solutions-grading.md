@@ -16,9 +16,9 @@
 >
 > **Related docs.**
 >
-> - `evaluation-authoring-reference-manual.md`
-> - `question-grading-model-and-anti-gaming.md`
-> - `rubric-engine-and-question-platform-architecture.md`
+> - [`evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md)
+> - [`question-grading-model-and-anti-gaming.md`](./question-grading-model-and-anti-gaming.md)
+> - [`rubric-engine-and-question-platform-architecture.md`](./rubric-engine-and-question-platform-architecture.md)
 
 ---
 
@@ -92,7 +92,7 @@ The reference topology exists so the author can prove:
 - one intended good topology passes
 - one intended bad topology fails on the intended axis
 
-That is the Dual-Topology Rule in `evaluation-authoring-reference-manual.md`.
+That is the Dual-Topology Rule in [`evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md).
 It is an authoring validation loop, not an exact-match runtime scoring model.
 
 ### 2.3 Current support for "multiple answers" already exists in narrow form
@@ -900,8 +900,8 @@ Needed product behavior:
 
 Update:
 
-- `evaluation-authoring-reference-manual.md`
-- `interview-question-to-django-assignment-translation.md`
+- [`evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md)
+- [`interview-question-to-django-assignment-translation.md`](./interview-question-to-django-assignment-translation.md)
 - example question fixtures
 
 Add at least:

@@ -16,3 +16,4 @@ visibly costs write latency.
 **Seen in:** [[p12-ps5-restock|Problem 12 - PS5 Restock]]
 **Taught in:** [[m08-traits|M08 - Traits]]
 **Spec:** [[replication-quorum-state-machine-walkthrough|replication-quorum-state-machine-walkthrough.md]]
+**Map:** [[maps/distributed-systems|Distributed Systems]]

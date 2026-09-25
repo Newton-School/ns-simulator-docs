@@ -1,6 +1,6 @@
 # Event Debugger - Data Model & Schema Changes
 
-This document specifies the data model, type additions, and schema changes required to implement the event debugger features described in `event-debugger-prototypes.md`. It is organized by layer - engine core, worker protocol, renderer state - and explains what each new type represents, why it exists, where it lives, and how it connects to existing types.
+This document specifies the data model, type additions, and schema changes required to implement the event debugger features described in [`event-debugger-prototypes.md`](./event-debugger-prototypes.md). It is organized by layer - engine core, worker protocol, renderer state - and explains what each new type represents, why it exists, where it lives, and how it connects to existing types.
 
 ---
 

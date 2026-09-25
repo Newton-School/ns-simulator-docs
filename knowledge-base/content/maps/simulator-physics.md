@@ -34,3 +34,16 @@ tags: [moc]
 
 ## Problems that exercise this
 - [[p04-iot-ingestion|P04 IoT Ingestion]] · [[p05-live-voting|P05 Live Voting]] · [[p02-video-transcoder|P02 Transcoder]]
+
+## More notes in this map
+
+- [[concepts/compute/cpu-bound-is-one-worker-per-vcpu|CPU-bound work gets one worker per vCPU]]
+- [[concepts/compute/derive-and-lock-prices-concurrency|Derive-and-lock makes concurrency cost money]]
+- [[concepts/compute/io-bound-multiplexes-many-per-vcpu|IO-bound work multiplexes many requests per vCPU]]
+- [[concepts/cost/egress-is-priced-per-gb|Egress is priced per GB and can dwarf compute cost]]
+- [[concepts/cost/provisioned-cost-is-instance-hours|Provisioned cost is instance-hours times a pricing multiplier]]
+- [[concepts/network/connector-edges-carry-no-physics|Connector edges carry no physics or cost]]
+- [[concepts/network/edge-concurrency-caps-inflight-requests|Edge maxConcurrentRequests caps in-flight requests]]
+- [[concepts/network/latency-is-dominated-by-path-type|Edge latency is dominated by path type]]
+- [[concepts/network/synchronous-blocking-exhausts-connection-pools|Synchronous blocking exhausts connection pools]]
+- [[concepts/simulation/closed-terminal-taxonomy-enables-honest-errors|A closed terminal taxonomy enables honest error accounting]]

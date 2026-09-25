@@ -2,8 +2,8 @@
 
 > Every formula, constant, and term used to compute a design's cost, laid out as
 > tables and mapped to the three dimensions of a real cloud bill. Companion to
-> `budget-feature-consolidated-design-v3.md` (the design) and
-> `budget-feature-implementation-v3.md` (the code). All numbers are the V3 **starting**
+> [`budget-feature-consolidated-design-v3.md`](./budget-feature-consolidated-design-v3.md) (the design) and
+> [`budget-feature-implementation-v3.md`](./budget-feature-implementation-v3.md) (the code). All numbers are the V3 **starting**
 > values - relative order is the lesson; absolutes are tuned at implementation.
 
 ---

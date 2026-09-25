@@ -9,3 +9,4 @@ earliest honest signal that a node is becoming the bottleneck.
 **Because:** [[queueing/queue-saturation-precedes-cpu-saturation|Queue saturation precedes CPU saturation]]
 **Related:** [[metrics/utilization-display-bug|The utilization-display bug]]
 **Taught in:** [[m03-queueing-model|M03 - Queueing Model]]
+**Map:** [[maps/simulator-physics|Simulator Physics]] · [[maps/performance|Performance Engineering]]

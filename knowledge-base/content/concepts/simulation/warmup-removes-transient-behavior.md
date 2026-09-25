@@ -11,3 +11,4 @@ steady state is measured.
 **Leads to:** [[simulation/steady-state-differs-from-transient|Steady-state differs from transient]]
 **Seen in:** [[p04-iot-ingestion|Problem 4 - IoT Ingestion]]
 **Taught in:** [[m01-discrete-event-simulation|M01 - DES Core]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

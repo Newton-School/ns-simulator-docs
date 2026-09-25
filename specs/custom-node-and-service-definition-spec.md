@@ -52,7 +52,7 @@ future grading; it does not change a single simulated number.
 
 1. **No silent decorative dials.** Any input that does not change simulation output
    must be visibly labeled `contract` (documentation) in the UI, never presented as
-   if it tunes behavior. This extends [[no-point-sampled-scalars]] and
+   if it tunes behavior. This extends [[utilization-is-a-time-weighted-integral|no-point-sampled-scalars]] and
    [[question-simulation-alignment]] to the builder.
 2. **Editor ⇄ mapping parity.** A trait field is either (a) editable in the builder
    **and** mapped in `applyDefinitionTraits`, or (b) absent from both. No field may
@@ -998,9 +998,9 @@ Runtime traits enabled: <list>
 - Runtime traits should reuse existing trait/capability modules rather than adding
   duplicate forms.
 - Request flow must align with
-  `ns-simulator-docs/specs/request-flow-direction-and-topology-rules.md`.
+  [`ns-simulator-docs/specs/request-flow-direction-and-topology-rules.md`](./request-flow-direction-and-topology-rules.md).
 - Resource behavior must align with
-  `ns-simulator-docs/specs/resource-allocation-and-derived-concurrency.md`.
+  [`ns-simulator-docs/specs/resource-allocation-and-derived-concurrency.md`](./resource-allocation-and-derived-concurrency.md).
 
 ## 21. Contract ⇄ graph reconciliation lint (feedback, not credit)
 

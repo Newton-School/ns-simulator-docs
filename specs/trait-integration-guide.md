@@ -1,6 +1,6 @@
 # Trait Integration & Cohesion Guide
 
-> Companion to `node-capability-matrix.md`. That doc says **what** to build; this
+> Companion to [`node-capability-matrix.md`](./node-capability-matrix.md). That doc says **what** to build; this
 > one says **where it plugs in** so the whole simulator stays cohesive and nothing
 > breaks - engine, config schema, UI, grading, and telemetry - when you add a new
 > `🔧` trait or extend an existing one (`➕`).
@@ -55,7 +55,7 @@ registered in `capabilityModules.ts`, attached via `appliesTo`); the new wrinkle
 is **run-scoped `sharedState`** for cross-node coordination and emitting
 `stateTimeline` transitions (new scopes `broker`/`replication`/`protocol`/
 `commit-outcome`) via the trait payload. See
-`specs/replication-quorum-state-machine-walkthrough.md` for a worked trace.
+[`specs/replication-quorum-state-machine-walkthrough.md`](./replication-quorum-state-machine-walkthrough.md) for a worked trace.
 
 **Hooks a trait can implement** (all optional, on `NodeBehaviourTrait`):
 `beforeArrival` · `beforeRouting` · `filterRoutes` · **`afterTerminal`** (per-request
@@ -110,7 +110,7 @@ engine.ts / routing.ts                  # calls the hooks per request
 | 9 | **On-canvas metric** | `RuntimeNodeMetrics.tsx`, `MetricLensSwitcher.tsx`, `LensMetricCard.tsx` | A lens/cell so students *see* the new metric on the node | needed to "feel" it |
 | 10 | **ResultsTray** | `components/simulation/ResultsTray.tsx` | Overview/Bottlenecks row for the new effect | optional |
 | 11 | **Tests** | `src/engine/traits/<trait>.test.ts` | Deterministic unit test of the hook | - |
-| 12 | **Docs** | `node-capability-matrix.md` | Flip the node row to ✅, move the trait from 🔧 to shipped | - |
+| 12 | **Docs** | [`node-capability-matrix.md`](./node-capability-matrix.md) | Flip the node row to ✅, move the trait from 🔧 to shipped | - |
 
 Steps **3 and 4 are free** - that's the cohesion win. Steps **6-9** are the ones
 that make the trait *land* pedagogically; skipping them yields a trait that changes

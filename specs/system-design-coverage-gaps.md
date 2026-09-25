@@ -92,7 +92,7 @@ TTL eviction. **No open gap.**
 
 | # | Gap | Kind | Designs | Status |
 |---|---|---|---|---|
-| **1** | **Connection-server node + node-level `maxConnections` capacity** | node + capacity primitive | Chat, Google Docs | **V1 implemented** → `connection-tier-capacity.md` (Connection Server palette node + derived capacity) |
+| **1** | **Connection-server node + node-level `maxConnections` capacity** | node + capacity primitive | Chat, Google Docs | **V1 implemented** → [`connection-tier-capacity.md`](./connection-tier-capacity.md) (Connection Server palette node + derived capacity) |
 | **2** | Fan-out amplification (1 event → N writes from a set/social-graph) | behavior/primitive | News Feed, Chat | **V1 implemented** → edge `fanoutFactor` (see §3.2) |
 | ~~**3**~~ | ~~Fault-injection authoring UI + datastore `replicas` field~~ | authoring surface | all four (failover) | **closed** — already shipped (see §3.1) |
 

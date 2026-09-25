@@ -10,3 +10,4 @@ internet hop can dwarf every node's service time.
 **Seen in:** [[p01-static-image-board|Problem 1 - Image Board]]
 **Taught in:** [[m07-edges|M07 - Edges]]
 **Spec:** [[edge-properties-and-defaults|edge-properties-and-defaults.md]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

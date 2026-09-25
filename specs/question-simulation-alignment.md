@@ -9,8 +9,8 @@
 > something the simulator can **drive and grade**, closes the concrete gaps, and
 > says honestly where we are per question archetype.
 >
-> **Companions.** `question-grading-model-and-anti-gaming.md` (the grading axes +
-> the PDF/​web questions), `request-type-model.md` (request identity), `rubric-engine-and-question-platform-architecture.md`, `worked-example-order-processing-question.md`. Memory: `honesty-redesign-roadmap`, `no-point-sampled-scalars`, `cache-aside-routing-split`.
+> **Companions.** [`question-grading-model-and-anti-gaming.md`](./question-grading-model-and-anti-gaming.md) (the grading axes +
+> the PDF/​web questions), [`request-type-model.md`](./request-type-model.md) (request identity), [`rubric-engine-and-question-platform-architecture.md`](./rubric-engine-and-question-platform-architecture.md), [`worked-example-order-processing-question.md`](./worked-example-order-processing-question.md). Memory: `honesty-redesign-roadmap`, `no-point-sampled-scalars`, `cache-aside-routing-split`.
 
 ---
 
@@ -122,7 +122,7 @@ prompt:
    an un-cached design. This is the whole point of a read-heavy question.
 
 > Per-type processing weights, per-type SLOs, and per-type metrics are **deferred**
-> (see `request-type-model.md`). Read/write routing + the mix is enough for V1
+> (see [`request-type-model.md`](./request-type-model.md)). Read/write routing + the mix is enough for V1
 > alignment; the deferred items refine fidelity later.
 
 ---
@@ -322,7 +322,7 @@ validation), not core physics. The tracer bullet de-risks the whole plan.
 
 "Authored correctly" means the question **discriminates**: a good design passes, a
 gamed one fails on the intended axis. Follow this recipe (all steps validated
-against the 12-question bank; see `question-bank-initial-game-states.md`).
+against the 12-question bank; see [`question-bank-initial-game-states.md`](./question-bank-initial-game-states.md)).
 
 1. **Name the workload character.** Set `workloadCategory` to one of
    read-/write-/connection-/correctness-/batch-heavy. This decides which axis

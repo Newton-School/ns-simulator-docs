@@ -14,6 +14,7 @@ follow the **curriculum** in order, or explore by **problem**.
 
 | Map | Covers |
 |-----|--------|
+| [[maps/atlas\|Atlas]] | the whole vault on one page: module → concept → spec |
 | [[maps/simulator-physics\|Simulator Physics]] | time, queues, compute, network, cost |
 | [[maps/distributed-systems\|Distributed Systems]] | caching, replication, locks, CQRS, fanout |
 | [[maps/performance\|Performance Engineering]] | latency, throughput, utilization, p99 |
