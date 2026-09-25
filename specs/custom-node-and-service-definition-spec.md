@@ -52,7 +52,7 @@ future grading; it does not change a single simulated number.
 
 1. **No silent decorative dials.** Any input that does not change simulation output
    must be visibly labeled `contract` (documentation) in the UI, never presented as
-   if it tunes behavior. This extends [[no-point-sampled-scalars]] and
+   if it tunes behavior. This extends [[utilization-is-a-time-weighted-integral|no-point-sampled-scalars]] and
    [[question-simulation-alignment]] to the builder.
 2. **Editor ⇄ mapping parity.** A trait field is either (a) editable in the builder
    **and** mapped in `applyDefinitionTraits`, or (b) absent from both. No field may
