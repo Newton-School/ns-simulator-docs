@@ -38,7 +38,7 @@ Worked example convention:
 
 | Candidate part ID | Part title | Why this is a separate lesson | Dominant path | Dominant bottleneck domain(s) | Keep as part? (`Yes` / `No`) | Merge with / split from |
 |-------------------|------------|-------------------------------|---------------|-------------------------------|-------------------------------|-------------------------|
-| P1 | URL shortener core redirect path | One dominant lesson: point lookup store plus cache under read-heavy traffic | Redirect read path, with supporting write path | `compute`, `storage` | `Yes` | — |
+| P1 | URL shortener core redirect path | One dominant lesson: point lookup store plus cache under read-heavy traffic | Redirect read path, with supporting write path | `compute`, `storage` | `Yes` | - |
 | P2 | Click analytics pipeline | Separate async ingestion and reporting lesson | Click event ingest to downstream analytics | `streaming`, `storage` | `No` | Split from source; defer |
 | P3 | Abuse prevention and custom aliases | Policy and product controls are not the same lesson as redirect performance | Moderation and policy enforcement | `policy`, `application` | `No` | Split from source; defer |
 

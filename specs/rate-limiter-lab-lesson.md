@@ -5,7 +5,7 @@ Date: 2026-09-01
 Instructor/author-facing. This is the staged lab for "Design a Rate Limiter"
 (Alex Xu vol. 1, ch. 4). It is a **lab, not a single graded question**, because
 the chapter is a sequence of contrasts (five algorithms, each with a distinct
-failure mode, plus a distributed bug) — that is a curriculum, not one verdict.
+failure mode, plus a distributed bug) - that is a curriculum, not one verdict.
 A lone graded question would promise "design a rate limiter" while the rubric
 could only check "did you centralize the counter," which is under-constrained by
 construction.
@@ -18,23 +18,23 @@ and the capstone are graded; stages 4–5 are simulate-and-justify.
 Backed by the rate-limiter admission & breach model
 ([`specs/rate-limiter-admission-and-breach-model.md`](./rate-limiter-admission-and-breach-model.md)):
 
-- placement (limiter on the path) — **T**
+- placement (limiter on the path) - **T**
 - counter store is a shared in-memory store, not a per-instance local store and
-  not a relational DB — **T / S**
-- the store does not saturate under load — **Σ**
+  not a relational DB - **T / S**
+- the store does not saturate under load - **Σ**
 - the **synchronization bug** (uncoordinated local counters over-admit) →
-  `rateLimit.breaches == 0` — **Σ**
+  `rateLimit.breaches == 0` - **Σ**
 - the **fixed-window edge-doubling bug** → same `rateLimit.breaches` metric under
-  an edge-straddling burst — **Σ**
-- no over-provisioning — **$**
+  an edge-straddling burst - **Σ**
+- no over-provisioning - **$**
 
 ## What stays justify/narrative (do not fake)
 
-- which algorithm by *name* (token vs leaking vs sliding) — **J** (graded by
+- which algorithm by *name* (token vs leaking vs sliding) - **J** (graded by
   consequence in stage 4, never by the name)
-- the literal read-modify-write interleaving — **J/N** (insight is covered by the
-  breach oracle; the byte-level race is not simulated — see the model doc §3)
-- 429 status, `X-RateLimit-*` headers, Lyft rule format — **N**
+- the literal read-modify-write interleaving - **J/N** (insight is covered by the
+  breach oracle; the byte-level race is not simulated - see the model doc §3)
+- 429 status, `X-RateLimit-*` headers, Lyft rule format - **N**
 
 Refuse the tempting proxy ("require a node named `lua-script`"). It grades
 vocabulary, not design, and mis-grades a correct design that uses a different
@@ -42,7 +42,7 @@ mechanism.
 
 ---
 
-## Stage 1 — Placement (graded T)
+## Stage 1 - Placement (graded T)
 
 **Prompt.** Requests must pass a rate-limit check before reaching the API
 servers. Build the path. Client-side limiting is rejected (forgeable).
@@ -57,9 +57,9 @@ STRUCTURAL_RULE  requires_single_source
 SEMANTIC_CRITERION  guardedPath  { from: client, guard: rate-limiter, to: api-server }   # all traffic passes the limiter
 ```
 
-Trivial on purpose — it builds confidence and establishes the spine.
+Trivial on purpose - it builds confidence and establishes the spine.
 
-## Stage 2 — Where the counter lives (graded S + Σ)
+## Stage 2 - Where the counter lives (graded S + Σ)
 
 **Prompt.** The limiter needs a counter per client. Put it somewhere that
 survives at 10K rps and is fast. A relational DB on the counter path is the
@@ -74,10 +74,10 @@ SEMANTIC_CRITERION  storageFit  { accessPattern: point-lookup, accept: [in-memor
 RUBRIC_CHECK  simulation  metric: <counter-store>.utilization  op: <  value: 0.85   # store does not saturate
 ```
 
-The Σ check lets you *show* the DB path's p99 blow up instead of asserting it —
+The Σ check lets you *show* the DB path's p99 blow up instead of asserting it -
 more convincing than prose.
 
-## Stage 3 — The synchronization bug (graded Σ, the capstone) 
+## Stage 3 - The synchronization bug (graded Σ, the capstone) 
 
 **Prompt.** Two rate-limiter instances sit behind a stateless tier; a client can
 hit either. High concurrency, one hot client. Design so the client cannot exceed
@@ -87,7 +87,7 @@ This is the deep, gradeable idea, and it is the **capstone** (see below). The
 wrong answer (two limiters, each with a local counter) lets the client through
 twice; the right answer funnels one key through one authority.
 
-## Stage 4 — Algorithms, graded by consequence (Σ + justify)
+## Stage 4 - Algorithms, graded by consequence (Σ + justify)
 
 **Prompt.** Pick an admission algorithm for a burst-tolerant endpoint (flash
 sale). Then a second scenario demands a strict cap with no edge overshoot.
@@ -95,11 +95,11 @@ sale). Then a second scenario demands a strict cap with no edge overshoot.
 Do **not** grade the name. Configure the limiter with `limit` + `windowMs` +
 `rateLimitKeyField`, and inject traffic that *exposes the consequence*:
 
-- **Strict-cap scenario** — a burst straddling a window boundary. `fixed-window`
+- **Strict-cap scenario** - a burst straddling a window boundary. `fixed-window`
   admits up to 2× → `rateLimit.breaches > 0` → **fails**. `sliding-window` →
   `breaches == 0` → **passes**. The student learns *why* fixed-window is wrong by
   watching the number, not by memorizing it.
-- **Burst-tolerant scenario** — a scenario where short bursts should pass;
+- **Burst-tolerant scenario** - a scenario where short bursts should pass;
   an over-strict config drops legitimate load (Σ throughput/drop check).
 
 ```
@@ -110,7 +110,7 @@ RUBRIC_CHECK  simulation  metric: rateLimit.breaches  op: ==  value: 0     # str
 burst number in the prompt; state the tradeoff." Graph-consistency + number +
 tradeoff gates apply.
 
-## Stage 5 — The race condition (simulate-and-justify, ungraded)
+## Stage 5 - The race condition (simulate-and-justify, ungraded)
 
 **Prompt.** Reproduce the chapter's read-check-increment interleaving (Fig.
 4-14): two requests read the same counter before either writes. What makes the
@@ -164,7 +164,7 @@ with `rateLimitKeyField: "clientId"` on the limiter and `baseRps` set well above
 
 **Dual-Topology check.** Reference `breaches == 0` PASS; all three gamed
 topologies FAIL on their intended signal. This is the executable definition of a
-valid question — do not ship the capstone until all four run this way.
+valid question - do not ship the capstone until all four run this way.
 
 ## Delivery
 

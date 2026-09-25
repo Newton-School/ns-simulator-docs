@@ -1,4 +1,4 @@
-# Contended-Inventory & Oversell Model — Gap Analysis + Build Spec
+# Contended-Inventory & Oversell Model - Gap Analysis + Build Spec
 
 > **Goal.** Make the simulator able to author and *honestly grade* a true
 > "Design Ticketmaster" question whose lesson is **"never sell the same seat
@@ -7,7 +7,7 @@
 > and (b) specifies the build.
 >
 > **Status.** Gap audit complete (2026-08-27). **Model B built and validated
-> (2026-08-27)** — see §6. GAP 4 (question-owned invariants) was deliberately
+> (2026-08-27)** - see §6. GAP 4 (question-owned invariants) was deliberately
 > **deferred**: oversell is graded via a question-owned `rubric` simulation check
 > on `reservations.oversells`, so no invariant-injection channel was needed.
 
@@ -23,7 +23,7 @@ Built end-to-end, all 635 tests green, dual-topology validation passing.
 - **Reservation capability** (`traits/reservationStore.ts`, new component type
   `reservation-store`). Atomic per-key reserve: first request for a key commits
   (`reservationCommits`), later requests at the same authority get a fast
-  "sold out" success (`reservationConflicts`, modeled as `handled` — **not** an
+  "sold out" success (`reservationConflicts`, modeled as `handled` - **not** an
   error), and a commit for a key already committed by a *different* node is an
   **oversell** (`reservationOversells`). Registered across all 10 catalogue/
   renderer sites; honesty block declares what it does and does not model.
@@ -32,7 +32,7 @@ Built end-to-end, all 635 tests green, dual-topology validation passing.
   schema in `validation/validator.ts`). Small size + high RPS = contention.
 - **Metric surface (GAP 3).** `verdict.perNode.<id>.traitCounters` and a run-wide
   `verdict.reservations = { commits, conflicts, oversells }` (`verdict.ts`).
-  `resolveMetric` reaches both via its `getByPath` fallback — a rubric grades
+  `resolveMetric` reaches both via its `getByPath` fallback - a rubric grades
   `reservations.oversells == 0` with no new switch case.
 - **Authored question** at
   `examples/question-bank/flash-sale-booking/`
@@ -45,7 +45,7 @@ Built end-to-end, all 635 tests green, dual-topology validation passing.
 | Reference (1 authority) | **0** | ✓ | ✓ | 7/7 | **PASS** |
 | Gamed (2 uncoordinated authorities) | **40** | ✓ | ✓ | 2/7 (0.29 < 0.71) | **FAIL** |
 
-The gamed design is structurally valid and passes store-fit — it fails **only**
+The gamed design is structurally valid and passes store-fit - it fails **only**
 on the simulated oversell, which is the correctness signal that did not exist
 before. Reference sells all 40 seats exactly once; the two-authority design
 double-books every seat.
@@ -60,12 +60,12 @@ double-books every seat.
 
 Everything below was verified by reading source, not inferred.
 
-### GAP 1 — There is no contended finite-inventory / reservation model
+### GAP 1 - There is no contended finite-inventory / reservation model
 - No inventory / seat / reservation / oversell mechanism exists in `traits/` or
   `nodes/`.
 - `traits/storageProfile.ts:254` explicitly lists `notModeled: ['quorums,
   freshness/staleness windows, lock contention, compaction internals']`. Lock
-  contention — the exact physics of double-booking — is declared out of scope.
+  contention - the exact physics of double-booking - is declared out of scope.
 - `traits/idempotencyDedup.ts` (honesty block, lines 200-207) models **retry
   dedup by key** and explicitly *not* `['commit outcome tracking', 'cross-node
   consensus', 'partial-failure recovery']`. Dedup catches the *same* request
@@ -75,14 +75,14 @@ Everything below was verified by reading source, not inferred.
   never be *made* to double-book. Oversell only exists if we deliberately model
   the read-modify-write race.
 
-### GAP 2 — The workload cannot generate a contended keyspace
+### GAP 2 - The workload cannot generate a contended keyspace
 - `workload.ts:176-179` copies a **static** `requestType.metadata` onto every
   request of that type. Every `book` request therefore carries identical
   metadata.
 - There is no per-request key sampling (no hot-key / uniform-over-N-seats
   distribution). Without a varying `seatId`, there is no contention to grade.
 
-### GAP 3 — Trait counters are dropped before grading; no metric surface exists
+### GAP 3 - Trait counters are dropped before grading; no metric surface exists
 - Traits emit `payload.metricCounters`; the engine aggregates them per node via
   `recordNodeTraitCounters` (`metrics.ts:630`), stored as `NodeMetrics.traitCounters`.
 - **But `projectToVerdict` (`verdict.ts:128-150`) does not copy `traitCounters`
@@ -92,12 +92,12 @@ Everything below was verified by reading source, not inferred.
   rubric or invariant. Any oversell counter we add is invisible to grading until
   this boundary is bridged.
 
-### GAP 4 — Invariants are not question-owned, and are threshold-only
+### GAP 4 - Invariants are not question-owned, and are threshold-only
 - `InvariantCheck = { id, description, condition }` (`core/types.ts:479`) lives on
   `TopologyJSON.invariants` (`core/types.ts:509`) and is evaluated from
   `this.topology.invariants` (`engine.ts:1810`).
 - `mergeTopologyWithOverrides` (`evaluate.ts:67-91`) merges `global`, `workload`,
-  and `faults` — **not `invariants`**. So a question suite has no channel to
+  and `faults` - **not `invariants`**. So a question suite has no channel to
   inject its own invariants; the graded topology's invariants come from the
   *student's* base topology, which the student can delete. The url-shortener
   `no-invariants` rubric row is effectively a no-op today.
@@ -105,7 +105,7 @@ Everything below was verified by reading source, not inferred.
   metrics. A "no double-book" invariant is meaningless until a resolvable oversell
   metric exists (GAP 3) **and** the question can own the invariant.
 
-### GAP 5 — (authoring correction, not a blocker) guard is semantic, not structural
+### GAP 5 - (authoring correction, not a blocker) guard is semantic, not structural
 - There is **no** `requires_guarded_path` structural kind. `structural.ts` kinds:
   single_source, component, category, edge, path, redundancy, connected_graph,
   counts, composite, forbids_component.
@@ -113,14 +113,14 @@ Everything below was verified by reading source, not inferred.
   `from` / `guard` / `to` (`semanticCriteria.ts:127-168`) and it already enforces
   "a path exists **and no path bypasses the guard**." Usable as-is.
 
-### GAP 6 — (authoring correction) `storageFit.accessPattern` is cosmetic
+### GAP 6 - (authoring correction) `storageFit.accessPattern` is cosmetic
 - `evalStorageFit` uses `accessPattern` only inside the human-readable `detail`
   string (`semanticCriteria.ts:297-311`). Grading is purely the `accept` /
   `partial` / `antiPattern` **component-type lists**. "Use an atomic/consistent
-  store" must be encoded as component lists, not as an `accessPattern` value —
+  store" must be encoded as component lists, not as an `accessPattern` value -
   which is why GAP 7 (a distinct reservation component type) matters.
 
-### GAP 7 — No reservation/inventory component type or catalog surface
+### GAP 7 - No reservation/inventory component type or catalog surface
 - `ComponentType` (`core/types.ts:176`) has no reservation/inventory member.
 - Adding one touches: the union; capability registration in
   `traits/capabilityModules.ts`; catalog `componentSpecs.ts`,
@@ -130,8 +130,8 @@ Everything below was verified by reading source, not inferred.
 ---
 
 ## 2. What already exists and is reusable
-- **Guard placement:** `guardedPath` semantic criterion (GAP 5) — reuse directly.
-- **Store-fit discrimination:** `storageFit` accept/anti/hardFail — reuse to force
+- **Guard placement:** `guardedPath` semantic criterion (GAP 5) - reuse directly.
+- **Store-fit discrimination:** `storageFit` accept/anti/hardFail - reuse to force
   the right store and reject cache-as-source-of-truth.
 - **Stateful trait pattern:** `TraitStateStore` + `payload.metricCounters` +
   `NodeCapabilityModule.honesty` (`traits/idempotencyDedup.ts` is the reference
@@ -143,24 +143,24 @@ Everything below was verified by reading source, not inferred.
 
 ---
 
-## 3. THE ONE DECISION — how should an oversell *emerge*?
+## 3. THE ONE DECISION - how should an oversell *emerge*?
 
 An oversell must be a **consequence of the design**, not a dial. Two viable models:
 
-### Model A — Emergent from topology (purest, hardest)
+### Model A - Emergent from topology (purest, hardest)
 Booking is modeled as an explicit **check-then-commit** two-step. Oversell is
 counted at runtime when a commit for a `seatId` lands after a *stale* availability
-read — i.e., when the design reads availability from a **non-authoritative**
+read - i.e., when the design reads availability from a **non-authoritative**
 component (cache / read-replica) ahead of the write, or splits writes across
 **multiple uncoordinated authorities**. A single atomic reservation store on a
 guarded path yields zero. Most physically honest; requires modeling stale reads
 and multi-authority state. Highest build cost/risk.
 
-### Model B — Atomic reservation node + topology-derived authority (recommended)
+### Model B - Atomic reservation node + topology-derived authority (recommended)
 Add a **`reservation-store` capability**: a single stateful authority that holds
 per-`seatId` remaining capacity and performs an **atomic conditional reserve**
 (first request for a seat commits; later ones are cleanly *rejected* as
-"sold out" — a correct rejection, not an error). Oversell is counted **only** when
+"sold out" - a correct rejection, not an error). Oversell is counted **only** when
 the graded topology routes writes for the same key through **more than one
 independent reservation authority** (e.g. two replicas each holding inventory) or
 lets an unguarded path reach the seat store without the reservation node. A
@@ -168,7 +168,7 @@ correct single-authority, guarded design yields zero; the classic gamed designs
 (no guard, cache-as-truth, uncoordinated replicas) yield >0. Emergent enough to
 discriminate, bounded enough to build deterministically in one pass.
 
-### Model C — Explicit `concurrencyControl` toggle (rejected)
+### Model C - Explicit `concurrencyControl` toggle (rejected)
 The student flips the store to "safe." Violates the no-free-dial honesty
 principle (correctness must not be a dial). Not building this.
 
@@ -210,7 +210,7 @@ Phased so each phase is independently testable.
 ## 5. Open sub-questions to settle inside the chosen model
 - Capacity default per key (1 seat) and how a seat "inventory" of N is declared.
 - The exact deterministic runtime rule for counting an oversell under Model B
-  (single-authority serialization vs. multi-authority race) — pinned in Phase 4.
+  (single-authority serialization vs. multi-authority race) - pinned in Phase 4.
 - Whether oversell surfaces as a first-class `invariantViolations` entry (so the
   existing `invariantViolations.count` rubric works) or as a dedicated
   `reservations.oversells` metric (or both).

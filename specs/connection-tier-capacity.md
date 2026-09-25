@@ -1,4 +1,4 @@
-# Connection tier — a stateful connection-server node with connection-count capacity
+# Connection tier - a stateful connection-server node with connection-count capacity
 
 > Status: V1 implemented (GAP 1 in [`system-design-coverage-gaps.md`](./system-design-coverage-gaps.md)). A **Connection
 > Server** palette node (Network category, backed by `api-gateway`) now carries a
@@ -7,7 +7,7 @@
 > dedicated `websockets-gateway` spec remain V2.
 >
 > Purpose: model the **persistent-connection tier** that stateful real-time systems
-> need — the WebSocket/connection servers in Chat and the WS layer in Google Docs — by
+> need - the WebSocket/connection servers in Chat and the WS layer in Google Docs - by
 > adding a placeable connection-server node whose capacity is measured in **concurrent
 > held connections**, a dimension the engine does not model today.
 
@@ -17,7 +17,7 @@ The engine already models the *pieces* around connections but not the tier itsel
 
 - **Sessions & lifecycle:** the `protocol.session` trait (`load-balancer-l4/l7`,
   `api-gateway`) marks sessions opened/closed, WebSocket/HTTP2/TCP protocols, L7
-  rejection, and stream flow-control. But it is **per-arriving-request** — it counts
+  rejection, and stream flow-control. But it is **per-arriving-request** - it counts
   `protocolSessionsOpened`, it does not model a *persistently held* connection.
 - **Per-edge connection limit:** `edge.maxConcurrentRequests` +
   `protocolSupportsConnectionLimits` make the engine emit `connection_refused` when an
@@ -33,7 +33,7 @@ Result: the canonical "10M concurrent connections → ~150–300 connection serv
 65K/host" reasoning has nowhere to live, and its bottleneck (a connection blip causing a
 thundering-herd reconnect that exceeds capacity) cannot be shown.
 
-## 2. Model — connection count as a held-capacity dimension (V1)
+## 2. Model - connection count as a held-capacity dimension (V1)
 
 Model concurrent connections the way storage models GB: a **steady-state held capacity**,
 distinct from request throughput (RPS). This matches how the design itself reasons
@@ -44,7 +44,7 @@ machinery.
 
 A new placeable palette node **Connection Server** (a.k.a. WebSocket Gateway):
 
-- **V1 backing: `componentType: 'api-gateway'`** — the api-gateway already carries the
+- **V1 backing: `componentType: 'api-gateway'`** - the api-gateway already carries the
   `protocol.session` trait (WebSocket/TCP session lifecycle + flow-control), so it is the
   honest home for a connection front-door, and this avoids reviving the fully-dead
   `websockets-gateway` type (no spec/cost/resources → the ~10-site new-ComponentType
@@ -79,7 +79,7 @@ sim.connection = {
    limit but at node scope. Connection utilization = `offeredConnections / fleetCapacity`
    (time-weighted, per the no-point-sampled-scalars rule).
 2. **Heartbeat background load.** Held connections generate keepalive requests at
-   `offeredConnections / heartbeatIntervalMs` RPS, added to the node's request load — so
+   `offeredConnections / heartbeatIntervalMs` RPS, added to the node's request load - so
    a large connection count costs CPU/RPS even when idle (the real reason connection
    servers are their own tier).
 3. **Fleet sizing (derived, like the instance model).** Required instances =
@@ -87,7 +87,7 @@ sim.connection = {
    in cost. This is the "10M ÷ 65K → ~154 servers" calculation, made live.
 4. **Thundering-herd (with a fault).** A connection blip (fault on the tier) drops held
    connections; on recovery they reconnect. If reconnects arrive faster than
-   `fleetCapacity` allows, the excess is refused — the modeled thundering herd. (Requires
+   `fleetCapacity` allows, the excess is refused - the modeled thundering herd. (Requires
    GAP 3 fault authoring to trigger; the capacity math is here.)
 
 ### 2.4 Metrics
@@ -101,9 +101,9 @@ sim.connection = {
 - **Per-connection lifecycle events** (individual connect/hold/disconnect over time).
   V1 treats connection count as a steady-state number, not a dynamic queue of long-lived
   occupants. Full lifecycle is a V2 (see §5).
-- **Exact reconnect dynamics** beyond the capacity check — jittered-backoff *policy*
+- **Exact reconnect dynamics** beyond the capacity check - jittered-backoff *policy*
   correctness stays justification.
-- **Presence semantics / message routing** — those remain the key-based routing +
+- **Presence semantics / message routing** - those remain the key-based routing +
   in-memory-cache story; this node is only the connection capacity front door.
 
 ## 4. Why a node (not a trait) and why a new capacity dimension
@@ -111,8 +111,8 @@ sim.connection = {
 Per the node-vs-property doctrine ([`custom-node-and-service-definition-spec.md`](./custom-node-and-service-definition-spec.md)): a
 connection server *is* a distinct deployable box with a capacity dimension no existing
 node has (held connections ≠ RPS). It recurs in two designs. That clears the bar for a
-new node. The capacity dimension is genuinely new — it is a *held* resource over time,
-the connection analogue of storage GB — so it warrants a first-class `sim.connection`
+new node. The capacity dimension is genuinely new - it is a *held* resource over time,
+the connection analogue of storage GB - so it warrants a first-class `sim.connection`
 block rather than being faked with RPS.
 
 ## 5. Deferred to V2
@@ -124,17 +124,17 @@ block rather than being faked with RPS.
 
 ## 6. Registration sites (when implemented)
 
-- `src/engine/core/types.ts` — `sim.connection` on the config; `websockets-gateway`
+- `src/engine/core/types.ts` - `sim.connection` on the config; `websockets-gateway`
   already in the `ComponentType` union.
-- `src/engine/catalog/componentSpecs.ts` — a real spec for `websockets-gateway`
+- `src/engine/catalog/componentSpecs.ts` - a real spec for `websockets-gateway`
   (default sim config, cost).
-- `src/engine/catalog/paletteTemplates.ts` — a `connection-server` palette template.
+- `src/engine/catalog/paletteTemplates.ts` - a `connection-server` palette template.
 - A capacity/admission trait (connection saturation + heartbeat load + derived fleet).
-- `src/renderer/src/config/{catalogConfig,nodeRegistry,libraryInfo}.ts` — palette
+- `src/renderer/src/config/{catalogConfig,nodeRegistry,libraryInfo}.ts` - palette
   surfacing; `componentLibraryVisibility.ts` if it should be in the default set.
 - A properties-panel **Connection capacity** section (`maxConnectionsPerInstance`,
   `offeredConnections`, `heartbeatIntervalMs`, `sessionProtocol`).
-- `supportLedger.ts` — move `connection-pool limits` from `deferred` to `guided` once
+- `supportLedger.ts` - move `connection-pool limits` from `deferred` to `guided` once
   shipped.
 
 ## 7. Acceptance criteria

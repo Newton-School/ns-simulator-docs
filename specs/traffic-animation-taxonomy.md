@@ -1,7 +1,7 @@
-# Traffic Animation Taxonomy — Every Factor That Changes How Traffic Flows
+# Traffic Animation Taxonomy - Every Factor That Changes How Traffic Flows
 
 > **Goal.** An exhaustive, code-grounded catalogue of everything that determines
-> how request traffic flows and animates across the canvas — so the edge-dot
+> how request traffic flows and animates across the canvas - so the edge-dot
 > animation (and any "explain this" preview) can faithfully reflect the real
 > mechanism for every node type, edge type, strategy, and outcome. This is the
 > reference behind making the runtime dots legible per pattern.
@@ -17,7 +17,7 @@ existence, path, speed, and fate is a combination of one value from each.
 
 ---
 
-## Axis A — Temporal shape: *when* dots appear (rate over time)
+## Axis A - Temporal shape: *when* dots appear (rate over time)
 
 Driven by the source `workload.pattern` (`edgeFlowPatterns.ts` `patternMultiplier`).
 Controls dot **frequency/density**, not direction.
@@ -32,7 +32,7 @@ Controls dot **frequency/density**, not direction.
 | `diurnal` | slow hourly-multiplier swell and ebb |
 | `replay` | fixed cadence from a recorded/committed offset |
 
-## Axis B — Spatial distribution: *which edge(s)* get the dot at a fork
+## Axis B - Spatial distribution: *which edge(s)* get the dot at a fork
 
 Driven by the source node's distribution mechanism (`routing.ts` + traits). This is
 the core "how is it distributed" axis.
@@ -55,7 +55,7 @@ the core "how is it distributed" axis.
 | scatter/gather | search-service, search-index | fan-out + join | dots scatter to all shards, then a gathered return |
 | fan-out amplification | any edge w/ `fanoutFactor>1` | multiplied | one inbound dot becomes N dots on that edge |
 
-## Axis C — Edge mode: *how* the dot travels (semantics)
+## Axis C - Edge mode: *how* the dot travels (semantics)
 
 Driven by `edge.mode` (`core/types.ts`).
 
@@ -66,7 +66,7 @@ Driven by `edge.mode` (`core/types.ts`).
 | `streaming` | continuous flow rather than discrete request/response |
 | `conditional` | edge only carries a dot when its condition matches the request |
 
-## Axis D — Node effect: does the dot continue, short-circuit, split, drop, or multiply
+## Axis D - Node effect: does the dot continue, short-circuit, split, drop, or multiply
 
 Driven by node traits. This changes flow *at* a node, not just at the fork.
 
@@ -85,7 +85,7 @@ Driven by node traits. This changes flow *at* a node, not just at the fork.
 | cold start / autoscaler | delay then flow | first dot **stalls** (warm-up) before travelling |
 | batching | coalesce | several dots **merge** into one downstream dot |
 
-## Axis E — Outcome: the dot's *fate* (drives color / end-state)
+## Axis E - Outcome: the dot's *fate* (drives color / end-state)
 
 Driven by `EdgeFlowStatus` + `EdgeFailureCause` (`core/events.ts`).
 
@@ -99,7 +99,7 @@ Driven by `EdgeFlowStatus` + `EdgeFailureCause` (`core/events.ts`).
 | consumer-group-rebalance | (event) group reassignment ripple |
 | network-partition | (event) an edge/region goes dark |
 
-## Axis F — Edge physical properties: dot *speed* and appearance
+## Axis F - Edge physical properties: dot *speed* and appearance
 
 Driven by `edge.latency.pathType`, `bandwidth`, `packetLossRate`, `errorRate`.
 
@@ -110,10 +110,10 @@ Driven by `edge.latency.pathType`, `bandwidth`, `packetLossRate`, `errorRate`.
 | `packetLossRate` | a fraction of dots vanish (feeds Axis E) |
 | `errorRate` | a fraction of dots fail (feeds Axis E) |
 
-## Axis G — Request identity: *which* dot, and where it pins (the authoring gap)
+## Axis G - Request identity: *which* dot, and where it pins (the authoring gap)
 
 Driven by request metadata. **This is what makes Axis-B affinity/key/content
-patterns actually differ** — and most of it has no authoring UI yet (the in-flight
+patterns actually differ** - and most of it has no authoring UI yet (the in-flight
 work). Fields the engine reads:
 
 | Field | Read by | Enables |
@@ -127,7 +127,7 @@ work). Fields the engine reads:
 | `partitionKey` / `shardKey` | stream / sharding | partition / shard placement (needs authoring) |
 
 **Authoring plan:** extend `RequestDistributionEditor` (which already authors
-type/method/host/path) with `keyspace` (field/size/skew — one input unblocks
+type/method/host/path) with `keyspace` (field/size/skew - one input unblocks
 sticky, ip-hash via `clientIp`, key/shard/partition routing, cache LRU, and Zipf
 skew) and a `headers` key/value editor (unblocks header routing). `requestDistribution`
 passes through to the engine verbatim (`useTopologySerializer.ts`), so these are
@@ -141,8 +141,8 @@ A single dot = **A** (born on this tick) × **B** (sent down this edge) × **C**
 (this travel semantics) × **D** (this node's effect) × **E** (this fate) × **F**
 (this speed), selected by **G** (this request's identity). The runtime animation
 already realizes all of this from real events; the product work is (1) authoring
-Axis G, and (2) visually **encoding** Axes B, D, and E so the *pattern* — not just
-the motion — is legible at a glance.
+Axis G, and (2) visually **encoding** Axes B, D, and E so the *pattern* - not just
+the motion - is legible at a glance.
 
 ---
 
@@ -158,46 +158,46 @@ the motion — is legible at a glance.
 - **C** ✅ edge mode → `strokeDasharray` (line style).
 - **D** ◑ node effects now surface as **runtime markers on the card** (2026-09-15):
   `describeNodeEffects(metrics)` → `RuntimeNodeMetrics` shows badges for the
-  *hidden* effects — `⚡ cache X%` (short-circuit), `↻ N retries`, `⇉ replicated`,
+  *hidden* effects - `⚡ cache X%` (short-circuit), `↻ N retries`, `⇉ replicated`,
   `⋔ scatter/gather`, `⊘ N dupes blocked`. Drops/timeouts stay in the
   Rejected/Timed-out cell (not duplicated). **On-edge cache bounce-back added
-  2026-09-15** — the hit-ratio share of a cache's inbound dots visibly return.
+  2026-09-15** - the hit-ratio share of a cache's inbound dots visibly return.
 - **E** ✅ failure pulses colored by cause; failing link stroke turns red.
 - **F** ✅ stroke width = volume; **dot speed now also scales with `pathType`
-  latency** (2026-09-15, `latencySpeedFactor`) — cross-region dots visibly crawl
+  latency** (2026-09-15, `latencySpeedFactor`) - cross-region dots visibly crawl
   vs same-rack. **Backpressure** (2026-09-15): an edge hitting its concurrency cap
   (recent `connection_refused`) additionally slows/bunches its dots.
 - **G** ◑ authoring landed 2026-09-11; **"color dots by key" mode shipped
-  2026-09-15** — `EdgeFlowEvent.key` (engine `affinityKeyOf`: __key / partitionKey
+  2026-09-15** - `EdgeFlowEvent.key` (engine `affinityKeyOf`: __key / partitionKey
   / shardKey / sessionId / clientIp) + a `colorDotsByKey` display toggle tint each
   edge dot by a stable per-key hue (`keyToColor`, golden-angle). A key's color
   stays on one edge under sticky/shard and scatters under round-robin. Off by
-  default. (Dots are still synthetic — colored from real keys sampled per edge,
+  default. (Dots are still synthetic - colored from real keys sampled per edge,
   not one-dot-per-request.)
 
-**Progress:** shipped — Axis-G authoring (keyspace + headers, 2026-09-11);
+**Progress:** shipped - Axis-G authoring (keyspace + headers, 2026-09-11);
 Axis-B mechanism label + per-edge weight-share %; Axis-D node-effect markers;
 Axis-F latency-driven dot speed; Axis-G color-dots-by-key (all 2026-09-15).
 **Every axis is now legible to at least ◑.**
 
 Bandwidth backpressure and the canvas legend shipped 2026-09-15.
 
-**On-edge D bounce-back shipped 2026-09-15** — a cache's measured `cacheHitRatio`
+**On-edge D bounce-back shipped 2026-09-15** - a cache's measured `cacheHitRatio`
 share of the inbound edge's dots now travel to the cache and return (triangle
 wave, primary accent) instead of passing through; the miss share passes through.
 Renderer-only, driven by real hit-ratio data (no engine change). Replicator/split
 return-paths remain deferred (same mechanism, lower value).
 
-**Causal request tracer shipped 2026-09-15 — the "living / causal" goal.** Rather
+**Causal request tracer shipped 2026-09-15 - the "living / causal" goal.** Rather
 than making the aggregate stream per-request (no perceptible gain for reading
 *patterns*), we deliver causality as a **follow-a-request tracer**: from a Results
 row, "▶ Follow on canvas" sets `tracedRequestId`; `RequestTraceOverlay` (inside
 the ReactFlow provider) replays that one real request as a single dot travelling
 its actual node path (from the request's `stateTimeline`), pausing at each hop
 with a plain-language cause and ending in its terminal status/reason. This is the
-"this happened *because* of that" story — the aggregate stream stays synthetic for
+"this happened *because* of that" story - the aggregate stream stays synthetic for
 ambient flow; the tracer is the per-request, causal view.
 
-**Still deferred — turning the whole ambient stream into per-request dots:** adds
+**Still deferred - turning the whole ambient stream into per-request dots:** adds
 no pattern-reading insight over sampled color-by-key, and would be sparse at low
 trace-sample rates. The tracer covers the causal-narrative need instead.

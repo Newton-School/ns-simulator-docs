@@ -34,7 +34,7 @@ providers. Each provider is a thin adapter that only knows how to call its API
 and pull the model's text out of the response envelope; the shared core builds
 the prompt, parses the JSON, and maps it into the engine's result type.
 
-Adding a provider is one entry in the `PROVIDERS` registry — the IPC handler,
+Adding a provider is one entry in the `PROVIDERS` registry - the IPC handler,
 renderer, prompt, and result mapping are untouched.
 
 ## 3. Architecture
@@ -47,8 +47,8 @@ Renderer  →  IPC (llm:gradeJustification)  →  Main process  →  <selected p
 - The **main process** resolves the provider + key and makes the outbound HTTPS
   call.
 - The renderer **never sees the key** and never knows which provider ran.
-- Any failure — no provider configured, network error, non-2xx, unparseable
-  body — returns an `{ error }` object. The caller falls back to the
+- Any failure - no provider configured, network error, non-2xx, unparseable
+  body - returns an `{ error }` object. The caller falls back to the
   deterministic grader.
 
 ### 3.1 Privacy / secret boundary
@@ -113,19 +113,19 @@ return exactly:
 markdown fencing (```` ```json ````) that some models emit. `mapLlmResponseToResult`
 folds the response into the engine's existing `JustificationResult`
 (`checks.graphConsistent`, `checks.number`, `checks.tradeoff`, `detail`), so the
-UI and downstream grading consume it **unchanged** — deterministic and LLM paths
+UI and downstream grading consume it **unchanged** - deterministic and LLM paths
 are interchangeable.
 
 ## 6. Grading criteria (identical to the deterministic grader)
 
-1. **Graph consistency — the anti-stuffing gate.** The answer must reference the
+1. **Graph consistency - the anti-stuffing gate.** The answer must reference the
    component the student *actually placed*. If the bound component is missing,
    this criterion MUST fail regardless of answer content. This stops a student
    pasting a beautiful essay about a component they never put on the canvas.
 2. **Number citation.** The answer should cite a relevant scale number.
    Reasonable rounding and abbreviation are accepted (`200K` = `200,000`).
 3. **Tradeoff awareness.** The answer should acknowledge what is sacrificed.
-   Synonyms and paraphrasing count — the literal token "tradeoff" is not
+   Synonyms and paraphrasing count - the literal token "tradeoff" is not
    required.
 
 ### 6.1 Scoring rules given to the model
@@ -150,10 +150,10 @@ are interchangeable.
 
 - It does not replace the deterministic grader; it sits alongside it as an
   enhancement and a fallback.
-- It does not award points per prompt — `pointsEarned`/`pointsPossible` are `0`
+- It does not award points per prompt - `pointsEarned`/`pointsPossible` are `0`
   in the mapped result; the batch grader allocates points.
 - It does not persist or cache responses; each grade is a fresh call.
-- It is not a general-purpose free-text grader — it evaluates exactly the three
+- It is not a general-purpose free-text grader - it evaluates exactly the three
   justification criteria above.
 
 ## 9. Code map

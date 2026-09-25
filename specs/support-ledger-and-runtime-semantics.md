@@ -178,7 +178,7 @@ The most important honesty rule today:
 because a full atomic end-to-end commit *coordination* protocol is still not
 modeled. Note the commit-outcome journal and modeled external reconciliation
 (§3.2, `commit-outcome` scope) now cover unknown-outcome blocking and
-authoritative reconciliation probes — but that is a local journal, not
+authoritative reconciliation probes - but that is a local journal, not
 distributed exactly-once consensus.
 
 ### 3.4 Coordination state markers
@@ -256,7 +256,7 @@ the trait metrics in the capability matrix):
 - low-level transport physics (TCP handshake timing, TLS, HTTP/2 multiplexing)
 
 Consult the support ledger (`supportLedger.ts`) for the authoritative tier of
-each concept — these V2 areas are `guided` (real, with declared boundaries), not
+each concept - these V2 areas are `guided` (real, with declared boundaries), not
 `first-class`.
 
 ## 6. What to build next

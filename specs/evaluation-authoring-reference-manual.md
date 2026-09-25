@@ -26,7 +26,7 @@
 >
 > **What's new (2026-08, later).** Authoring the Django rows is now **forgiving**:
 > `SIMULATOR_CONFIG` is optional and every field auto-derives (`id` / `description` /
-> `points` / workload `weight`+`sizeBytes` / suite name+case ids / constraint booleans —
+> `points` / workload `weight`+`sizeBytes` / suite name+case ids / constraint booleans -
 > §11.3a), so rows are **atomic** (`{ "type": "STRUCTURAL_RULE", "kind":
 > "requires_single_source" }`). The prompt always renders (preview mode + actionable
 > errors on bad config; §11.1). New **contention** modeling: a `keyspace` on a workload
@@ -263,18 +263,18 @@ A `rubric` check's `kind` is inferred from the metric prefix
 
 **Correctness / capability aggregates (run-wide, summed across all nodes):**
 `reservations.oversells` · `reservations.commits` · `reservations.conflicts`
-(reservation-store — a double-book is `reservations.oversells > 0`) ·
+(reservation-store - a double-book is `reservations.oversells > 0`) ·
 `locks.contentions` · `locks.acquires` · `locks.keyless` (distributed-lock) ·
 `retries.attempts` · `retries.budgetExhausted` (retry-backoff callers) ·
 `rateLimit.breaches` · `rateLimit.admitted` · `rateLimit.rejected` ·
-`rateLimit.keyless` (rate-limiter — an over-admit is `rateLimit.breaches > 0`).
+`rateLimit.keyless` (rate-limiter - an over-admit is `rateLimit.breaches > 0`).
 These are `kind: "simulation"` checks. Any single trait counter is also reachable
 per node as `perNode.<nodeId>.traitCounters.<counter>`, but prefer the run-wide
 aggregate so the check does not depend on a node id the student can rename.
 
-**V2 distributed-systems trait counters (per-node only — no run-wide aggregate;
+**V2 distributed-systems trait counters (per-node only - no run-wide aggregate;
 grade via `perNode.<nodeId>.traitCounters.<counter>` OR, preferred, a runtime
-`stateTransition` criterion on the matching scope — see below):**
+`stateTransition` criterion on the matching scope - see below):**
 
 - replication (`storage.replication-boundary` on `relational-db` / `nosql-db`):
   `replicationQuorumWrites` · `replicationPrimaryAcks` · `replicationQuorumFailures` ·
@@ -293,12 +293,12 @@ grade via `perNode.<nodeId>.traitCounters.<counter>` OR, preferred, a runtime
   `idempotencyReconciliations` · `idempotencySafeRetries` · `externalReconciliationProbes`
 
 **Runtime semantic criteria (`SEMANTIC_CRITERION`, kinds `stateTransition` /
-`stateSequence`)** grade the per-request `stateTimeline` directly — the cleanest
+`stateSequence`)** grade the per-request `stateTimeline` directly - the cleanest
 way to check V2 distributed behavior. Scopes and their states:
 
 - `request` · `delivery` · `broker` · `replication` · `protocol` · `idempotency` ·
   `commit-outcome` · `lock` · `reservation`
-- e.g. `{ "kind": "stateTransition", "match": { "scope": "replication", "state": "quorum-unavailable" }, "maxCount": 0, "hardFail": true }` — the write path never loses quorum.
+- e.g. `{ "kind": "stateTransition", "match": { "scope": "replication", "state": "quorum-unavailable" }, "maxCount": 0, "hardFail": true }` - the write path never loses quorum.
 
 See [`specs/runtime-semantic-criteria.md`](./runtime-semantic-criteria.md) for the full scope→state table and
 matcher/filter syntax.
@@ -374,7 +374,7 @@ justification  →  semantic (forbidUnjustified reads justification results)  �
 
 ### 5.3 Structural rule kinds (full)
 Base fields on every rule: `kind` (required) plus `id` and `description` (both
-**optional** in the Newton flow — auto-derived; §11.3a).
+**optional** in the Newton flow - auto-derived; §11.3a).
 
 | `kind` | Extra fields | Passes when |
 |--------|--------------|-------------|
@@ -392,12 +392,12 @@ Base fields on every rule: `kind` (required) plus `id` and `description` (both
 ### 5.4 Learner-created components (Service Builder / Custom Node Builder)
 
 Learners can now **compose** nodes with the Service Builder and Custom Node Builder
-instead of only dragging palette items. This does **not** change the grading engine —
+instead of only dragging palette items. This does **not** change the grading engine -
 but it changes how you must author targeting. See the builder spec
 [`custom-node-and-service-definition-spec.md`](./custom-node-and-service-definition-spec.md) §15.1 for the full contract.
 
 **Creation is transparent to grading.** Every created node serializes to a real
-`componentType` — a built *service* becomes `microservice` / `serverless-function` /
+`componentType` - a built *service* becomes `microservice` / `serverless-function` /
 `batch-worker`; a built *custom node* becomes its backing type (`in-memory-cache`,
 `relational-db`, `queue`, `api-endpoint`, …). All rules above match on that resolved
 `componentType`, never on the learner's label or the builder's declared contract. So a
@@ -414,13 +414,13 @@ Four authoring rules follow:
    solutions guidance.)
 2. **Gate creation with `allowedNodeTypes` / `forbiddenNodeTypes`** (SIMULATOR_CONFIG,
    §11.4). These operate on the **resolved componentType**, so they already apply to
-   created nodes — use them so a learner can't simply *conjure* the exact node the
+   created nodes - use them so a learner can't simply *conjure* the exact node the
    question is testing (e.g. forbid the anti-pattern store types).
 3. **Never grade the declared contract.** The builder's operations, capabilities, and
    per-operation dependencies are documentation-only and invisible to grading. A
    `requires_edge` / `requires_path` / guarded-path check needs the learner's **actual
    edge**, not a *declared* dependency. (A renderer-side advisory lint flags declared-
-   but-unwired dependencies as feedback — it never touches grading.)
+   but-unwired dependencies as feedback - it never touches grading.)
 4. **Label-independence is a feature.** A `microservice` mislabeled "Redis Cache" still
    fails `requires_component: in-memory-cache`. No need to defend rules against naming.
 
@@ -954,7 +954,7 @@ from the **rows**, not from `initial_game_state`.
 
 > **Companion reference:** [`test-case-catalog.md`](./test-case-catalog.md) is a
 > copy-paste catalog of every row type, rule/criterion/check kind, verdict metric, and
-> `SIMULATOR_CONFIG` field — with a field-by-field syntax breakdown. Use it as the
+> `SIMULATOR_CONFIG` field - with a field-by-field syntax breakdown. Use it as the
 > "what can I write" index; use this manual for the "why / how it grades".
 
 Each question folder ships a **`django-admin-assignment.md`** that spells the rows
@@ -986,7 +986,7 @@ at `systems-simulator.newtonschool.co` keeps topology Open/Save and is authored 
   **author-actionable messages** (e.g. *"passThreshold must be a fraction between 0 and
   1"*) rather than a cryptic zod error. Only a seed with neither a prompt nor any grading
   row fails outright.
-- **Row `input` must be pure JSON — no comments.** A trailing `// note` makes the row
+- **Row `input` must be pure JSON - no comments.** A trailing `// note` makes the row
   invalid JSON, so it is silently dropped; write the object only.
 
 ### 11.2 Django question fields
@@ -1029,7 +1029,7 @@ Each row is one Django test case. Create the rows **in the exact order** below. 
 | `output_file` | empty |
 
 Every `input` object is discriminated by its **`type`** key. `SIMULATOR_CONFIG` is
-**optional** — a question authored from only `STRUCTURAL_RULE` / `SEMANTIC_CRITERION` /
+**optional** - a question authored from only `STRUCTURAL_RULE` / `SEMANTIC_CRITERION` /
 `RUBRIC_CHECK` rows builds fine (every config field defaults). Add a `SIMULATOR_CONFIG`
 row only to inject a workload (for Simulation checks), set a `budget`/`constraints`, or
 override a default; when present, keep it first.
@@ -1066,9 +1066,9 @@ and a rubric check is:
 | `cases[].id` / `cases[].description` | `peak`, then `case-2`… / none |
 | `requestDistribution[].weight` | `1` (or `1/n` split across classes) |
 | `requestDistribution[].sizeBytes` | `256` |
-| a `RUBRIC_CHECK` row, when you have none yet | a harmless always-passing placeholder check so a structural-only draft still satisfies the "≥1 check" schema rule. It is **hidden from the authoring Tests list** (and excluded from the pass/total badge) — authors only ever see checks they wrote. |
+| a `RUBRIC_CHECK` row, when you have none yet | a harmless always-passing placeholder check so a structural-only draft still satisfies the "≥1 check" schema rule. It is **hidden from the authoring Tests list** (and excluded from the pass/total badge) - authors only ever see checks they wrote. |
 
-**Keep a field only when it differs from the default** — e.g. `points` above 1,
+**Keep a field only when it differs from the default** - e.g. `points` above 1,
 `sizeBytes` ≠ 256, a non-default `weight`, a hard-fail (`"hardFail": true`), the
 `accept`/`antiPattern` lists, an explicit `passThreshold` (0-1 fraction), or an
 `environmentProfile` with non-default capabilities. The shipped
@@ -1076,14 +1076,14 @@ and a rubric check is:
 
 > **Existing questions keep their authored `id`s.** When an authored id differs from
 > what would be derived (e.g. `single-source` vs. `requires-single-source`), leave it
-> — dropping it changes the check's result identifier. New questions can omit it.
+> - dropping it changes the check's result identifier. New questions can omit it.
 
 ### 11.4 Row 1 - `SIMULATOR_CONFIG` (the master row)
 
 > The **whole row is optional** (§11.3), and every key below except `type` is optional
 > (§11.3a). The full form is shown for reference; author only the keys whose value is not
 > the default. `configVersion` and `promptSource` are not read at all; `questionVersion`
-> and `presentationMode` default to `"1.0"` / `"raw-html"` — so in the common case all
+> and `presentationMode` default to `"1.0"` / `"raw-html"` - so in the common case all
 > four are dropped.
 
 Carries everything that is not a rule/criterion/check. Top-level keys:
@@ -1159,7 +1159,7 @@ corresponding array element in `question.json`.
 | `RUBRIC_CHECK` | `rubric.checks[]` (§4.2) | `simulation` / `topology` / `invariant` |
 
 Worked example - the remaining url-shortener rows. The Django `title` is the label; the
-`input` is the JSON only (**no comments — a `//` line makes the input invalid JSON**):
+`input` is the JSON only (**no comments - a `//` line makes the input invalid JSON**):
 
 `title`: `STRUCTURAL_RULE: single-source`
 ```json
