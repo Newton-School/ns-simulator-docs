@@ -1,6 +1,6 @@
 # Budget V3 - Implementation Spec (code-level)
 
-> **What this is.** The engineering translation of `budget-feature-consolidated-design-v3.md`
+> **What this is.** The engineering translation of [`budget-feature-consolidated-design-v3.md`](./budget-feature-consolidated-design-v3.md)
 > onto the actual ns-simulator codebase: the exact files, symbols, signatures, and
 > ordering to build it - plus the two places where the design meets a code reality it
 > didn't account for (edge traffic cost and the "foil" topology), and how to resolve them.
@@ -345,7 +345,7 @@ Concrete targets (numbers from the design §7, re-measured with the model in §3
 | `chatty-services` *(new)* | client→svc-a→cache→svc-b (`C_ref≈9`) | client→svc-a→svc-b fat ≈300 MB/s link (`C_foil≈12`) | **10** | Phase 3 (traffic edges) |
 
 > `sensor-store` only becomes a *strong* budget question once `storageProfile` (see
-> `node-capability-matrix.md`) makes the relational write path physically slower - until
+> [`node-capability-matrix.md`](../node-capability-matrix.md)) makes the relational write path physically slower - until
 > then the foil is only *pricier*, not *slower*. Ship `async-sla` (Phase 2) first.
 
 Then run `validate-question-dir.ts` over each: reference within budget + passing; gamed

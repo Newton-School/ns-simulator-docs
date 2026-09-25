@@ -17,3 +17,4 @@ for a correctness claim.**
 **Seen in:** [[p08-flash-sale|Problem 8 - Flash Sale]]
 **Taught in:** [[m12-grading-dsl|M12 - Grading DSL]]
 **Spec:** [[support-ledger-and-runtime-semantics|support-ledger-and-runtime-semantics.md]]
+**Map:** [[maps/authoring-grading|Authoring & Grading]]

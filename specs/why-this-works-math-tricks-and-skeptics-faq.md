@@ -10,10 +10,10 @@
 > looks un-gradeable. Below is how each of those is solved.
 >
 > **See also.** `CURRICULUM.md` Part III (this content in teaching context) and the
-> deep specs: `resource-allocation-and-derived-concurrency.md`,
-> `question-grading-model-and-anti-gaming.md`, `question-simulation-alignment.md`,
-> `queue-depth-calculation.md`, `throughput-calculation.md`,
-> `execution-profile-and-node-concurrency.md`.
+> deep specs: [`resource-allocation-and-derived-concurrency.md`](./resource-allocation-and-derived-concurrency.md),
+> [`question-grading-model-and-anti-gaming.md`](./question-grading-model-and-anti-gaming.md), [`question-simulation-alignment.md`](./question-simulation-alignment.md),
+> [`queue-depth-calculation.md`](./queue-depth-calculation.md), [`throughput-calculation.md`](./throughput-calculation.md),
+> [`execution-profile-and-node-concurrency.md`](./execution-profile-and-node-concurrency.md).
 
 ---
 
@@ -119,7 +119,7 @@ nothing floating-point is ever summed.**
 clock in `engine.ts` / `core/types.ts`, quantization in `workload.ts`.
 **Gap:** no spec states this determinism contract as a first-class invariant - it's
 correct in code + unit-tested, but undocumented. Proposed: a short
-`simulation-determinism-and-numerics.md` so "reproducible given a seed" is a
+[`simulation-determinism-and-numerics.md`](./simulation-determinism-and-numerics.md) so "reproducible given a seed" is a
 documented guarantee, not folklore.
 
 ## D. The skeptic's FAQ

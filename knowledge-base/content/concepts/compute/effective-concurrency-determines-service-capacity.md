@@ -11,3 +11,4 @@ capacity costs money and is capped.
 **Seen in:** [[p02-video-transcoder|Problem 2 - Video Transcoder]]
 **Taught in:** [[m05-instance-model|M05 - Instance Model]]
 **Spec:** [[resource-allocation-and-derived-concurrency|resource-allocation-and-derived-concurrency.md]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

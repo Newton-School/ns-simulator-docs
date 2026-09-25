@@ -10,3 +10,4 @@ hits quotas - which turns scaling into a real, un-gameable tradeoff.
 **Leads to:** [[compute/effective-concurrency-determines-service-capacity|Effective concurrency determines service capacity]]
 **Seen in:** [[p02-video-transcoder|Problem 2 - Video Transcoder]] · [[p12-ps5-restock|Problem 12 - PS5 Restock]]
 **Taught in:** [[m05-instance-model|M05 - Instance Model]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

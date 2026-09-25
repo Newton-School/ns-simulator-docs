@@ -10,3 +10,4 @@ attributed to a cause - no silent losses, no double counting.
 **Seen in:** [[p06-notification-gateway|Problem 6 - Notification Gateway]]
 **Taught in:** [[m02-request-lifecycle|M02 - Request Lifecycle]]
 **Spec:** [[arrival-departure-and-request-lifecycle-semantics|arrival-departure-and-request-lifecycle-semantics.md]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

@@ -11,3 +11,4 @@ gamed design passes, the question is under-constrained and rejected.
 **Seen in:** [[p08-flash-sale|Problem 8 - Flash Sale]]
 **Taught in:** [[m12-grading-dsl|M12 - Grading DSL]]
 **Spec:** [[question-grading-model-and-anti-gaming|question-grading-model-and-anti-gaming.md]]
+**Map:** [[maps/authoring-grading|Authoring & Grading]]

@@ -8,3 +8,4 @@ read-heavy service can add replicas; a write-heavy one must shard or change the 
 
 **Related:** [[storage/cqrs-splits-read-and-write-paths|CQRS splits read and write paths]]
 **Taught in:** [[m04-nodes-service-time|M04 - Nodes & Service Time]]
+**Map:** [[maps/distributed-systems|Distributed Systems]]

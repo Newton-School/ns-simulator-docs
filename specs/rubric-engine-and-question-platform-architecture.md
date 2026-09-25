@@ -786,7 +786,7 @@ The `gradeVerdict`/`gradeBatch` functions already handle verdict checks. The str
 
 ### Cost Model Dependency
 
-Topology checks that involve cost (`cost_within_budget`) require a per-node cost model. This maps to the existing cost calculator specification (`specs/cost-calculation-and-budgeting.md`), which defines:
+Topology checks that involve cost (`cost_within_budget`) require a per-node cost model. This maps to the existing cost calculator specification ([`specs/cost-calculation-and-budgeting.md`](./cost-calculation-and-budgeting.md)), which defines:
 
 - Default pricing: CPU @ $0.048/hr, Memory @ $0.006/GB-hr
 - Per-node provisioned cost based on `ResourceConfig` (cpu, memory, replicas)
@@ -1049,14 +1049,14 @@ This document integrates and extends the following existing specifications:
 
 | Existing spec                                            | Relationship                                                                                                                                                                                                                                                                                                            |
 | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `question-creation-feature-spec.md`                      | Defines the Django-side features (10 question types, 4 scoring buckets, structural rules, feedback). This document covers the **engine-side** architecture and the type system that both sides share.                                                                                                                   |
+| [`question-creation-feature-spec.md`](./question-creation-feature-spec.md)                      | Defines the Django-side features (10 question types, 4 scoring buckets, structural rules, feedback). This document covers the **engine-side** architecture and the type system that both sides share.                                                                                                                   |
 | `game-playground-evaluation-integration-gap-analysis.md` | Defines the gap matrix and integration principles for Game Playground embedding. This document implements gaps 1-3 and specifies gaps 4+ with concrete types.                                                                                                                                                           |
-| `environment-definition-and-configuration-model.md`      | Defines the simulation environment configuration (defaults, normalization, validation). This document's `EnvironmentProfile` is a **presentation** layer - distinct from the simulation environment. They compose: the simulation environment controls engine behavior, the environment profile controls UI visibility. |
-| `cost-calculation-and-budgeting.md`                      | Defines the per-node cost model. This document's topology checks and budget constraints depend on the cost model as a prerequisite.                                                                                                                                                                                     |
+| [`environment-definition-and-configuration-model.md`](./environment-definition-and-configuration-model.md)      | Defines the simulation environment configuration (defaults, normalization, validation). This document's `EnvironmentProfile` is a **presentation** layer - distinct from the simulation environment. They compose: the simulation environment controls engine behavior, the environment profile controls UI visibility. |
+| [`cost-calculation-and-budgeting.md`](./cost-calculation-and-budgeting.md)                      | Defines the per-node cost model. This document's topology checks and budget constraints depend on the cost model as a prerequisite.                                                                                                                                                                                     |
 
 ### Architecture Boundary (Unchanged)
 
-The boundary defined in `question-creation-feature-spec.md` remains authoritative:
+The boundary defined in [`question-creation-feature-spec.md`](./question-creation-feature-spec.md) remains authoritative:
 
 ```
 NS Simulator owns:

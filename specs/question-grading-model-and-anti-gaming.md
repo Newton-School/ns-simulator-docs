@@ -17,7 +17,7 @@ This spec is the design authority for the grading model. The implementation
 companion lives in `docs/question-platform-hardening/`.
 
 See also:
-`multiple-valid-solutions-grading.md` for how the simulator should handle
+[`multiple-valid-solutions-grading.md`](./multiple-valid-solutions-grading.md) for how the simulator should handle
 questions where more than one architecture family is fully correct.
 
 ---
@@ -108,7 +108,7 @@ Mapping to the current `QuestionPackage` (see gap analysis, §8):
 | rubric (metric checks)     | `rubric.checks`                                                         | ✅ have (simulation kind)                        |
 | structural checks          | `structuralRules`                                                       | ✅ have (presence/path)                          |
 | **justify**                | -                                                                       | ❌ new                                           |
-| **budget**                 | -                                                                       | ❌ new (see `cost-calculation-and-budgeting.md`) |
+| **budget**                 | -                                                                       | ❌ new (see [`cost-calculation-and-budgeting.md`](./cost-calculation-and-budgeting.md)) |
 | weighted points + hardFail | partial (`points`)                                                      | ⚠️ extend                                        |
 
 ---
@@ -153,7 +153,7 @@ on (
 
 Each snippet is a **schema-valid** `QuestionPackage` fragment (validated with
 `parseQuestionPackage`). Full packages live in
-`question-bank-initial-game-states.md`. Metric keys are the real verdict paths
+[`question-bank-initial-game-states.md`](./question-bank-initial-game-states.md). Metric keys are the real verdict paths
 (`summary.latency.p99`, `summary.throughput`, `invariantViolations.count`).
 
 **FR** → each functional requirement becomes a required node/sub-path (`structural`).
@@ -436,7 +436,7 @@ config* side: realistic ceilings + cost (§4, §6).
 Two levers make all of the above robust: a **graph-consistent justification**
 (§5) - now **implemented** (`justification.ts`; UI answer capture is the only
 remaining piece, Phase 2b) - and a **cost/budget model** (§4, specced in
-`cost-calculation-and-budgeting.md`) - **still to build** (the `budget` axis).
+[`cost-calculation-and-budgeting.md`](./cost-calculation-and-budgeting.md)) - **still to build** (the `budget` axis).
 This analysis reframes both as **anti-gaming infrastructure**, not just features.
 (The scale-fit semantic checks that back several rows above - `guardedPath`,
 `storageFit`, `fanout`, `placement` - are now implemented too; see §4.1.)
@@ -462,7 +462,7 @@ time-weighted integrals) - a lenient/averaged metric is itself a gaming surface.
 | **`storageFit` (scale→DB-type)**                                                                   | ❌ new      | Lab 4, Exam 1                                                                                                   |
 | **`fanout` (node-type-aware)**                                                                     | ❌ new      | Lab 3                                                                                                           |
 | **`placement` / `direction`**                                                                      | ⚠️ extend   | extend `requires_path`; add forbidden-position/edge + directed-all-traffic                                      |
-| **Cost / budget model**                                                                            | ⚠️ specced  | `cost-calculation-and-budgeting.md` exists; wire as `budget` check                                              |
+| **Cost / budget model**                                                                            | ⚠️ specced  | [`cost-calculation-and-budgeting.md`](./cost-calculation-and-budgeting.md) exists; wire as `budget` check                                              |
 | **Question-authored test conditions** (workload/seed/duration/faults injected, overriding student) | ✅ have     | `QuestionSuiteCase` overrides via `mergeTopologyWithOverrides` - the anti-gaming test/architecture split (§7.1) |
 | **Scale numbers → sim workload**                                                                   | ⚠️ plumbing | derive the injected workload from `scale` so numbers force architecture                                         |
 | **Bounded student config** (node/edge config ceilings + cost)                                      | ⚠️ extend   | realistic defaults + pricing so config-tuning is caught, not forbidden (§6, §7.1)                               |

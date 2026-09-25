@@ -55,7 +55,7 @@ The repo already has the core schema boundary needed for this product model.
 | Student work state | `AttemptState` in `src/engine/analysis/question.ts` |
 | Verdict-driven grading | rubric and grading pipeline in `src/engine/analysis/rubric.ts` and `src/engine/analysis/question.ts` |
 | Runtime question UI | `QuestionPanel` and host seam already wired in the renderer |
-| Product-level environment model | specified in `rubric-engine-and-question-platform-architecture.md`, not yet fully enforced in runtime |
+| Product-level environment model | specified in [`rubric-engine-and-question-platform-architecture.md`](./rubric-engine-and-question-platform-architecture.md), not yet fully enforced in runtime |
 | Palette allowlist / locked scaffold / curated results | specified in docs, still a follow-up implementation slice |
 
 As of July 28, 2026, the main missing piece is not the concept model. The missing piece is runtime enforcement of the environment lens.

@@ -11,3 +11,4 @@ store.
 **Seen in:** [[p03-global-leaderboard|Problem 3 - Leaderboard]] · [[p11-celebrity-upload|Problem 11 - Celebrity Upload]]
 **Taught in:** [[m08-traits|M08 - Traits]]
 **Spec:** [[trait-integration-guide|trait-integration-guide.md]]
+**Map:** [[maps/architecture-patterns|Architecture Patterns]] · [[maps/distributed-systems|Distributed Systems]]

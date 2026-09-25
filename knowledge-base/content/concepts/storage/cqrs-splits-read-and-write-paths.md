@@ -10,3 +10,4 @@ read-optimized view so each scales independently.
 **Because:** [[metrics/utilization-is-a-time-weighted-integral|Utilization is a time-weighted integral]]
 **Seen in:** [[p10-geospatial|Problem 10 - Geospatial]]
 **Taught in:** [[m10-metrics-honesty|M10 - Metrics & Honesty]]
+**Map:** [[maps/distributed-systems|Distributed Systems]]

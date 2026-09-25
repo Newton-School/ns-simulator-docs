@@ -1193,7 +1193,7 @@ Both the terminal and the event debugger live in the Results Tray bottom panel (
 
 ## Engine Integration Requirements
 
-The terminal requires changes to the engine beyond what the event debugger already specifies. The event debugger's requirements (documented in `event-debugger-schema.md`) are prerequisites; the terminal adds:
+The terminal requires changes to the engine beyond what the event debugger already specifies. The event debugger's requirements (documented in [`event-debugger-schema.md`](./event-debugger-schema.md)) are prerequisites; the terminal adds:
 
 ### 1. Port-level state tracking
 
@@ -1207,7 +1207,7 @@ The terminal writes to `ComponentNode` fields through the Zustand store (same pa
 
 ### 3. Expected path computation utility
 
-The `ping` and `traceroute` commands need a utility that walks the topology's edges from node A to node B. The event debugger's `ExpectedPath` type (from `event-debugger-schema.md`) describes this, but the actual implementation - walking `RoutingTable.getOutgoingEdges()` recursively - doesn't exist yet. This utility should be shared between the debugger (for the Actual vs Expected Path Diff view) and the terminal (for `ping`/`traceroute`).
+The `ping` and `traceroute` commands need a utility that walks the topology's edges from node A to node B. The event debugger's `ExpectedPath` type (from [`event-debugger-schema.md`](./event-debugger-schema.md)) describes this, but the actual implementation - walking `RoutingTable.getOutgoingEdges()` recursively - doesn't exist yet. This utility should be shared between the debugger (for the Actual vs Expected Path Diff view) and the terminal (for `ping`/`traceroute`).
 
 ### 4. Diagnostic analysis functions
 

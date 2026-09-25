@@ -12,3 +12,4 @@ add throughput. A c5.large (2 vCPU) cpu-bound node has 2 servers.
 **Seen in:** [[p02-video-transcoder|Problem 2 - Video Transcoder]]
 **Taught in:** [[m06-execution-profiles|M06 - Execution Profiles]]
 **Spec:** [[execution-profile-and-node-concurrency|execution-profile-and-node-concurrency.md]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

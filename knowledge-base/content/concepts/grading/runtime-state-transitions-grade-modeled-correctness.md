@@ -17,3 +17,4 @@ only for behavior the engine genuinely models.
 **Seen in:** [[p12-ps5-restock|Problem 12 - PS5 Restock]]
 **Taught in:** [[m12-grading-dsl|M12 - Grading DSL]]
 **Spec:** [[runtime-semantic-criteria|runtime-semantic-criteria.md]]
+**Map:** [[maps/authoring-grading|Authoring & Grading]] · [[maps/distributed-systems|Distributed Systems]]

@@ -13,3 +13,8 @@ tags: [moc]
 - [[m03-queueing-model|M03]] · [[m10-metrics-honesty|M10]]
 ## Problems
 - [[p05-live-voting|P05]] · [[p10-geospatial|P10]]
+
+## More notes in this map
+
+- [[concepts/metrics/percentiles-do-not-sum-across-hops|Latency percentiles do not sum across hops]]
+- [[concepts/workloads/burst-traffic-creates-transient-instability|Burst traffic creates transient queue instability]]

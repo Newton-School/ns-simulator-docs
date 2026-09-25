@@ -16,3 +16,4 @@ the retention window.
 **Seen in:** [[p13-taylor-swift-news-feed|Problem 13 - News Feed]]
 **Taught in:** [[m08-traits|M08 - Traits]]
 **Spec:** [[support-ledger-and-runtime-semantics|support-ledger-and-runtime-semantics.md]]
+**Map:** [[maps/distributed-systems|Distributed Systems]]

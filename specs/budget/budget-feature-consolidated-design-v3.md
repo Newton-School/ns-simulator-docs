@@ -11,8 +11,8 @@
 > meter auto-hides). Everything below is the V2/V3 build plan - **plan only**.
 >
 > **Companions (authoritative for detail).** This is the *design*. The code-level
-> translation lives in `budget-feature-implementation-v3.md` and the finalized cost
-> arithmetic in `budget-cost-model-math.md`. Those two carry refinements that post-date
+> translation lives in [`budget-feature-implementation-v3.md`](./budget-feature-implementation-v3.md) and the finalized cost
+> arithmetic in [`budget-cost-model-math.md`](./budget-cost-model-math.md). Those two carry refinements that post-date
 > this draft and **supersede it where they differ**: the operator is `floor` (below);
 > the "foil" is a **third topology** distinct from the gamed one; the cap/guardrail read
 > the **full grade-time cost** while the live meter is a degraded preview; `wrong_unit`
@@ -151,7 +151,7 @@ total          = Σ nodeCost + Σ edgeCost
 > full unit** - otherwise every node with ≥1 worker and every edge with any traffic gains
 > a spurious +1, contradicting §4b's own "a 1 KB/s link adds 0" and making a "thin edge"
 > or a default-sized node impossible to price at base. (Corrected from the original draft;
-> see the worked examples in `budget-cost-model-math.md`, which foot only under `floor`.)
+> see the worked examples in [`budget-cost-model-math.md`](./budget-cost-model-math.md), which foot only under `floor`.)
 
 Three deliberate changes from V2's `nodeCost = BASE[type]*replicas + ceil(workers/100)`
 and flat `EDGE_COST * edges`:
@@ -254,7 +254,7 @@ before any design existed - that's the whole bug.
   → `C_ref ≈ 16`. **`cap = 18`.**
 - **Foil:** `client → svc → relational-db(6 × 3 = 18)` chasing the SLA
   → `C_foil ≈ 22` (`0 + 2 + 18 + 2 edges`), over budget *and* still risks the 15s SLA
-  under spike. (Full worked table in `budget-cost-model-math.md` §8.)
+  under spike. (Full worked table in [`budget-cost-model-math.md`](./budget-cost-model-math.md) §8.)
 - **Lesson:** decoupling is cheaper than scaling the datastore.
 
 ### 7b. `sensor-store` → "Ingest 200k writes/s on a budget" *(needs `storageProfile`)*
@@ -279,7 +279,7 @@ before any design existed - that's the whole bug.
   **`cap = 10`.**
 - **Foil:** `client → svc-a(2) → svc-b(2)` with a fat ≈300 MB/s direct link → the edge
   term alone pushes `C_foil ≈ 12` over the cap. Two valid integer caps in the gap
-  (`10`, `11`). (Worked table + integer-gap check in `budget-cost-model-math.md` §8b.)
+  (`10`, `11`). (Worked table + integer-gap check in [`budget-cost-model-math.md`](./budget-cost-model-math.md) §8b.)
 - **Precondition:** the fat link must be **fast enough to pass the SLA** while **too
   expensive to afford** - if removing the cache also blows p99, the foil fails perf and
   collapses back into a gamed topology, not a clean "affordable-vs-not" fork.

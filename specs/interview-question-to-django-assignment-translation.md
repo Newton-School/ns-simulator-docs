@@ -208,7 +208,7 @@ question.
 The worksheet set also has a companion reference pack at
 [interview-question-translation-reference-pack.md](interview-question-translation-reference-pack.md),
 which collects a glossary plus the reusable authoring tables imported from
-`evaluation-authoring-reference-manual.md`.
+[`evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md).
 
 ### 5.1 Source capture
 

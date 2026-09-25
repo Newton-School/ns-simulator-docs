@@ -10,3 +10,4 @@ sits near 1%. The fix is async decoupling.
 **Because:** [[network/edge-concurrency-caps-inflight-requests|Edge concurrency caps in-flight requests]]
 **Seen in:** [[p06-notification-gateway|Problem 6 - Notification Gateway]]
 **Taught in:** [[m02-request-lifecycle|M02 - Request Lifecycle]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

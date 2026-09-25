@@ -11,3 +11,4 @@ are rejected. This is why capacity is a hard wall, not a soft slowdown.
 **Seen in:** [[p05-live-voting|Problem 5 - Live Voting]]
 **Taught in:** [[m03-queueing-model|M03 - Queueing Model]]
 **Spec:** [[queue-depth-calculation|queue-depth-calculation.md]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

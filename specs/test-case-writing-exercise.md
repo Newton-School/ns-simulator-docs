@@ -190,7 +190,7 @@ climbs, the row goes red.
 
 > Use exact verdict metric keys. `summary.latency.p99` is correct;
 > `summary.latencyP99Ms` does not resolve and the check silently fails. The full metric
-> list is in `evaluation-authoring-reference-manual.md`.
+> list is in [`evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md).
 
 ---
 
@@ -256,5 +256,5 @@ A question that has not been graded both ways is not authored.
 **Next:** for correctness lessons that a diagram cannot assert (no double-book, retry
 amplification, lock contention), see the run-wide simulation metrics
 `reservations.oversells`, `retries.*`, `locks.*` in
-`evaluation-authoring-reference-manual.md`, and the worked build in
-`contended-inventory-and-oversell-model.md`.
+[`evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md), and the worked build in
+[`contended-inventory-and-oversell-model.md`](./contended-inventory-and-oversell-model.md).

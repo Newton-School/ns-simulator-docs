@@ -154,16 +154,16 @@ The resulting document serves as:
 
 | Document | Feature domain | Features covered | Source material |
 |---|---|---|---|
-| `event-debugger-prototypes.md` | Event debugging & request lifecycle inspection | 13 features | 5 HTML prototypes |
-| `event-debugger-schema.md` | Event debugger data model | 7 engine types, 4 worker messages, 5 renderer types | The prototypes doc + codebase exploration |
-| `terminal-feature-spec.md` | In-app Cisco Packet Tracer-style terminal | 11 features | 2 PDF design docs |
-| `question-creation-feature-spec.md` | Simulator-based grading & question authoring | 10 features | 1 PDF design doc |
+| [`event-debugger-prototypes.md`](./event-debugger-prototypes.md) | Event debugging & request lifecycle inspection | 13 features | 5 HTML prototypes |
+| [`event-debugger-schema.md`](./event-debugger-schema.md) | Event debugger data model | 7 engine types, 4 worker messages, 5 renderer types | The prototypes doc + codebase exploration |
+| [`terminal-feature-spec.md`](./terminal-feature-spec.md) | In-app Cisco Packet Tracer-style terminal | 11 features | 2 PDF design docs |
+| [`question-creation-feature-spec.md`](./question-creation-feature-spec.md) | Simulator-based grading & question authoring | 10 features | 1 PDF design doc |
 
 ---
 
 ## Adapting the prompt
 
-**For a schema/data model document** (like `event-debugger-schema.md`):
+**For a schema/data model document** (like [`event-debugger-schema.md`](./event-debugger-schema.md)):
 Replace "feature perspective" with "data model perspective" and change the feature section structure to:
 - Type name and definition (code block)
 - Why this type exists (what feature needs it, why existing types don't suffice)
@@ -171,7 +171,7 @@ Replace "feature perspective" with "data model perspective" and change the featu
 - How it connects to existing types (what it wraps, extends, or projects from)
 - Where it's populated (which function/handler creates instances of it)
 
-**For a backend-heavy system** (like `question-creation-feature-spec.md`):
+**For a backend-heavy system** (like [`question-creation-feature-spec.md`](./question-creation-feature-spec.md)):
 Add a section for "Architecture Boundary" that explicitly draws the line between what lives in which codebase. Use a diagram showing the contract surface.
 
 **For a system with cross-cutting concerns**:

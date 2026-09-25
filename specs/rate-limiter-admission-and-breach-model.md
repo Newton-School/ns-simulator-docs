@@ -128,6 +128,6 @@ burst rate above `limit / windowMs` so the limiter is actually exercised.
 - Registration: `src/engine/traits/capabilityModules.ts`
 - Run-wide aggregate: `src/engine/analysis/verdict.ts` (`SimulationVerdict.rateLimit`, `sumRateLimitCounters`)
 - Tests: `src/engine/traits/rateLimiter.test.ts`
-- Contended-key workload primitive: `specs/contended-inventory-and-oversell-model.md`
-- Runtime-evidence grading surface: `specs/runtime-semantic-criteria.md`
-- Lesson design: `specs/rate-limiter-lab-lesson.md`
+- Contended-key workload primitive: [`specs/contended-inventory-and-oversell-model.md`](./contended-inventory-and-oversell-model.md)
+- Runtime-evidence grading surface: [`specs/runtime-semantic-criteria.md`](./runtime-semantic-criteria.md)
+- Lesson design: [`specs/rate-limiter-lab-lesson.md`](./rate-limiter-lab-lesson.md)

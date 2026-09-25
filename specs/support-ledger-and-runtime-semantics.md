@@ -289,6 +289,6 @@ With V2 landed, the next dependency-safe order is:
 - V2 distributed-systems traits + state machines:
   - `src/engine/traits/replication.ts`, `streamBroker.ts`, `protocolSession.ts`
   - `src/engine/semantics/v2StateMachines.ts` (`ReplicatedLog`, `ReplicaCluster`, `ExternalOutcomeRegistry`, `reconcileExternalOutcome`, `routeSession`)
-  - worked trace: `specs/replication-quorum-state-machine-walkthrough.md`
+  - worked trace: [`specs/replication-quorum-state-machine-walkthrough.md`](./replication-quorum-state-machine-walkthrough.md)
 
 This is the current foundation, not the final semantics architecture.

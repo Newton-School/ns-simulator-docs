@@ -4,8 +4,8 @@ Date: 2026-09-02
 
 A worked trace of one request moving through the replication capability, from the
 cluster state machine down to the entries stamped on the request's
-`stateTimeline`. Read this alongside `support-ledger-and-runtime-semantics.md`
-(what the timeline is) and `runtime-semantic-criteria.md` (how to grade it).
+`stateTimeline`. Read this alongside [`support-ledger-and-runtime-semantics.md`](./support-ledger-and-runtime-semantics.md)
+(what the timeline is) and [`runtime-semantic-criteria.md`](./runtime-semantic-criteria.md) (how to grade it).
 
 ## 1. Two state machines, one request
 
@@ -207,7 +207,7 @@ question that forbids stale reads can assert
 ## 7. Grading these timelines
 
 Author against the `replication` scope with the runtime semantic criteria
-(`runtime-semantic-criteria.md`). Examples as `SEMANTIC_CRITERION` rows:
+([`runtime-semantic-criteria.md`](./runtime-semantic-criteria.md)). Examples as `SEMANTIC_CRITERION` rows:
 
 ```json
 { "type": "SEMANTIC_CRITERION", "id": "no-quorum-loss", "kind": "stateTransition",

@@ -998,9 +998,9 @@ Runtime traits enabled: <list>
 - Runtime traits should reuse existing trait/capability modules rather than adding
   duplicate forms.
 - Request flow must align with
-  `ns-simulator-docs/specs/request-flow-direction-and-topology-rules.md`.
+  [`ns-simulator-docs/specs/request-flow-direction-and-topology-rules.md`](./request-flow-direction-and-topology-rules.md).
 - Resource behavior must align with
-  `ns-simulator-docs/specs/resource-allocation-and-derived-concurrency.md`.
+  [`ns-simulator-docs/specs/resource-allocation-and-derived-concurrency.md`](./resource-allocation-and-derived-concurrency.md).
 
 ## 21. Contract ⇄ graph reconciliation lint (feedback, not credit)
 

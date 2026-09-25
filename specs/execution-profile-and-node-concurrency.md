@@ -13,9 +13,9 @@
 > capability in `src/engine/analysis/environmentProfile.ts`.
 >
 > **Companion specs.** The full sizing/cost model is
-> `resource-allocation-and-derived-concurrency.md` (this doc is the focused
+> [`resource-allocation-and-derived-concurrency.md`](./resource-allocation-and-derived-concurrency.md) (this doc is the focused
 > concurrency-per-profile slice of it); authoring guidance is
-> `evaluation-authoring-reference-manual.md` §9.
+> [`evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md) §9.
 
 ---
 
@@ -135,5 +135,5 @@ cpu-bound only to make it bite.
 - **Cost.** Priced off the instance (`pricePerHour × instanceCount × pricingModel`),
   independent of profile.
 
-See `resource-allocation-and-derived-concurrency.md` for the full derivation, caps
+See [`resource-allocation-and-derived-concurrency.md`](./resource-allocation-and-derived-concurrency.md) for the full derivation, caps
 (quota / cost / per-node), and cost model.

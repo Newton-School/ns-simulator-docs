@@ -11,3 +11,4 @@ not CPU, to see trouble first.
 **Leads to:** [[queueing/queue-depth-is-a-leading-indicator-of-latency|Queue depth is a leading indicator of latency]]
 **Seen in:** [[p05-live-voting|Problem 5 - Live Voting]]
 **Taught in:** [[m03-queueing-model|M03 - Queueing Model]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

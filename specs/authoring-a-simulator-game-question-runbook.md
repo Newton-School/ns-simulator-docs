@@ -105,7 +105,7 @@ skeleton (see the engine's `QuestionPackage` schema for all fields):
 
 **The three grading axes you author** (all graded in the browser):
 - **`structuralRules`** - graph facts (has a load balancer, single source, a path exists). Runs first; if these fail, simulation is skipped.
-- **`semanticCriteria`** - architecture invariants (`guardedPath`, `storageFit`, `fanout`, `placement`, `forbidUnjustified`). See `question-grading-model-and-anti-gaming.md` §4/§4.1.
+- **`semanticCriteria`** - architecture invariants (`guardedPath`, `storageFit`, `fanout`, `placement`, `forbidUnjustified`). See [`question-grading-model-and-anti-gaming.md`](./question-grading-model-and-anti-gaming.md) §4/§4.1.
 - **`rubric`** - runtime metrics after simulating under the hidden `suite` load (p99, error rate, invariants).
 
 > **Note on `description`:** it's a human label - never parsed. The `kind` +
@@ -169,7 +169,7 @@ the question).
   question by creating a fresh one. Iterate on staging first.
 - **No server grading (this version):** scores are client-computed and trusted.
   Fine for practice; a real graded assessment needs the deferred server-side
-  re-grade (see `newton-api-backend-integration.md` §6).
+  re-grade (see [`newton-api-backend-integration.md`](./newton-api-backend-integration.md) §6).
 - **`initial_game_state` size:** no hard cap; the ~2-4 KB package is fine (the
   "tiny in prod" norm is convention).
 - **Semantic axis is graded now**, but `forbidUnjustified` needs a justification
@@ -189,4 +189,4 @@ the question).
 - **ns-simulator:** the Newton wire adapter (`engine/analysis/newtonGamePlayground.ts`
   + `renderer/utils/newtonHostMessaging.ts`), wired into `WorkspaceLayout.tsx`
   (handshake + seed) and `QuestionPanel.tsx` (submit). Selected by `?host=newton`.
-- Full design: `newton-api-backend-integration.md`.
+- Full design: [`newton-api-backend-integration.md`](./newton-api-backend-integration.md).

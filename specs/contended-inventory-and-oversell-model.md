@@ -201,7 +201,7 @@ Phased so each phase is independently testable.
 5. **Author the question + dual-topology validation.** Reference topology → 0
    oversell, PASS; gamed topologies (no guard / cache-as-truth / split replicas)
    → oversell > 0, FAIL on the intended axis. Ship as Django rows.
-6. **Docs.** Update `evaluation-authoring-reference-manual.md` (new component,
+6. **Docs.** Update [`evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md) (new component,
    new metrics, keyspace workload) and rewrite video-script 3 against the real
    schema.
 

@@ -11,9 +11,9 @@
 > + `src/engine/nodes/resourceDerivation.ts`; the Newton authoring bridge in
 > `src/engine/analysis/newtonGamePlayground.ts`.
 > Validated by `parseQuestionPackage` (schema) + `validateAuthoredQuestion`
-> (authoring contract). Companion specs: `question-simulation-alignment.md`,
-> `question-grading-model-and-anti-gaming.md`, `question-bank-initial-game-states.md`,
-> `resource-allocation-and-derived-concurrency.md`.
+> (authoring contract). Companion specs: [`question-simulation-alignment.md`](./question-simulation-alignment.md),
+> [`question-grading-model-and-anti-gaming.md`](./question-grading-model-and-anti-gaming.md), [`question-bank-initial-game-states.md`](./question-bank-initial-game-states.md),
+> [`resource-allocation-and-derived-concurrency.md`](./resource-allocation-and-derived-concurrency.md).
 >
 > **What's new (2026-08).** Node capacity is now derived from a discrete **instance
 > model** (§9), not free-typed workers; every node has an **execution profile**
@@ -72,7 +72,7 @@ sim evaluate question <package.json> <gamed-topology.json>       # non-zero, fai
 If the gamed design passes, the question is **under-constrained** - tighten the
 `semanticCriteria`/`rubric`. A question that has not been graded both ways is not
 authored. (Every kind in this manual was validated this way - see
-`question-bank-initial-game-states.md` §Validation status.)
+[`question-bank-initial-game-states.md`](./question-bank-initial-game-states.md) §Validation status.)
 
 ### 1.3 Workload characterization
 `workloadCategory` selects which axis dominates and what load is injected. It is
@@ -300,7 +300,7 @@ way to check V2 distributed behavior. Scopes and their states:
   `commit-outcome` · `lock` · `reservation`
 - e.g. `{ "kind": "stateTransition", "match": { "scope": "replication", "state": "quorum-unavailable" }, "maxCount": 0, "hardFail": true }` — the write path never loses quorum.
 
-See `specs/runtime-semantic-criteria.md` for the full scope→state table and
+See [`specs/runtime-semantic-criteria.md`](./runtime-semantic-criteria.md) for the full scope→state table and
 matcher/filter syntax.
 
 **Invariant:** `invariantViolations.count` · `sloBreaches.count` ·
@@ -394,7 +394,7 @@ Base fields on every rule: `kind` (required) plus `id` and `description` (both
 Learners can now **compose** nodes with the Service Builder and Custom Node Builder
 instead of only dragging palette items. This does **not** change the grading engine —
 but it changes how you must author targeting. See the builder spec
-`custom-node-and-service-definition-spec.md` §15.1 for the full contract.
+[`custom-node-and-service-definition-spec.md`](./custom-node-and-service-definition-spec.md) §15.1 for the full contract.
 
 **Creation is transparent to grading.** Every created node serializes to a real
 `componentType` — a built *service* becomes `microservice` / `serverless-function` /
@@ -825,7 +825,7 @@ a bug.
 
 > **Deep dive.** The canonical explainer for the execution-profile model - the
 > per-tier defaults, the reasoning, the "one number, many labels" vocabulary, and
-> the `canEditExecutionProfile` lock - is `execution-profile-and-node-concurrency.md`.
+> the `canEditExecutionProfile` lock - is [`execution-profile-and-node-concurrency.md`](./execution-profile-and-node-concurrency.md).
 
 ### 9.4 Service speed (`perfFactor` → `serviceTimeMultiplier`)
 

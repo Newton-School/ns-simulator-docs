@@ -10,3 +10,4 @@ The right choice depends on the read/write ratio and follower counts.
 **Leads to:** [[workloads/celebrity-workload-breaks-fanout-on-write|Celebrity workload breaks fanout-on-write]]
 **Seen in:** [[p13-taylor-swift-news-feed|Problem 13 - News Feed]]
 **Taught in:** [[m11-workload-scale|M11 - Workload & Scale]]
+**Map:** [[maps/distributed-systems|Distributed Systems]]

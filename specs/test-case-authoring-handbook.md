@@ -420,7 +420,7 @@ timeline." E.g. a lock must go `acquired → released` in that order.
 Restricts *which requests* are eligible before counting: `caseId` (only one test
 scenario), `outcomeStatus`, `terminalNodeType`, etc.
 
-Full scope→state tables live in `runtime-semantic-criteria.md`.
+Full scope→state tables live in [`runtime-semantic-criteria.md`](./runtime-semantic-criteria.md).
 
 ---
 
@@ -575,7 +575,7 @@ The tokens you put in `componentType` / `fromType` / `accept` etc. are node
 - **Coordination:** `rate-limiter`, `distributed-lock`, `reservation-store`,
   `idempotency-manager`, `circuit-breaker-controller`
 
-The full list lives in `test-case-catalog.md` §6.
+The full list lives in [`test-case-catalog.md`](./test-case-catalog.md) §6.
 
 ## 8.1 Capability-carrying types
 
@@ -621,7 +621,7 @@ These are built out of state machines that span several nodes, and their
 transitions are what runtime criteria grade.
 
 A worked trace of one such machine is in
-`replication-quorum-state-machine-walkthrough.md`.
+[`replication-quorum-state-machine-walkthrough.md`](./replication-quorum-state-machine-walkthrough.md).
 
 ---
 
@@ -862,7 +862,7 @@ through both → breaches > 0 → fails. Dual-Topology satisfied. Ship it.
 where modelled), never correctness behind a latency number.
 **Ship test:** reference passes, gamed fails, on the intended axis.
 
-*Deeper references: `evaluation-authoring-reference-manual.md` (the full DSL),
-`test-case-catalog.md` (every row + component vocabulary),
-`runtime-semantic-criteria.md` (scope→state tables),
-`node-capability-matrix.md` (every trait).*
+*Deeper references: [`evaluation-authoring-reference-manual.md`](./evaluation-authoring-reference-manual.md) (the full DSL),
+[`test-case-catalog.md`](./test-case-catalog.md) (every row + component vocabulary),
+[`runtime-semantic-criteria.md`](./runtime-semantic-criteria.md) (scope→state tables),
+[`node-capability-matrix.md`](./node-capability-matrix.md) (every trait).*

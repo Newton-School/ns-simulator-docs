@@ -9,3 +9,4 @@ directly as money - the lever that makes over-provisioning fail the budget axis.
 
 **Because:** [[compute/derive-and-lock-prices-concurrency|Derive-and-lock prices concurrency]]
 **Taught in:** [[m09-cost-model|M09 - Cost Model]]
+**Map:** [[maps/simulator-physics|Simulator Physics]]

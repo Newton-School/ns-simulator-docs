@@ -10,3 +10,4 @@ at once - a thundering herd that can overwhelm the DB the cache was meant to pro
 **Leads to:** [[caching/request-collapsing-dedups-inflight-misses|Request collapsing dedups in-flight misses]]
 **Seen in:** [[p11-celebrity-upload|Problem 11 - Celebrity Upload]]
 **Taught in:** [[m08-traits|M08 - Traits]]
+**Map:** [[maps/distributed-systems|Distributed Systems]]

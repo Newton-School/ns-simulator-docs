@@ -5,7 +5,7 @@ Date: 2026-09-01
 ## 1. Why this exists
 
 The runtime-semantics foundation (see
-`support-ledger-and-runtime-semantics.md`) records a per-request
+[`support-ledger-and-runtime-semantics.md`](./support-ledger-and-runtime-semantics.md)) records a per-request
 `stateTimeline` — the ordered transitions a request moves through across the
 `request`, `delivery`, `broker`, `replication`, `protocol`, `idempotency`, `commit-outcome`, `lock`, and `reservation` scopes. That
 foundation *records* semantic evidence but does not *grade* it.
