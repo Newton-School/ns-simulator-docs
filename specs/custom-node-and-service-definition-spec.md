@@ -42,9 +42,9 @@ change simulation output:
 | cache | `cacheHitLatencyMs` | `sim.cacheHitLatencyMs` | yes (distributed-cache template) |
 | arrival | `baseRps`, `pattern` | `sim.source.defaultWorkload.baseRps` / `.pattern` | yes (request-source template) |
 
-Everything else the builder collects — **all capabilities**, **all operations and
+Everything else the builder collects - **all capabilities**, **all operations and
 their input/output fields**, **all per-operation dependencies**, and the
-`circuit-breaker`, `idempotency`, `async-emission` trait packs — is **contract /
+`circuit-breaker`, `idempotency`, `async-emission` trait packs - is **contract /
 documentation only**. It is stored on the node and used (at most) for validation and
 future grading; it does not change a single simulated number.
 
@@ -68,53 +68,53 @@ future grading; it does not change a single simulated number.
 
 ### 0.3 Correction milestones (supersede §17 ordering)
 
-- **C0 — Honesty relabel: DONE.** Capabilities and operations carry explicit
+- **C0 - Honesty relabel: DONE.** Capabilities and operations carry explicit
   "documentation only, not simulated" notes; the review pane shows a per-definition
   "Your selections" split (simulated traits vs. documentation-only
   capabilities/operations); the properties-panel subtitle no longer promises absent
   traits.
-- **C1 — Trait round-trip: DONE.** `applyDefinitionTraits` now lives in the engine
+- **C1 - Trait round-trip: DONE.** `applyDefinitionTraits` now lives in the engine
   module and re-runs on every properties-panel definition edit, keeping the stored
   definition and live `sim.*` in sync.
-- **C2 — Editor/mapping parity: DONE.** `instanceCount`, `queueSlots`, `maxRetries`,
+- **C2 - Editor/mapping parity: DONE.** `instanceCount`, `queueSlots`, `maxRetries`,
   and `idleTimeoutMs` are now editable in the builder trait cards. No mapped field is
   unreachable and no editor field is ignored.
-- **C3 — Kill dead traits: DONE.** `circuit-breaker`, `idempotency`, and
+- **C3 - Kill dead traits: DONE.** `circuit-breaker`, `idempotency`, and
   `async-emission` removed from `TraitPackId`, labels, and `background-worker`.
   (`circuit-breaker-controller` / `idempotency-manager` engine component types are
   unrelated and untouched.)
-- **C4 — Runtime guard: DONE (no code).** Subsumed by `isCustomNodeDefinition`,
+- **C4 - Runtime guard: DONE (no code).** Subsumed by `isCustomNodeDefinition`,
   which rejects any definition whose `kind` is not in
   `runtimeTemplate.allowedDefinitionKinds`.
-- **C3b — Dependency parity, runtime-switch preservation, real section nav: DONE.**
+- **C3b - Dependency parity, runtime-switch preservation, real section nav: DONE.**
   Both dependency editors render the canonical `DEPENDENCY_ACTIONS` (8),
   `DEPENDENCY_TARGET_ROLES` (11), and `DEPENDENCY_CONDITIONS` (5) plus call mode, so a
   stored value never lands on an editor that cannot show it. Switching runtime
   intersects existing capability selections with the new template instead of wiping
   them. The builder side rail is a working section navigator, not a fake wizard.
-- **C5+ — Deferred.** Only one item needs a genuinely new engine primitive; the rest
+- **C5+ - Deferred.** Only one item needs a genuinely new engine primitive; the rest
   are adapter/wiring work on capabilities the engine already has. Anything not yet
   wired stays `contract` (rule 0.2.1) until it maps to something the engine consumes.
-  - **Operation→edge materialization — NEEDS NEW ENGINE PRIMITIVE.** The engine routes
+  - **Operation→edge materialization - NEEDS NEW ENGINE PRIMITIVE.** The engine routes
     along edges via `routingStrategy` / `routingRules`; it has no "operation" as a
     routing unit. A request carries a `requestType` but nodes never branch on which
     operation it is. Making the declared per-operation dependency graph drive traffic
     requires operation-scoped edges plus a router that dispatches by operation.
-  - **Per-dependency latency — ADAPTER ONLY.** Edges already carry latency
+  - **Per-dependency latency - ADAPTER ONLY.** Edges already carry latency
     (`engine.ts` `propagationMs` + transmission + protocol overhead, `edgeLatencyMs`
     span). Missing only because a builder dependency is not yet tied to an edge; falls
     out of the operation→edge work above.
-  - **Storage / messaging runtime templates — ADAPTER ONLY (doing now, #3).** The
+  - **Storage / messaging runtime templates - ADAPTER ONLY (doing now, #3).** The
     engine already simulates `relational-db`, `kv-store`, `in-memory-cache`,
     `search-index`, `object-store`, queues, and streams. Gap is that
     `RUNTIME_TEMPLATES` only defines compute/external entries. Fix = add template
     entries pointing at those existing component types + extend `applyDefinitionTraits`
     for their knobs.
-  - **Request-mix binding — ADAPTER ONLY (doing now, #4).** Requests already carry
+  - **Request-mix binding - ADAPTER ONLY (doing now, #4).** Requests already carry
     `requestType` and the source/input node consumes an emission mix. Gap is that a
     service's declared operations are not seeded into that mix. Fix = project declared
     operations onto the source's request-mix distribution.
-  - **Topology-scoped persistence — NO ENGINE INVOLVEMENT.** Definitions live in
+  - **Topology-scoped persistence - NO ENGINE INVOLVEMENT.** Definitions live in
     `localStorage` (service-kind only). Moving them onto the topology document is
     renderer/store/serialization work.
 
@@ -387,14 +387,14 @@ Allowed service runtimes:
 The service builder should default to `long-running-service`, but the user may
 change it when the question policy allows.
 
-### 6.5 Trait packs (executable set — both builders)
+### 6.5 Trait packs (executable set - both builders)
 
 Both builders offer trait packs, not raw JSON. This is the **complete** set of packs
 that exist, each shown only on the runtime templates where it applies (`RUNTIME_TEMPLATES[*].traitPacks`).
 
 Legend: **exec** = mapped to `sim.*` in `applyDefinitionTraits` and changes simulation
 output; **contract** = documentation/validation only (per §0.2 rule 1 it must be
-labeled as such in the UI). Every pack here has a real mapping — that is the entry
+labeled as such in the UI). Every pack here has a real mapping - that is the entry
 condition (§0.2 rule 3).
 
 | Trait pack | Executable fields (mapped) | → `sim.*` | Applies on templates |
@@ -418,7 +418,7 @@ Growing the list is a fixed recipe (see the `cache` pack as the reference): add 
 relevant template's `traitPacks` (and default-enable it in `createDefaultTraits` where
 sensible), then a unit test asserting the `sim.*` projection. Type-specific packs
 (cache hit rate, replication, keyed rate-limiter) must be gated to the templates whose
-backing `componentType` actually consumes them — never shown generically.
+backing `componentType` actually consumes them - never shown generically.
 
 ## 7. Custom Node Builder Modal
 
@@ -868,7 +868,7 @@ it with no change.
    the node-type gates below. (Extends [[multiple-valid-solutions-grading]].)
 2. **Gate creation with the existing `allowedNodeTypes` / `forbiddenNodeTypes`.**
    These question constraints operate on the **resolved componentType**, so they
-   already apply to created nodes — a created cache counts as `in-memory-cache`. Use
+   already apply to created nodes - a created cache counts as `in-memory-cache`. Use
    them so a learner can't simply conjure the exact node the question is testing.
 3. **Never grade the declared contract.** Operations, capabilities, and per-operation
    dependencies from the builder are **documentation-only and invisible to grading**
@@ -1004,7 +1004,7 @@ Runtime traits enabled: <list>
 
 ## 21. Contract ⇄ graph reconciliation lint (feedback, not credit)
 
-The declared contract (§0.1, §15.1) is documentation — it never earns credit and never
+The declared contract (§0.1, §15.1) is documentation - it never earns credit and never
 changes the simulation. But it is a useful **formative signal**: when a learner
 declares a dependency in the builder but never wires the matching edge, we can nudge
 them. This section specs that lint.
@@ -1033,18 +1033,18 @@ canvas graph:
 - **Advisory only.** Rendered as a hint in the properties panel; never affects score.
   Grading still keys off actual edges + runtime evidence.
 - **Reachability, not direct edges.** A dependency reached through an intermediary
-  (service → gateway → cache) is satisfied — reduces false positives.
+  (service → gateway → cache) is satisfied - reduces false positives.
 - **Role → type is heuristic.** Unusual-but-valid backends may not match; the wording
   suggests ("did you forget to wire it?"), never asserts an error. Learners can
   dismiss it.
-- **Free-text `target` is ignored for matching** — only the `targetRole` enum drives
+- **Free-text `target` is ignored for matching** - only the `targetRole` enum drives
   the check, so renaming a node never breaks it.
 
 ### 21.3 Not in V1
 
 - The inverse direction (**wired-but-undeclared**: an edge to a typed backend with no
-  matching declared dependency) — deferred to avoid noise on partial contracts.
-- Auto-materialization (drawing the missing edge) — that is the deferred operation→edge
+  matching declared dependency) - deferred to avoid noise on partial contracts.
+- Auto-materialization (drawing the missing edge) - that is the deferred operation→edge
   work (§0.3 C5). This lint is the stepping stone: flag the mismatch first.
 
 ### 21.4 Source

@@ -1,6 +1,6 @@
-# Visual Question Authoring Studio — Product and Implementation Plan
+# Visual Question Authoring Studio - Product and Implementation Plan
 
-**Status:** Proposed — revised after architecture review
+**Status:** Proposed - revised after architecture review
 
 **Date:** 2026-09-18
 
@@ -68,11 +68,11 @@ This creates four predictable failures:
 The 14 canonical questions are all `open-build` and currently use 14 suite cases in
 total. Their most common authoring primitives are:
 
-- structural — `requires_component`: 12, `requires_single_source`: 10,
+- structural - `requires_component`: 12, `requires_single_source`: 10,
   `requires_path`: 1
-- semantic — `stateTransition`: 8, `storageFit`: 5, `guardedPath`: 3, `placement`: 3,
+- semantic - `stateTransition`: 8, `storageFit`: 5, `guardedPath`: 3, `placement`: 3,
   `fanout`: 2, `forbidUnjustified`: 1
-- rubric — `invariant`: 13, `simulation`: 9 (of which p99 checks: 5)
+- rubric - `invariant`: 13, `simulation`: 9 (of which p99 checks: 5)
 
 This is a prioritization signal, not proof of end-to-end coverage. A field audit run
 against the bank on 2026-09-19 confirms the counts above and shows why the
@@ -185,7 +185,7 @@ the right place to render the domain-specific editor.
 The studio uses seven stages. Authors may move backward freely; readiness is shown
 continuously rather than enforced as a brittle linear wizard.
 
-### Stage 1 — Frame the lesson
+### Stage 1 - Frame the lesson
 
 The author enters or imports the source prompt, then defines one sentence:
 
@@ -206,7 +206,7 @@ The studio does not need an LLM to make this useful. It can provide templates,
 examples, and deterministic warnings first. Assisted classification can be a later,
 optional feature.
 
-### Stage 2 — Write the learner brief
+### Stage 2 - Write the learner brief
 
 Use structured fields rather than raw HTML:
 
@@ -224,7 +224,7 @@ Each FR and NFR becomes a requirement card with a stable internal ID used by the
 traceability view. The stable ID is authoring metadata and is not required in the
 runtime `QuestionPackage`.
 
-### Stage 3 — Choose the learner starting state
+### Stage 3 - Choose the learner starting state
 
 The author selects:
 
@@ -246,7 +246,7 @@ Entry formats whose learner workflow is still disabled in the runtime must be
 labelled **contract available, learner shell not yet released**. The authoring UI
 must not make schema availability look like shipped learner behavior.
 
-### Stage 4 — Build grading scenarios
+### Stage 4 - Build grading scenarios
 
 Scenarios are displayed as cards and edited through a visual workload and fault
 composer.
@@ -272,7 +272,7 @@ scenarios** rather than exposing a per-scenario selector the contract cannot hon
 Runtime semantic criteria may expose `where.caseId` in the advanced section because
 that scope exists in the current contract.
 
-### Stage 5 — Compose the grading contract
+### Stage 5 - Compose the grading contract
 
 The default view is a traceability board, not a list of JSON rows.
 
@@ -319,7 +319,7 @@ The UI uses controlled metric and operator choices, formats percent values in hu
 units, and shows the exact compiled meaning below each card. Authors can reorder
 checks visually, but output ordering remains config → structural → semantic → rubric.
 
-### Stage 6 — Prove discrimination
+### Stage 6 - Prove discrimination
 
 The verification lab has canvas snapshots for:
 
@@ -335,14 +335,14 @@ Running verification produces a matrix:
 
 | Design    | Structural | Semantic  | Scenario outcomes | Expected discriminator | Ready  |
 | --------- | ---------- | --------- | ----------------- | ---------------------- | ------ |
-| Reference | pass       | pass      | pass              | —                      | yes/no |
+| Reference | pass       | pass      | pass              | -                      | yes/no |
 | Gamed A   | pass/fail  | pass/fail | pass/fail         | caught/missed          | yes/no |
 
 The studio highlights accidental failures separately from the intended failure. A
 gamed design failing only because its topology is invalid is not proof of a good
 grading contract.
 
-### Stage 7 — Review and export
+### Stage 7 - Review and export
 
 The final screen contains:
 
@@ -635,17 +635,17 @@ rather than adding more conditional branches to the already large runtime layout
 
 Use four layers, all visible in the right rail:
 
-### Layer 1 — Field validity
+### Layer 1 - Field validity
 
 Examples: required title, positive RPS, request weights total 100%, valid threshold
 units, fault start before simulation end.
 
-### Layer 2 — Contract validity
+### Layer 2 - Contract validity
 
 Run the existing Zod schemas and cross-field authoring validator. Errors point back
 to source controls through stable field paths.
 
-### Layer 3 — Teaching alignment
+### Layer 3 - Teaching alignment
 
 Examples:
 
@@ -657,7 +657,7 @@ Examples:
 - learner prompt promises edge physics while the environment uses connector edges
 - hidden suite has no representative dry-run case when the author intends practice
 
-### Layer 4 — Empirical proof
+### Layer 4 - Empirical proof
 
 - reference topology is valid
 - reference passes all hard requirements and threshold
@@ -710,13 +710,13 @@ panel and block lossy re-export until handled.
 
 ## 11. Implementation phases and tickets
 
-### Phase 0 — Contract foundation
+### Phase 0 - Contract foundation
 
 This phase is mandatory before UI work and is a shippable deliverable on its own.
 Even if the studio UI is delayed, a reconciled row codec, coverage matrix, and
 golden fixtures immediately reduce risk in the current manual authoring workflow.
 
-#### QAS-000 — Audit canonical authoring coverage and drift
+#### QAS-000 - Audit canonical authoring coverage and drift
 
 Build a field-level matrix for all canonical question packs. Record package fields,
 row fields, auxiliary metadata, rule kinds, metric paths, scenario features,
@@ -727,7 +727,7 @@ fidelity; state exactly how many questions the proposed vertical slice can repro
 unmodified; classify every gap as intentional normalization, unsupported UI, parser
 loss, exporter loss, or engine-contract mismatch.
 
-#### QAS-001 — Extract and type the Newton row codec
+#### QAS-001 - Extract and type the Newton row codec
 
 **Targets:** new engine-side authoring module, `newtonGamePlayground.ts`, Django
 guide generator.
@@ -737,7 +737,7 @@ reveal existing drift; every discovered mismatch is added to the QAS-000 registe
 and either reconciled or preserved as an explicit compatibility case before the
 codec becomes authoritative.
 
-#### QAS-002 — Add golden package/row round-trip fixtures
+#### QAS-002 - Add golden package/row round-trip fixtures
 
 Use all 14 canonical question-bank packages plus focused minimal rows. First add
 characterization fixtures for current behavior, then reconcile intentional
@@ -747,7 +747,7 @@ differences, and only then promote equality failures to blocking tests.
 IDs, friendly error paths, unchanged reference/gamed grading behavior, and an
 explicit policy for source-only fields such as `family` and legacy `_justify`.
 
-#### QAS-003 — Define the project, capability registry, and compiler
+#### QAS-003 - Define the project, capability registry, and compiler
 
 Include schema versioning, migrations, requirement traceability, topology assets,
 pure generated outputs, and the engine-owned authoring capability registry.
@@ -770,32 +770,32 @@ Phase 0 may ship when:
 The release notes should treat drift discovered during extraction as a successful
 output of the phase, not as unexpected schedule failure.
 
-### Phase 1 — Thin vertical slice
+### Phase 1 - Thin vertical slice
 
 Deliver one end-to-end path before implementing every rule kind.
 
-#### QAS-004 — App shell and project persistence
+#### QAS-004 - App shell and project persistence
 
 Add the AUTHOR-only studio surface, open/save project, unsaved-change guard, and
 stage/readiness navigation.
 
-#### QAS-005 — Lesson frame and structured brief
+#### QAS-005 - Lesson frame and structured brief
 
 Support core metadata, FR/NFR/scale cards, learner preview, derived IDs, and safe
 HTML generation.
 
-#### QAS-006 — Starting-state canvas
+#### QAS-006 - Starting-state canvas
 
 Support blank and scaffolded starts, node/edge locks, constraints, snapshot
 switching, and learner-permission preview.
 
-#### QAS-007 — Scenario composer
+#### QAS-007 - Scenario composer
 
 Support multiple cases, deterministic seeds, constant/bursty/spike/sawtooth
 patterns, request mix, and the current single-fault controls. Reuse existing
 simulation-control normalization.
 
-#### QAS-008 — Core obligation composers
+#### QAS-008 - Core obligation composers
 
 Use QAS-000 to freeze the exact vertical-slice coverage target. The current
 candidate set is:
@@ -809,60 +809,60 @@ Other supported structural kinds can follow as small sentence-editor additions.
 The ticket is not complete until the coverage matrix names which canonical
 questions are fully reproducible with this set and which still require Phase 2.
 
-#### QAS-009 — Live compilation and diagnostics
+#### QAS-009 - Live compilation and diagnostics
 
 Compile on change with debouncing, map diagnostic paths to controls, show support
 ledger notes, and implement readiness states.
 
-#### QAS-010 — Discrimination lab
+#### QAS-010 - Discrimination lab
 
 Build reference/gamed topology tabs, deterministic batch verification, expected
 discriminator matching, stale-proof detection, and the results matrix. Add the
 design × case preflight, production-parity auto-routing, evidence-mode checks,
 bounded worker queue, cancellation, and resolved-mode recording defined in §7.7.
 
-#### QAS-011 — Review and export
+#### QAS-011 - Review and export
 
 Generate `question.json`, safe prompt HTML, Django fields, ordered rows, fixture
 files, Markdown guide, and full bundle. Enforce publish-ready gates.
 
-### Phase 2 — Full contract coverage and migration
+### Phase 2 - Full contract coverage and migration
 
-#### QAS-012 — Complete kind coverage
+#### QAS-012 - Complete kind coverage
 
 Add uncommon structural kinds, `stateSequence`, justification editors, budget
 controls, advanced environment capability overrides, baseline verdict capture, and
 all fault forms supported by the schema.
 
-#### QAS-013 — Lossless legacy import
+#### QAS-013 - Lossless legacy import
 
 Import full packages and Django row sets, surface unsupported extensions, and prove
 lossless re-export with the canonical bank.
 
-#### QAS-014 — Templates and cloning
+#### QAS-014 - Templates and cloning
 
 Add curated templates such as read-heavy cache, async decoupling, fanout, storage
 fit, scaffold repair, and correctness under contention. Templates should contain
 instructional placeholders, not hidden magical checks.
 
-#### QAS-015 — Learner-experience previews
+#### QAS-015 - Learner-experience previews
 
 Preview `AUTHOR`, `ASSIGNMENT`, and `PRACTICE`, including prompt visibility,
 scaffold locks, editable component palette, edges, resources, and rubric timing.
 
-### Phase 3 — Django lifecycle integration
+### Phase 3 - Django lifecycle integration
 
-#### QAS-016 — Host launch/save contract for drafts
+#### QAS-016 - Host launch/save contract for drafts
 
 Django launches the studio with a versioned draft or published package and receives
 save payloads without needing to understand simulator internals.
 
-#### QAS-017 — Publish handoff
+#### QAS-017 - Publish handoff
 
 Send compiled fields and rows to a Django staging record, show a diff against the
 currently published version, and require normal backend permissions and peer review.
 
-#### QAS-018 — Versioning and audit
+#### QAS-018 - Versioning and audit
 
 Record compiler version, package version, verification digest, author/reviewer, and
 published artifact hashes. A post-freeze edit creates a new version rather than

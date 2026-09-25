@@ -1,5 +1,5 @@
 ---
-title: "Atlas — the whole vault on one page"
+title: "Atlas - the whole vault on one page"
 type: moc
 tags: [moc]
 ---
@@ -12,7 +12,7 @@ split in two to keep it readable), and each gets a diagram below: modules on the
 the concept clusters they teach in the middle (yellow), and the spec behind each
 cluster on the right (pink). Every box is a link.
 
-## Part I — Core physics engine
+## Part I - Core physics engine
 How time, requests and queues work.
 
 ```mermaid
@@ -53,7 +53,7 @@ flowchart LR
 [[m00-orientation|M00]] is orientation and doesn’t teach a concept cluster, so it is left off the diagram.
 
 
-## Part II — Node & edge mechanics (M04–M06)
+## Part II - Node & edge mechanics (M04–M06)
 What a node is and how much work it can do at once.
 
 ```mermaid
@@ -84,7 +84,7 @@ flowchart LR
 ```
 
 
-## Part II — Node & edge mechanics (M07–M09)
+## Part II - Node & edge mechanics (M07–M09)
 What edges and traits add, and what it all costs.
 
 ```mermaid
@@ -137,7 +137,7 @@ flowchart LR
 ```
 
 
-## Part III — Metrics, grading & authoring
+## Part III - Metrics, grading & authoring
 Measuring honestly, and turning it into a graded question.
 
 ```mermaid
@@ -192,7 +192,7 @@ so the metrics cluster has none; start from [[m10-metrics-honesty|M10]].
 | storage | [[m04-nodes-service-time\|M04]] · [[m05-instance-model\|M05]] · [[m08-traits\|M08]] · [[m10-metrics-honesty\|M10]] | [[replication-quorum-state-machine-walkthrough]] | [[maps/distributed-systems\|Distributed Systems]] |
 | caching | [[m08-traits\|M08]] | [[trait-integration-guide]] | [[maps/distributed-systems\|Distributed Systems]] |
 | workloads | [[m08-traits\|M08]] · [[m11-workload-scale\|M11]] | [[support-ledger-and-runtime-semantics]] | [[maps/distributed-systems\|Distributed Systems]] |
-| metrics | [[m03-queueing-model\|M03]] · [[m10-metrics-honesty\|M10]] | — | [[maps/performance\|Performance]] |
+| metrics | [[m03-queueing-model\|M03]] · [[m10-metrics-honesty\|M10]] | - | [[maps/performance\|Performance]] |
 | cost | [[m09-cost-model\|M09]] | [[cost-calculation-and-budgeting]] | [[maps/simulator-physics\|Simulator Physics]] |
 | grading | [[m12-grading-dsl\|M12]] | [[question-grading-model-and-anti-gaming]] | [[maps/authoring-grading\|Authoring & Grading]] |
 

@@ -1,4 +1,4 @@
-# Replication Quorum — State Machine Walkthrough
+# Replication Quorum - State Machine Walkthrough
 
 Date: 2026-09-02
 
@@ -11,8 +11,7 @@ cluster state machine down to the entries stamped on the request's
 
 Replication involves **two** state machines working together:
 
-1. **The cluster** (`ReplicaCluster` in `src/engine/semantics/v2StateMachines.ts`)
-   — long-lived, shared across the run. Each replica member is in one role:
+1. **The cluster** (`ReplicaCluster` in `src/engine/semantics/v2StateMachines.ts`) - long-lived, shared across the run. Each replica member is in one role:
 
    ```
    [leader] ──fail()──> [failed] ──recover()──> [follower]
@@ -22,10 +21,10 @@ Replication involves **two** state machines working together:
    The cluster remembers membership, each member's `role`/`term`/`appliedIndex`/
    `durableIndex`, the consensus protocol (`raft`/`none`), and quorum size
    (`floor(n/2)+1`). It lives in run-scoped `sharedState`, so every request in
-   the run sees the *same* cluster — that is what makes leader election and
+   the run sees the *same* cluster - that is what makes leader election and
    quorum loss observable across requests.
 
-2. **The request** — short-lived. Each request that hits a replicating datastore
+2. **The request** - short-lived. Each request that hits a replicating datastore
    asks the cluster to do something (a write, a replica read) and the *result*
    of that interaction is stamped onto the request's own `stateTimeline` under
    the `replication` scope. This is the per-request state machine that grading
@@ -50,12 +49,12 @@ A request can pick up any of these `replication`-scope transitions
 | `failover-in-progress` | traffic was rejected while promotion was underway |
 
 These are emitted by `deriveTraitStateTransitions` from the payload fields the
-trait returns — the trait produces `replicationWriteAck`,
+trait returns - the trait produces `replicationWriteAck`,
 `replicationQuorumUnavailable`, `replicationLeader`, etc., and the engine
 translates each into a timeline transition. All are matchable in a
 `stateTransition` / `stateSequence` criterion (`scope: "replication"`).
 
-## 3. Trace A — a healthy quorum write (the happy path)
+## 3. Trace A - a healthy quorum write (the happy path)
 
 Setup: `db-a, db-b, db-c` (quorum size = 2), `writeAckPolicy: quorum`,
 `replicationLagMs: 8`, `replicationEnabled: true`. A `write` request arrives at
@@ -102,7 +101,7 @@ request      completed
 Run-wide the verdict shows `traitCounters.replicationQuorumWrites` summed across
 the run. The request ends `completed`.
 
-## 4. Trace B — quorum lost (two of three replicas down)
+## 4. Trace B - quorum lost (two of three replicas down)
 
 Same cluster, but `db-b` and `db-c` have failed (only the leader is healthy). A
 `write` arrives.
@@ -136,18 +135,18 @@ replication  leader-promoted db-a
 request      rejected              (terminal: reason "quorum_unavailable")
 ```
 
-The distributed failure is now a first-class, gradeable fact — not a latency
+The distributed failure is now a first-class, gradeable fact - not a latency
 number and not prose. This is the honesty payoff: a design that under-replicates
 (cannot form a quorum under one failure) *fails a runtime check*, not a
 reviewer's opinion.
 
-## 5. Trace C — failover (leader dead, follower elected)
+## 5. Trace C - failover (leader dead, follower elected)
 
 The leader node's `nodeState.status` is `failed` when a write arrives.
 
 1. The trait sees `nodeState.status === 'failed'`.
-2. It calls `cluster.fail(node.id)` — the dead member's role becomes `failed`.
-3. It calls `cluster.elect()` — among healthy members, the one with the highest
+2. It calls `cluster.fail(node.id)` - the dead member's role becomes `failed`.
+3. It calls `cluster.elect()` - among healthy members, the one with the highest
    `appliedIndex` (ties broken by id) is promoted to `leader`, and the term is
    bumped. Returns the promoted member.
 4. The trait rejects the in-flight request during the promotion:
@@ -177,10 +176,10 @@ request      rejected               (reason "replica_failover_in_progress")
 ```
 
 Because the cluster lives in `sharedState`, the *next* request in the run sees
-`db-b` as leader and can commit normally — the promotion persisted. That
+`db-b` as leader and can commit normally - the promotion persisted. That
 cross-request continuity is exactly what a single-node model cannot express.
 
-## 6. Trace D — a stale replica read
+## 6. Trace D - a stale replica read
 
 A `read` request, on a node with `replicationRole: replica` and
 `replicationLagMs: 40`.
@@ -199,7 +198,7 @@ request      processing
 request      completed
 ```
 
-The read succeeds, but the timeline honestly flags that it *may* be stale — so a
+The read succeeds, but the timeline honestly flags that it *may* be stale - so a
 question that forbids stale reads can assert
 `stateTransition {scope:"replication", state:"stale-read-possible"}` with
 `maxCount: 0`.
@@ -239,8 +238,8 @@ primary-only design loses quorum on the same failure → `quorum-unavailable > 0
 
 From the trait's `honesty.notModeled`: **packet-level log replication, real Raft
 election timing, and Byzantine consensus** are not simulated. The cluster is a
-deterministic bookkeeping model — roles, indices, quorum arithmetic, and a
-configured failover window — not a wire-level consensus implementation. It is
+deterministic bookkeeping model - roles, indices, quorum arithmetic, and a
+configured failover window - not a wire-level consensus implementation. It is
 enough to make quorum loss, leader promotion, and stale reads *observable and
 gradeable*, which is the goal; it is not a Raft implementation.
 

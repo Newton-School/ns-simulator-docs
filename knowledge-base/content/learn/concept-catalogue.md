@@ -1,5 +1,5 @@
 ---
-title: "Concept Catalogue — every concept, in teaching order"
+title: "Concept Catalogue - every concept, in teaching order"
 tags: [moc, curriculum]
 ---
 
@@ -16,7 +16,7 @@ on everything else. Part VIII is product-specific: skip it for a pure system-des
 course. It follows the [[learn/_moc|course order (M00–M15)]], with newer topics placed
 where their prerequisites are met.
 
-## Part 0 — Orientation
+## Part 0 - Orientation
 
 ### Chapter 1. What the simulator is
 - **Topology:** the design being tested: nodes (components) connected by edges, drawn on the canvas and saved as `TopologyJSON`.
@@ -28,7 +28,7 @@ where their prerequisites are met.
 
 **Go deeper:** [[m00-orientation|M00 Orientation]] · [[support-ledger-and-runtime-semantics]]
 
-## Part I — Time and a single request
+## Part I - Time and a single request
 
 ### Chapter 2. Randomness and reproducibility
 - **Distribution:** the shape of a random quantity, such as a service time or edge latency. Supported: constant, deterministic, normal, log-normal, exponential, uniform, Weibull, gamma, beta, Pareto, Poisson, binomial, empirical, and mixtures of these.
@@ -57,7 +57,7 @@ where their prerequisites are met.
 
 **Go deeper:** [[m02-request-lifecycle|M02]] · [[arrival-departure-and-request-lifecycle-semantics]] · [[request-rejection-behaviour]] · [[closed-terminal-taxonomy-enables-honest-errors]]
 
-## Part II — One node
+## Part II - One node
 
 ### Chapter 5. Queueing
 - **G/G/c/K queue:** the model every node follows: arrivals of any shape (G), service times of any shape (G), `c` parallel workers, total capacity `K`.
@@ -102,7 +102,7 @@ where their prerequisites are met.
 
 **Go deeper:** [[memory-pressure-and-memory-bound-model]]
 
-## Part III — Connecting nodes
+## Part III - Connecting nodes
 
 ### Chapter 10. Edges and the network
 - **Edge model:** `network` (edges carry real latency, bandwidth, loss and cost) or `connector` (plain wires with none of these).
@@ -126,7 +126,7 @@ where their prerequisites are met.
 
 **Go deeper:** [[traffic-distribution-gap-register]]
 
-## Part IV — Traffic
+## Part IV - Traffic
 
 ### Chapter 12. Workload
 - **Source node:** where traffic enters the topology.
@@ -146,7 +146,7 @@ where their prerequisites are met.
 
 **Go deeper:** [[m11-workload-scale|M11]]
 
-## Part V — Node behaviours (traits)
+## Part V - Node behaviours (traits)
 
 ### Chapter 14. What a trait is
 - **Trait / capability module:** a pluggable piece of behaviour attached to certain component types; its settings appear automatically in the properties panel.
@@ -222,7 +222,7 @@ where their prerequisites are met.
 
 **Go deeper:** [[request-rejection-behaviour]] · [[state-machines-make-behavior-gradeable]]
 
-## Part VI — Measuring
+## Part VI - Measuring
 
 ### Chapter 21. Metrics
 - **Time-weighted metric:** a total over the whole run, not an average of snapshots.
@@ -246,7 +246,7 @@ where their prerequisites are met.
 
 **Go deeper:** [[m09-cost-model|M09]] · [[cost-calculation-and-budgeting]] · [[provisioned-cost-is-instance-hours]] · [[egress-is-priced-per-gb]]
 
-## Part VII — Questions and grading
+## Part VII - Questions and grading
 
 ### Chapter 23. Questions
 - **Question package:** the question text, requirements (NFRs), scenarios, rubric and starting (scaffold) topology.
@@ -274,7 +274,7 @@ where their prerequisites are met.
 
 **Go deeper:** [[m15-newton-integration|M15]] · [[visual-question-authoring-studio-plan]] · [[custom-node-and-service-definition-spec]] · [[capstone|Capstone]]
 
-## Part VIII — The product surface
+## Part VIII - The product surface
 
 ### Chapter 26. Canvas and results UI
 - **Canvas:** where the topology is drawn and edited.

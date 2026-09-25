@@ -73,36 +73,36 @@ text, or not at all), so students couldn't learn it by running the sim.
 | `replication` (`storage.replication-boundary`) | Primary/quorum write ack, deterministic leader promotion, bounded replica-read staleness, failover-unavailability window (via `ReplicaCluster`) | Makes quorum loss, leader failover, and stale reads observable `replication`-scope states instead of justify-only claims. |
 | `streamBroker` (`stream.partitioned-broker`) | Partition assignment, one-delivery-per-consumer-group, offset commits, retention expiry, replay, rebalancing, broker availability (via `ReplicatedLog`) | Streaming correctness (consumer groups, offsets, retention) becomes gradeable `broker`-scope state, not prose. |
 | `protocolSession` (`protocol.session`) | Connection open/close, HTTP ack mode, L4-vs-L7 policy, WebSocket flow-control rejection | The transport/session layer between machines becomes a gradeable `protocol`-scope distinction. |
-| `geoLatency` (`cdn`/`global-traffic-manager`/`edge-router`) | Flat per-request region/PoP propagation penalty | Rewards locality — an edge/multi-region design beats always crossing the map. |
+| `geoLatency` (`cdn`/`global-traffic-manager`/`edge-router`) | Flat per-request region/PoP propagation penalty | Rewards locality - an edge/multi-region design beats always crossing the map. |
 | `externalLatency` (`third-party-api-connector`/`payment-gateway`/`third-party-auth`/`webhook-gateway`) | Round-trip latency of an external provider call | Makes a slow dependency a real blast radius, especially paired with retries. |
 | `tieredRetrieval` (`archive-storage`/`object-storage`) | Cold-tier retrieval latency (seconds–minutes) | "Just archive it" now has a consequence; you can't serve hot reads from cold storage. |
 | `cryptoCost` (`kms-storage`) | Per-op encrypt/verify/sign latency | A KMS on the hot path becomes a measurable bottleneck, not a free box. |
-| `tokenCost` (`llm-gateway`) | Latency ∝ output tokens (ms/token × tokens) | LLM serving's defining cost model — a chatty completion is slow regardless of throughput. |
-| `inspectionCost` (`network-policy`/`policy-engine`) | Per-request scan latency + probabilistic block rate | A WAF/policy hop adds latency and can drop traffic — not free. |
+| `tokenCost` (`llm-gateway`) | Latency ∝ output tokens (ms/token × tokens) | LLM serving's defining cost model - a chatty completion is slow regardless of throughput. |
+| `inspectionCost` (`network-policy`/`policy-engine`) | Per-request scan latency + probabilistic block rate | A WAF/policy hop adds latency and can drop traffic - not free. |
 | `capacityLimit` (`nat-gateway`/`block-storage`/`edge-router`/`transit-gateway`/`vpn-gateway`/`high-perf-nic`) | Rolling-window ops/sec ceiling → rejects excess | Saturates the *link* (IOPS, NAT ports, line rate) independently of CPU. |
 | `batching` (`batch-worker`/`gpu-node`) | Formation-wait latency + amortized (fixedCost ÷ batchSize) | The batching tradeoff: pay latency to buy throughput. |
 | `logReplay` (`event-sourcing-store`) | Read latency ∝ events-since-snapshot, grows with the log | Makes snapshot cadence a real, gradeable decision. |
-| `windowing` (`streaming-analytics`) | Processing-time tumbling windows: accumulate on arrival, emit a per-window aggregate on the recurring timer | First consumer of the `onTick` timer hook — one output per window, not per event. |
+| `windowing` (`streaming-analytics`) | Processing-time tumbling windows: accumulate on arrival, emit a per-window aggregate on the recurring timer | First consumer of the `onTick` timer hook - one output per window, not per event. |
 | `fanoutQuery` (`search-service`/`search-index`) | Scatter-gather tail latency as the max of N per-shard samples (grows ≈ ln N) | Distributed-search tail: why more shards ≠ always faster. |
-| `autoscaler` (`microservice`/`serverless-function`) | A utilization-target control loop on `onTick` that resizes effective concurrency every cooldown (reaction-lagged) | Capacity follows demand — via the `onTick` timer + the new **dynamic-capacity** resize; scaling still costs money. |
+| `autoscaler` (`microservice`/`serverless-function`) | A utilization-target control loop on `onTick` that resizes effective concurrency every cooldown (reaction-lagged) | Capacity follows demand - via the `onTick` timer + the new **dynamic-capacity** resize; scaling still costs money. |
 | `computeContention` (all instance-model nodes) | Two-tier service time: the sourced `cpuBoundFraction` of compute contends for physical cores (`vCPU × instances`), the rest multiplexes freely; service stretches by `max(1, activeWorkers·f / cores)`. Headline utilization becomes `max(worker-occupancy, CPU-occupancy)`. | Closes an active capacity overstatement: a 128-io-worker / 4-core store no longer reports headroom while its cores are pinned. Zero-regression for legacy (`f=0`) and cpu-bound (`c=cores`) nodes. See [`compute-contention-two-tier-model.md`](./compute-contention-two-tier-model.md). |
 
 ### Engine hooks a trait can use
 
 Traits are not arrival-only. The `NodeBehaviourTrait` interface exposes:
 `beforeArrival` · `beforeRouting` · `filterRoutes` · **`afterTerminal`** (per-request
-completion callback — used by `streamBroker` offset-commit and `idempotencyDedup`
+completion callback - used by `streamBroker` offset-commit and `idempotencyDedup`
 reconciliation) · **`onTick` + `tickIntervalMs`** (a node-scoped recurring timer, fired
 by deterministic SYSTEM-priority `trait-tick` events; first used by `windowing`, and the
 substrate for autoscaling and periodic sampling).
 
-### Wired and working (previously listed as gaps — corrected)
+### Wired and working (previously listed as gaps - corrected)
 
-- **Health probing / detection latency** — a `health-check-manager` node runs periodic
+- **Health probing / detection latency** - a `health-check-manager` node runs periodic
   probes (`handleHealthProbe` re-arms the timer), debounces via `evaluateProbe`, and
   `isNodeHealthy` feeds `healthAwareRouting` so traffic reroutes only *after* detection.
   `healthProber.ts` is wired into the engine, not an unwired file.
-- **Node failure / fault injection (engine)** — `topology.faults` → `node-failure` /
+- **Node failure / fault injection (engine)** - `topology.faults` → `node-failure` /
   `node-recovery` events → `node.fail()/recover()` (connection resets, status-timeline
   windows, replication + stream rebalancing). The remaining gap is a *canvas UI* to
   author faults; the engine path is complete.
@@ -134,7 +134,7 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 | `sidecar` | 📦 | ✅`circuitBreaker` +✅`retryBackoff` | Proxies every call; breakers protect the mesh and retries now re-enter the caller instead of being prose-only | `resilience.circuitBreaker.*`, `resilience.retry.*`, `sim.proxyOverheadMs`, `sim.mtlsMs` |
 | `serverless-function` | 📦 | ✅`coldStart` +✅`retryBackoff` | Scales from zero and can now own retried downstream calls with real backoff cost | `sim.coldStartLatencyMs`,`sim.idleTimeoutMs`,`sim.maxConcurrency`, `resilience.retry.*` |
 | `faas-background` | | ➕`coldStart` +🔧`retryBackoff` | Event-triggered and retried async - same cold-start + retry concerns | `sim.triggerBatch`, `resilience.retry.*`, `sim.coldStartLatencyMs` |
-| `container` | | ✅`computeContention` | Hard CPU limits throttle it before the queue does — now modeled via physical-core contention | `resources.instanceType/instanceCount`, `sim.restartOnCrash` |
+| `container` | | ✅`computeContention` | Hard CPU limits throttle it before the queue does - now modeled via physical-core contention | `resources.instanceType/instanceCount`, `sim.restartOnCrash` |
 | `vm-instance` | | ✅`computeContention` | CPU-bound compute contends for real cores; boot delay remains future work | `resources.instanceType/instanceCount`, `sim.bootMs` |
 | `edge-compute` | 📦 | 🔧`geoLatency` | Runs at PoPs; distance to the user dominates its latency | `sim.popLatencyMs`, constrained `resources.*` |
 | `gpu-node` | | 🔧`batching` | Efficient only when inference is batched; VRAM caps concurrency | `sim.batchWindowMs`+`sim.maxBatch`, `sim.vramMB`, `sim.modelLoadMs` |
@@ -192,7 +192,7 @@ Columns: **Node · 📦 · Trait · Why this node needs it · Config input → b
 | Node | 📦 | Trait | Why this node needs it | Config → behavior |
 |------|----|-------|------------------------|-------------------|
 | `queue` | 📦 | ✅`ackAndRelease` | Decouples producers from consumers; ack/visibility/DLQ define delivery | `sim.visibilityTimeoutMs`, `sim.dlqAfter`, `sim.ordering=fifo`, `sim.prefetch` |
-| `stream` | 📦 | ✅`streamBroker` + `consumerLag` | A partitioned, replayable log: partition assignment, one-delivery-per-group, offset commits, retention expiry, replay, rebalancing, availability — plus lag as the health signal | `sim.partitions`, `sim.consumerGroups`, `sim.retentionMs`, `sim.replay` → `broker`-scope states + `stream*` counters |
+| `stream` | 📦 | ✅`streamBroker` + `consumerLag` | A partitioned, replayable log: partition assignment, one-delivery-per-group, offset commits, retention expiry, replay, rebalancing, availability - plus lag as the health signal | `sim.partitions`, `sim.consumerGroups`, `sim.retentionMs`, `sim.replay` → `broker`-scope states + `stream*` counters |
 | `message-broker` | 📦 | ✅`broadcastFanout` | One publish now reaches every downstream subscriber instead of silently choosing one route; groups and guarantees remain future work | `routingStrategy=broadcast` (runtime), future `sim.consumerGroups`, `sim.deliveryGuarantee` |
 | `pub-sub` | 📦 | ✅`broadcastFanout` | Broadcast delivery is now modeled at runtime; per-subscription filters are still future work | `routingStrategy=broadcast` (runtime), future `sim.subscriptionFilter`, `sim.retentionMs` |
 | `event-bus` | | ✅`broadcastFanout` | Rule-routed broadcast now has one-to-many runtime delivery even before richer rule/filter semantics ship | `routingStrategy=broadcast` (runtime), future `sim.routingRules[]` |
@@ -355,16 +355,16 @@ Mostly control-plane / off the request path.
 `telemetrySink` · `scheduler` (cluster bin-packing) · `changeStream` · `requestMix`
 (see the Glossary for each one's rationale). The **`onTick` timer**,
 **`afterTerminal` completion**, and **dynamic-capacity resize** primitives all now
-exist — so `computeContention` is the main remaining engine gap (an honest CPU/thread
+exist - so `computeContention` is the main remaining engine gap (an honest CPU/thread
 `c`-derivation), while the rest are node-model or source-model work.
 
-**Shipped since (timer batch):** `windowing` · `fanoutQuery` · `autoscaler` — plus
+**Shipped since (timer batch):** `windowing` · `fanoutQuery` · `autoscaler` - plus
 the `onTick` recurring-timer hook and the dynamic-capacity resize that back them.
 
 **Shipped earlier:** `geoLatency` · `externalLatency` · `tieredRetrieval` ·
 `cryptoCost` · `tokenCost` · `inspectionCost` (latency/block modifiers),
 `capacityLimit` · `batching` · `logReplay` (admission ceiling, batch
-amortization, event-log replay), and `windowing` (first `onTick` consumer) —
+amortization, event-log replay), and `windowing` (first `onTick` consumer) -
 all now live in `TRAIT_CAPABILITY_MODULES`.
 
 ---

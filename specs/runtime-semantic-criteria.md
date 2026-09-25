@@ -6,7 +6,7 @@ Date: 2026-09-01
 
 The runtime-semantics foundation (see
 [`support-ledger-and-runtime-semantics.md`](./support-ledger-and-runtime-semantics.md)) records a per-request
-`stateTimeline` — the ordered transitions a request moves through across the
+`stateTimeline` - the ordered transitions a request moves through across the
 `request`, `delivery`, `broker`, `replication`, `protocol`, `idempotency`, `commit-outcome`, `lock`, and `reservation` scopes. That
 foundation *records* semantic evidence but does not *grade* it.
 
@@ -25,7 +25,7 @@ Example questions they unlock:
 
 ## 2. Where runtime evidence comes from
 
-`gradeAttemptWithArtifacts` builds a `SemanticContext.runtimeCases` array — one
+`gradeAttemptWithArtifacts` builds a `SemanticContext.runtimeCases` array - one
 entry per prepared suite case, each carrying that case's `SimulationOutput` (or
 `null` when the case ran without a topology). The evaluator reads
 `requestOutcomes[].stateTimeline` from those outputs. No new simulation is run;
@@ -46,7 +46,7 @@ Counts matching transitions across all eligible request outcomes.
   "match": { /* RuntimeStateTransitionMatcher, see §4 */ },
   "where": { /* RuntimeOutcomeFilter, optional, see §5 */ },
   "minCount": 1,   // default 1; how many matching transitions are required
-  "maxCount": 0    // optional upper bound — key for absence checks
+  "maxCount": 0    // optional upper bound - key for absence checks
 }
 ```
 
@@ -161,13 +161,13 @@ human-readable summaries:
 
 ## 9. What this does not do
 
-- It does not add new runtime states — it grades the states the foundation
+- It does not add new runtime states - it grades the states the foundation
   already records. Broker entries show deterministic partition assignment and
   one delivery per configured consumer group, while commit outcomes show the
   local intent/confirmation/unknown/replay-blocked journal. Offset progression,
   retention enforcement, partition ordering, quorum, and reconciliation are
   not yet modeled as end-to-end runtime truth.
-- `stateSequence` matches order, not adjacency or timing — it does not assert
+- `stateSequence` matches order, not adjacency or timing - it does not assert
   that two transitions were contiguous or within a time bound.
 - It does not run additional simulation; it is a read over the retained request
   ledger.
