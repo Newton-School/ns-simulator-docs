@@ -4,6 +4,7 @@ type: moc
 tags: [moc, curriculum]
 ---
 > The bottom-up curriculum. Each module depends only on earlier ones.
+> Every concept, defined in teaching order: [[learn/concept-catalogue|Concept Catalogue]].
 
 ## Part I - Core Physics Engine
 [[m00-orientation|M00 Orientation]] → [[m01-discrete-event-simulation|M01 DES Core]] → [[m02-request-lifecycle|M02 Lifecycle]] → [[m03-queueing-model|M03 Queueing]]
