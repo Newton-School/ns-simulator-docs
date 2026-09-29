@@ -65,7 +65,8 @@ where their prerequisites are met.
 - **Capacity (`K`):** the most requests a node can hold, in service plus waiting.
 - **Admission control:** when the node already holds K requests, the next arrival is rejected. Capacity is a hard wall, not a gradual slowdown.
 - **Queue depth:** requests waiting, not those in service. Rising depth predicts a p99 spike before the average latency moves.
-- **Queue discipline:** the order waiting requests are served in: FIFO, LIFO or priority. WFQ is accepted but currently behaves exactly like FIFO.
+- **Queue discipline:** the order waiting requests are served in: FIFO, LIFO, priority or WFQ.
+- **WFQ (weighted fair queueing):** each request type is a flow, and the node takes turns between waiting flows in proportion to their weights (1 by default, set per type in the Flow weights editor), so one busy type can't starve the others. Each request counts as one unit, so fairness is by request count, not service time.
 - **Saturation:** arrivals outpacing service, so the queue grows and latency explodes. A queue can saturate while CPU still looks fine.
 
 **Go deeper:** [[m03-queueing-model|M03]] · [[queue-depth-calculation]] · [[ggck-models-finite-capacity-queues]] · [[queue-saturation-precedes-cpu-saturation]] · [[queue-depth-is-a-leading-indicator-of-latency]]
@@ -298,5 +299,4 @@ where their prerequisites are met.
 ---
 
 > [!note] Known gaps (checked against the code)
-> - WFQ is accepted as a queue discipline but currently behaves like FIFO.
 > - Not covered, because it is planned rather than implemented: per-question builder policy. Failing a whole AZ or region at once is not modelled either. The 148 component types are covered by family, not one by one.
