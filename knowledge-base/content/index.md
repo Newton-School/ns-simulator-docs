@@ -47,7 +47,7 @@ concepts.
 1. **Honesty** - every number is derived and shows its provenance.
 2. **You can't fake it** - concurrency & cost cost money.
 3. **Discrimination** - a good design passes, a gamed one fails.
-4. **Known gaps** - taught openly: the [[concepts/metrics/utilization-display-bug|utilization-display bug]] and the dry-run-vs-graded-load trap.
+4. **Known gaps** - taught openly: the dry-run-vs-graded-load trap, plus fixed bugs kept as lessons, like the [[concepts/metrics/utilization-display-bug|utilization-display bug]].
 
 ---
 
