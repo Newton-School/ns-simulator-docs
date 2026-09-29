@@ -31,9 +31,9 @@ rejections rise together while the p50 stays flat and the p99 explodes.
 Given `c = 2` servers and 3.6 ms service, find the RPS at which p99 crosses 100 ms.
 Verify against a headless run.
 
-## ⚠️ Known gaps
+## ⚠️ A fixed bug worth knowing
 - [[concepts/metrics/utilization-display-bug|The utilization-display bug]] - a
-  saturated node can read "HEALTHY". Trust p99 + queue depth.
+  saturated node used to read "HEALTHY". Fixed, but utilization is still an average: read it with p99 + queue depth.
 
 ---
 Curriculum map → [[learn/_moc|Modules]] · Prev [[m02-request-lifecycle|M02]] · Next [[m04-nodes-service-time|M04]]

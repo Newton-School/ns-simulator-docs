@@ -111,6 +111,7 @@ where their prerequisites are met.
 - **Edge concurrency limit (`maxConcurrentRequests`):** the most requests one edge can carry at once, like a connection limit.
 - **Synchronous blocking:** a caller waiting on a slow downstream keeps its worker or connection tied up, which can exhaust connection pools.
 - **Location / region:** where a node sits, from an offline location catalogue.
+- **Region / AZ / subnet boxes:** grouping boxes on the canvas that nest (subnet in AZ in region). A node inside a box takes its location, and an edge's path type is derived from the boxes its two ends share: same subnet is same-rack, same AZ is same-dc, same region is cross-zone, different regions is cross-region. A path type set on the edge still wins.
 - **Geo latency:** extra delay that CDNs, global traffic managers and edge routers add for the distance to the serving region.
 - **Protocol session:** connection open and close, HTTP acknowledgement mode, L4 vs L7 behaviour, WebSocket flow control.
 
@@ -298,6 +299,4 @@ where their prerequisites are met.
 
 > [!note] Known gaps (checked against the code)
 > - WFQ is accepted as a queue discipline but currently behaves like FIFO.
-> - The concept note [[utilization-display-bug]] still describes an open bug; the engine now computes utilization from busy time, so the note looks out of date.
-> - The caching concept notes cite [[trait-integration-guide]], which isn't about caching; [[derived-cache-hit-rate-model]] is the real caching spec.
-> - Not covered, because they are planned rather than implemented: per-question builder policy and region/AZ/subnet grouping boxes. The 148 component types are covered by family, not one by one.
+> - Not covered, because it is planned rather than implemented: per-question builder policy. Failing a whole AZ or region at once is not modelled either. The 148 component types are covered by family, not one by one.
