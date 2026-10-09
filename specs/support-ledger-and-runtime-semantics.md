@@ -248,12 +248,33 @@ the trait metrics in the capability matrix):
   commit, explicit unknown-outcome blocking, and modeled authoritative external
   reconciliation probes
 
+**Added in October 2026** (ledger keys in brackets; all `guided` unless noted):
+
+- **request collapsing** (`cache.request-collapsing`, `first-class`): opt-in single-flight on
+  cdn / in-memory-cache / reverse-proxy
+- **read consistency** (`storage.consistency-model`): eventual / monotonic-reads /
+  read-your-writes / strong on replicated relational-db and nosql-db, with stale-read and
+  session-guarantee oracles and a bounded single-key linearizability check
+- **edge connection model** (`edge.connection-model`) and **Kafka producer batching**
+  (`edge.producer-batching`); edge bandwidth (transmission time plus FIFO link queueing) is
+  part of the `network.edge` entry
+- **fault domains**: Region / AZ / Subnet outages in the resilience domain
+- **bulkheads and load shedding** (`resilience.bulkhead`, `resilience.load-shedding`,
+  `first-class`)
+- **cluster scheduling** (`scheduler.cluster`, `scheduler.workload`), **telemetry sinks**
+  (`observability.telemetry-sink`), **change-stream ordering** (`stream.change-ordering`) and
+  **held-connection fan-out** (`realtime.persistent-connection-fanout`)
+
 **Still deferred** (author with topology + justify, never a runtime check):
 
-- `exactly-once` commit **coordination** and formal linearizability proof
+- `exactly-once` commit **coordination**; linearizability beyond the per-key bound or across
+  keys (reported as not checked)
 - packet-level log replication, real Raft election timing, Byzantine consensus
-- physical broker replication across machines and strict partition-ordering truth
-- low-level transport physics (TCP handshake timing, TLS, HTTP/2 multiplexing)
+- physical broker replication across machines
+- low-level transport physics below the connection model (slow start, windowing,
+  segmentation, TLS CPU cost)
+- partial zone degradation, partitions between live zones, cross-region replication lag
+- CDC capture lag, reconnect storms, tail sampling, cluster scale-down
 
 Consult the support ledger (`supportLedger.ts`) for the authoritative tier of
 each concept - these V2 areas are `guided` (real, with declared boundaries), not

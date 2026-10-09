@@ -16,13 +16,20 @@ Every capability is tagged with the ledger tier it actually has:
 The design principle for filling gaps (the doctrine from the builder spec §0.2 and the
 overcoming notes): **fill a gap only by wiring it to something the engine consumes, or
 by making the design *decision* observable via a measured metric.** Never fake a number;
-correctness properties (convergence, exactly-once, linearizability) stay `deferred`.
+correctness properties stay `deferred` unless a real checker exists. Exactly-once and OT/CRDT
+convergence are still deferred. Linearizability now has a bounded checker (October 2026,
+see §1): it is gradeable within its bound and reported as "not checked" beyond it.
 
 ## 1. Capability coverage (grounded in the ledger + traits)
 
 | Capability | Tier | Notes / source |
 |---|---|---|
-| Cache the hot set (hit/miss, latency) | first-class | `cache.read-through`; TTL/eviction are topology intent only |
+| Cache the hot set (hit/miss, latency) | first-class | `cache.read-through`; opt-in derived (LRU) model measures hit rate from capacity and key skew; TTL is topology intent only |
+| Cache stampede + request collapsing (single-flight) | first-class | `cache.request-collapsing`, opt-in `sim.requestCollapsing` on cdn / in-memory-cache / reverse-proxy: concurrent misses for a key wait for one fetch; needs keyed requests (source keyspace). Not modelled: waiter caps, lock timeouts, stale-while-revalidate, the fluid tier |
+| Read consistency (eventual / monotonic-reads / read-your-writes / strong) | guided | `storage.consistency-model`, opt-in `sim.consistencyModel` on replicated relational-db / nosql-db; stronger reads pay a measured catch-up wait; `consistency.staleReads`, `consistency.readYourWritesViolations`, `consistency.monotonicReadViolations`; client sessions from `workload.sessions.count` |
+| Linearizability (single key) | guided | bounded Wing and Gong register check (100 ops per key, 200 keys); `consistency.linearizabilityViolations`, `consistency.linearizableVerified` is 1 only when nothing was left unchecked; multi-key is not checked |
+| Region / AZ / Subnet outage (fault domains) | guided | a fault on a container fails every component inside it for the window; `az-outage` chaos preset. Not modelled: partial degradation, partitions between live zones, cached DNS, cross-region replication lag |
+| Bulkheads, load shedding | first-class | `resilience.bulkhead`, `resilience.load-shedding` |
 | Read/write split, read-only paths | first-class | `access.read-write-split` |
 | Content-aware routing (by request `type`/`method`/`path`/`host`) | first-class | `routing.content-aware`; entity attributes are stamped as request `type` at the source |
 | Key-based / partition-affine routing (sticky by key) | first-class | `routing.key-based`, `stream.partitioned-broker` - route-by-docId / conversation_id |
@@ -38,22 +45,27 @@ correctness properties (convergence, exactly-once, linearizability) stay `deferr
 | Cold start, memory pressure / OOM | first-class | `performance.cold-start`, `capacity.memory-pressure` |
 | Session lifecycle / L4-vs-L7 / HTTP acks / flow-control | guided | `protocol.session` trait (LB-L4/L7, api-gateway); markers + rejection |
 | Per-edge connection limit (`connection_refused`) | guided | `edge.maxConcurrentRequests` + `protocolSupportsConnectionLimits` (engine.ts) |
+| Edge bandwidth, connection model (TLS, keep-alive, HTTP/2 streams), Kafka batching | guided | `edge.connection-model`, `edge.producer-batching`; bandwidth is transmission time plus FIFO link queueing (see `edge-properties-and-defaults.md`) |
 | ID / sequence allocation (block vs central, contention) | first-class | `id-generator` node + `idAllocation` derivation (shipped) |
 | Cost / budget | guided | topology cost + budget caps |
-| **Node-level concurrent-connection capacity** | **deferred** | ledger: `connection-pool limits` deferred → **GAP 1** |
-| **Fan-out amplification (1 event → N from a set)** | **deferred** | broadcast is fixed-edge only → **GAP 2** |
-| Exactly-once, linearizability, OT/CRDT convergence | deferred / structural-only | grade by guarded paths + justification |
+| Node-level concurrent-connection capacity (held connections, heartbeat CPU, push fan-out) | guided | Connection Server node (GAP 1, V1) plus the `persistentConnFanout` trait since October 2026 (`realtime.persistent-connection-fanout`): connections capped per instance and by RAM, refused overflow counted, heartbeats take request cores. Not modelled: reconnect storms, slow-client buffers |
+| Fan-out amplification (1 event → N from a set) | guided | edge `fanoutFactor` (GAP 2, V1); N is a configured constant |
+| Change-stream ordering (per-entity order violations) | guided | `stream.change-ordering`: `changeOrderViolations`; `parallel` / `per-partition` / `per-key` consumers. Not modelled: CDC capture lag |
+| Cluster scheduling (pods on finite machines) | guided | `scheduler.cluster` on a Kubernetes Cluster node: pending pods, scale-ups that need room, machine failure → detection + eviction → reschedule |
+| Telemetry pipeline load (ingest ceiling, drops, head sampling) | guided | `observability.telemetry-sink`: `telemetryDropped`, never caller errors |
+| Exactly-once, OT/CRDT convergence, multi-key linearizability | deferred / structural-only | grade by guarded paths + justification |
 
 ## 2. Per-design mapping
 
 ### URL Shortener - fully covered (except correctly-deferred edges)
 Gateway routing ✓, request-source ✓, cache-aside ✓, **ID generator** ✓ (with block/central
-contention). Deferred/justify: cache stampede single-flight, read-your-write staleness,
-TTL eviction. **No open gap.**
+contention). Now measurable: cache stampede single-flight (`sim.requestCollapsing`) and
+read-your-write staleness (`sim.consistencyModel` + `consistency.readYourWritesViolations`).
+Deferred/justify: TTL eviction. **No open gap.**
 
 ### Chat - GAP 1 + GAP 2
-- Connection servers (WS, stateful, heartbeats) → **GAP 1** (no node-level connection
-  capacity, no placeable WS node).
+- Connection servers (WS, stateful, heartbeats) → **GAP 1**, now closed: the Connection
+  Server node holds connections with real RAM, per-instance caps and heartbeat CPU.
 - Presence/session registry ("which server holds recipient") → key-based routing +
   in-memory-cache (presence-TTL auto-expiry not simulated - minor/justify).
 - Persist-before-ACK → sync chain (ack is the response after the durable write) ✓.
@@ -63,8 +75,10 @@ TTL eviction. **No open gap.**
 - Push notification → `push-notification-service` palette node ✓.
 - Group fan-out (write storm vs read for large groups) → **GAP 2** + content-route on a
   group-size request type.
-- Per-conversation ordering → `message-ordering` (per-partition) guided ✓.
-- Thundering-herd reconnect → **GAP 1** + a burst/fault.
+- Per-conversation ordering → `message-ordering` (per-partition) guided ✓; with change
+  ordering on a stream, out-of-order applies are counted (`changeOrderViolations`).
+- Thundering-herd reconnect → **GAP 1** + a burst/fault (held connections are a steady
+  state; reconnect storms themselves are not modelled).
 
 ### News Feed - GAP 2 (+ hybrid is an authoring pattern, not a gap)
 - Hybrid push/pull → **content-route on request `type`** (`celebrity-post` 1% vs
@@ -79,8 +93,9 @@ TTL eviction. **No open gap.**
 ### Google Docs - GAP 1 (rest covered; OT correctness deferred)
 - WS layer routing by docId → **GAP 1** node; routing itself = key-based ✓.
 - Doc Session (one owner per doc, assigns order, broadcast) → key-based routing (sticky
-  by docId) + `leader-election` + failover ✓. **OT transform / convergence = deferred**
-  (linearizability) → justify.
+  by docId) + `leader-election` + failover ✓. **OT transform / convergence = deferred** →
+  justify. (Single-key linearizability of the backing store is checkable now; OT convergence
+  is a different property and is not.)
 - Op-log + snapshots + replay → `logReplay` ✓.
 - Doc metadata/permissions → structural (security `presentational-only`).
 - Optimistic local apply → client-side (justify); sub-100ms remote-apply is a gradable
@@ -115,10 +130,12 @@ pieces are shipped and the availability/failover story runs end-to-end:
   then calls `cluster.fail()` + `elect()`, emitting `replicationLeaderPromotions` and a
   bounded `replica_failover_in_progress` unavailability window.
 
-Residual (optional, not a design-coverage gap): the Chaos UI authors a **single** fault
-(`faults[0]`) while the engine loops over N - cascading/multi-node fault scenarios can't be
-authored from the UI yet. Each of the four designs needs only one failover fault, which is
-supported today.
+Residual (optional, not a design-coverage gap): the Chaos settings section authors a
+**single** fault (`faults[0]`) while the engine loops over N. Since October 2026 the Run
+dialog's chaos experiments compile to several scheduled faults, and the scenario composer
+runs presets together with offsets, so multi-fault scenarios can be run from the UI through
+experiments. A fault can also target a Region / AZ / Subnet container, which fails every
+component inside it.
 
 ### 3.2 GAP 2 - fan-out amplification (V1 implemented)
 
@@ -142,9 +159,13 @@ identical branch to the same target). Deriving N from an actual social-graph sto
 
 ## 4. Correctly deferred - do NOT build
 
-OT/CRDT convergence, exactly-once, linearizability (ledger `deferred`/`structural-only`);
-cache single-flight/stampede; read-your-write staleness; presence-TTL auto-expiry; cursor
-pagination; ML feed ranking; media codec/jitter. Grade these by topology + justification.
+OT/CRDT convergence, exactly-once, multi-key linearizability (ledger
+`deferred`/`structural-only`); presence-TTL auto-expiry; cursor pagination; ML feed ranking;
+media codec/jitter. Grade these by topology + justification.
+
+Moved out of this list in October 2026 because they are now simulated: cache single-flight /
+stampede (request collapsing), read-your-write staleness (consistency model), and bounded
+single-key linearizability.
 
 ## 5. Corrections to the first-pass analysis (for the record)
 

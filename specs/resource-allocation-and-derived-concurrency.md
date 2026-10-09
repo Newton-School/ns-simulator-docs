@@ -305,6 +305,8 @@ Slice 5 **is** this volume axis. Implementing it for the visible nodes = the `vo
 
 **FINAL MODEL - derive & lock (supersedes the earlier "cap a requested number" drafts).** `workersPerInstance` and `queueSlots` are **not authored at all** - the instance is the *only* allocation knob. Workers and K are pure functions of the hardware, shown read-only. This is the resolution of the original decision #1: keeping them as editable inputs (even capped) let a student type `8×10²⁰` workers and defeat the whole model, so they were removed entirely.
 
+> **October 2026.** A value that is still declared (old files, hand-written JSON) is ignored, and the Resources note on the node now says so by name; the validator warns. The TopologyJSON viewer shows `workersPerInstance`, `queueSlots`, `queue.workers` and `queue.capacity` read-only on instance-model nodes (editing 8 -> 16 workers there used to export 16 while the run still used the derived c). The in-app terminal's `set workers` / `set capacity` explain the derivation instead of setting anything. A related engine fix: an autoscaler scale-down now drains the worker ceiling to its target as in-flight work finishes (it used to freeze at the in-use level).
+
 ```
 { vcpu, ramGb } = instanceCatalog[instanceType]      // fixed per-instance, from the menu
 

@@ -6,6 +6,17 @@
 > required instances, and heartbeat load. Runtime heartbeat-arrival injection and a
 > dedicated `websockets-gateway` spec remain V2.
 >
+> **October 2026: the runtime side shipped** as the `persistentConnFanout` trait
+> (`realtime.persistent-connection-fanout` in the support ledger) on `api-gateway`,
+> `websockets-gateway` and `push-notification-service`. When the node declares offered
+> connections, held connections are capped per instance and by RAM (`sim.memPerConnectionKb`,
+> overflow refused and counted), pin RAM before request admission (K falls), and keepalive
+> heartbeats (`sim.heartbeatCostMs` per ping) take cores from request work and count in CPU
+> utilization; `sim.pushRecipients` makes each message an on-core write to that many sockets.
+> Heartbeats are modelled as steady background CPU, not as injected arrival events.
+> Not modelled: reconnect storms, slow-client send buffers and backpressure, routing a
+> message to the instance that holds each recipient.
+>
 > Purpose: model the **persistent-connection tier** that stateful real-time systems
 > need - the WebSocket/connection servers in Chat and the WS layer in Google Docs - by
 > adding a placeable connection-server node whose capacity is measured in **concurrent
