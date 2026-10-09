@@ -1,5 +1,23 @@
 # In-App Terminal - Feature Specification
 
+> **Status (October 2026): built, with differences from this spec.** The terminal ships in
+> the integration branch (issues #159, #160, #161). What differs from the design below:
+>
+> - It is a tab in a new **bottom dock** beside Results (toggle with Ctrl+\`), not a tab
+>   inside the Results Tray, because the tray only exists after a run.
+> - It is the app's **own React terminal** (about 5.6 kB gzipped, lazy-loaded), not
+>   xterm.js (Feature 10). No new dependency was added.
+> - Commands live in one shared registry, `src/shared/commands/`, used by both the app and
+>   `sim shell <topology.json>` in the sim cli. Modes are `sim>`, `node(x)>`, node config,
+>   port config and `sim(runtime)#`; Tab completes, `|` pipes through `grep`, `head`,
+>   `tail` and `count`, and `watch` re-runs a show command.
+> - There is **no engine port state**. "port N" is the node's Nth connection and edits it
+>   like the edge inspector. `shutdown`, per-port `rate-limit` and `health-check` are not
+>   simulated and say so; `set workers` / `set capacity` explain how c and K are derived
+>   instead of setting anything. SQL tables and Redis key counts are not simulated.
+>
+> User guide: `guides/in-app-terminal.md` in the docs repo.
+
 This document describes the features required for the NS Simulator's in-app terminal: a Cisco Packet Tracer-inspired contextual CLI embedded inside the simulator's bottom panel. It is written from a feature perspective: what each capability does, why it exists, how it works internally, what engine data it consumes, and what components it requires to be built.
 
 The terminal was designed through two reference documents: a high-level design document with annotated CLI examples across multiple node types (`hld-simulator-terminal-examples`), and an implementation plan document covering architecture layers, phasing, and the shared CLI strategy (`In-app_Terminal_for_ns-simulator`). This specification consolidates both into feature-level requirements grounded in the current codebase.

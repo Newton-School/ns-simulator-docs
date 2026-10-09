@@ -9,6 +9,7 @@ proxies instead of one fat connection.
 
 ## Teaches (concepts)
 - [[concepts/network/edge-concurrency-caps-inflight-requests|Edge concurrency caps in-flight requests]]
+- [[concepts/network/held-connections-cost-ram-and-cpu-while-idle|Held connections cost RAM and CPU even when idle]]
 
 ## Related modules
 - [[m07-edges|M07 - Edges]]

@@ -7,13 +7,19 @@ tags: [moc]
 
 ## Caching
 - [[concepts/caching/cache-aside-is-bernoulli-thinning|Cache-aside is Bernoulli thinning]]
-- cache stampede → request collapsing - see [[p11-celebrity-upload|P11]]
+- cache stampede → request collapsing (simulated, opt-in per cache) - see [[p11-celebrity-upload|P11]]
 ## Storage & consistency
 - row locks · contention · replication · CQRS - see [[p10-geospatial|P10]], [[p12-ps5-restock|P12]]
 - [[concepts/storage/quorum-writes-trade-latency-for-durability|Quorum writes trade latency for durability]]
+- [[concepts/storage/read-your-writes-costs-a-catch-up-wait-on-replica-reads|Read-your-writes costs a catch-up wait on replica reads]]
+- [[concepts/storage/eventual-consistency-makes-stale-reads-countable|Eventual consistency makes stale reads countable]]
 ## Messaging & fanout
 - queues · brokers · fanout - see [[p13-taylor-swift-news-feed|P13]]
 - [[concepts/workloads/consumer-groups-deliver-once-per-group|A stream delivers each message once per consumer group]]
+- [[concepts/workloads/per-entity-order-needs-keyed-ordered-consumers|Per-entity order survives only with keyed, ordered consumers]]
+## Failure and fault domains
+- [[concepts/simulation/chaos-experiments-need-a-steady-state-first|A chaos experiment means nothing without a steady state first]]
+- [[concepts/simulation/a-fault-domain-fails-everything-inside-it|A fault domain fails everything placed inside it]]
 ## State machines & runtime evidence (V2)
 - [[concepts/simulation/state-machines-make-behavior-gradeable|State machines make behavior gradeable]]
 - [[concepts/grading/runtime-state-transitions-grade-modeled-correctness|Runtime state-transition criteria grade modelled correctness]]

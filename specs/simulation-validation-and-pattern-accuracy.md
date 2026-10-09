@@ -405,9 +405,9 @@ interface NodeAccuracyReport {
 | `processing.distribution` | - | User set explicitly | Default constant(1) from `withNodeDefaults` | - |
 | `processing.timeout` | - | User set explicitly | Default 30000 from `withNodeDefaults` | - |
 | `edge.latency.distribution` | - | User set explicitly | Default log-normal(2.3, 0.5) from renderer | - |
-| `edge.bandwidth` | - | User set explicitly | - | Has no runtime effect |
-| `edge.protocol` | - | User set explicitly | - | Has no runtime effect |
-| `edge.pathType` | - | User set explicitly | - | Has no runtime effect |
+| `edge.bandwidth` | - | User set explicitly | Path-type default (same-dc 5,000 Mbps) | Enforced since October 2026 (transmission time plus FIFO link queueing) |
+| `edge.protocol` | - | User set explicitly | Inferred from the target | Per-request overhead and loss handling since October 2026 |
+| `edge.pathType` | - | User set explicitly | Inferred from the endpoints | Selects the latency profile when latency is derived from it |
 | `resources.cpu` | - | User set explicitly | - | Has no runtime effect |
 | `resources.memory` | - | User set explicitly | - | Has no runtime effect |
 | `resilience.circuitBreaker` | - | User set explicitly; drives breaker open/half-open/closed routing | Defaults seeded on breaker-capable nodes | - |

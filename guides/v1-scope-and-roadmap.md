@@ -72,10 +72,10 @@ that requires *understanding prose* or *modeling application logic* is deferred.
 | **Request model** | A request has `type`, `size`, `priority`, `path` only. | First-class request **body / endpoint / response codes**; richer payload semantics. |
 | **Access patterns** | A grading-only concept on `storageFit`. | First-class access-pattern modeling on the canvas. |
 | **Read/write mix** | JSON-only, injected by the question. | Editable on the canvas / source node; `readWriteRatio` auto-derivation. |
-| **Advanced nodes** | Core physics nodes only. | Deep behavior for the long tail of catalog types (observability, security, data-infra, real-time). |
-| **Composite nodes** | Region/AZ/Subnet containment resolves edge path types. | Fault domains, distance modeling, cross-region failure. |
+| **Advanced nodes** | Core physics nodes only. **Shipped since (October 2026):** telemetry sinks, held-connection fan-out on the Connection Server, change-stream ordering, cluster scheduling on a Kubernetes Cluster node, read consistency models. | Deep behavior for the rest of the long tail. |
+| **Composite nodes** | Region/AZ/Subnet containment resolves edge path types. **Shipped since (October 2026):** fault domains - a fault on a Region / AZ / Subnet fails everything inside it, with an AZ outage chaos preset. | Partial zone degradation, partitions between live zones, cross-region replication lag. |
 | **Cost model** | v1 capacity-cost heuristic (`1 + replicas + ⌈workers/50⌉` per node, +1/edge). | Real price-sheet cost model. |
-| **Connection lint** | Structural errors surface on Run; no connect-time design lint. | Live "this connection is a design smell" hints (e.g. Client → DB directly). |
+| **Connection lint** | Structural errors surface on Run; no connect-time design lint. **Shipped since (October 2026):** drawing refuses traffic into a source, out of a sink and a second connection between the same pair (with the reason); a **Design checks** chip lists anti-patterns in the current topology (the same detector as `sim lint`). | Hints aimed at specific smells such as Client → DB directly. |
 | **Grading location** | Client-only via iframe. | Optional server-side re-grade / anti-tamper. |
 
 ---

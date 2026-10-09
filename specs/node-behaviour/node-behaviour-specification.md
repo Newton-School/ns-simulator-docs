@@ -601,10 +601,10 @@ For **Graph DB** (`graph-db`), **Vector DB** (`vector-db`), **Data Warehouse** (
 | Aspect | Detail |
 |---|---|
 | **Palette IDs** | `external-service`, `output-sink` |
-| **Today** | GGcKNode queue. Sink role (no outgoing edges typically). |
+| **Today** | GGcKNode queue. Sink role (no outgoing edges typically). The two templates share the `third-party-api-connector` component type but have different defaults. **External Service** keeps the slow-dependency default (exponential, mean 150 ms, with the 50 ms floor for external integrations). **Output Sink** is a "the flow ends here" placeholder: its template sets `simDefaults.processing` to exponential with a mean of about 1 ms (timeout 1000 ms), so a plain Source -> Service -> Sink sketch under the default 100 rps Traffic Source does not report the sink as the bottleneck. Output Sink is listed in the default component library's Templates group by template id, next to Traffic Source, so the default library offers a matching input and output. |
 | **Real world** | Third-party APIs (Stripe, Twilio, SendGrid). Uncontrolled by the system designer. Variable latency. May rate-limit the caller. |
 | **Teaching gap** | Cannot demonstrate: rate limiting from the external service side, variable latency (third-party APIs are unpredictable), the risk of depending on external services (no control over availability). |
-| **Required behaviour** | (1) High and variable latency (wide distribution, e.g., log-normal with high sigma). (2) Rate limiting - returns 429 when caller exceeds the external service's rate limit. (3) Higher error rate than internal services. |
+| **Required behaviour** | External Service: (1) High and variable latency (wide distribution, e.g., log-normal with high sigma). (2) Rate limiting - returns 429 when caller exceeds the external service's rate limit. (3) Higher error rate than internal services. Output Sink: none of these - it should stay a fast acknowledging endpoint; use External Service when the point of the design is a slow or flaky dependency. |
 | **Config knobs** | `rateLimitRps` (caller is throttled beyond this), `errorRate` (higher default than internal services, e.g., 1-5%), `latencyDistribution` (wide/unpredictable) |
 
 #### LLM Gateway
@@ -738,6 +738,30 @@ The reason layers matter for teaching is that each layer **constrains what the c
 | "Kafka uses a binary protocol optimised for throughput" | Kafka edges should support batching (multiple messages per request) and have very high throughput but higher per-request latency than HTTP. |
 
 ### 4.4 Current Protocol Field: What Each Should Do
+
+> **Status (October 2026).** Much of this section is now implemented; the "Today"
+> columns below describe the engine when the section was written. What the engine does now
+> (see [Edge Properties & Defaults](../edge-properties-and-defaults.md#current-engine-behaviour-october-2026)
+> for the full reference):
+>
+> - **Reliable vs unreliable.** On a lost packet, every protocol except `udp` retransmits
+>   (the payload crosses the link a second time, so it costs latency, not the request). On
+>   `udp` the request is dropped and times out at its deadline.
+> - **Per-protocol overhead.** A fixed per-request cost: https 0.5 ms, grpc 0.2 ms,
+>   websocket 0.1 ms, amqp 1 ms, kafka 2 ms, tcp and udp 0 (a quarter of that on streaming
+>   edges). An edge can override it with `protocolOverheadMs`; Practice (connector) mode sets 0.
+> - **Connection setup, TLS, keep-alive, HTTP/2 multiplexing, WebSocket persistence.** Opt-in
+>   per edge through `edge.connection`. New connections pay real handshake round trips (TCP 1,
+>   TLS 1.2 +2 or TLS 1.3 +1, WebSocket upgrade +1, AMQP open +4, Kafka ApiVersions +1);
+>   keep-alive and persistent connections are reused; TLS session resumption shortens later
+>   handshakes; a connection carries 1 request at a time on https/tcp and up to 100 streams on
+>   grpc, so HTTP/1.1 requests wait at a full pool while HTTP/2 multiplexes.
+> - **Kafka producer batching.** Opt-in per Kafka edge through `edge.batching`
+>   (`lingerMs`, `maxBatchBytes`).
+> - **Still not modelled:** AMQP acknowledgement and prefetch on the edge, TCP flow and
+>   congestion control, TLS CPU cost, certificate errors, Kafka acks and compression. Consumer
+>   groups and partitions are modelled on the broker nodes (`streamBroker`, consumer groups on
+>   message-broker / pub-sub), not on the edge.
 
 #### TCP (`protocol: 'tcp'`)
 
@@ -1041,6 +1065,14 @@ This is ~15 lines of code that makes TCP vs UDP a real, observable, teachable di
 ---
 
 ## 5. Edge Specification: Properties, Constraints, and Node Compatibility
+
+> **Status (October 2026).** The key finding below is historical. The engine now reads
+> `protocol` (overhead, retransmit vs drop, connection limits), `latency.pathType`
+> (path-type latency profiles when the latency is derived from it), `bandwidth` (transmission
+> time plus FIFO link queueing) and `maxConcurrentRequests` (in-flight cap, `connection_refused`
+> over it). The current reference is
+> [Edge Properties & Defaults](../edge-properties-and-defaults.md#current-engine-behaviour-october-2026);
+> the priority table in 5.9 has a status column.
 
 > **Key finding:** Edges in the simulator carry 12+ configurable properties, but the engine only reads 3 of them (`latency.distribution`, `packetLossRate`, `errorRate`), plus 3 routing properties (`mode`, `weight`, `condition`) via `RoutingTable`. The `protocol`, `bandwidth`, `maxConcurrentRequests`, and `pathType` fields are defined, validated by schema, configurable in the UI, serialized into topology JSON - and then completely ignored by the engine. Every edge behaves identically regardless of protocol, bandwidth, or connected node types.
 
@@ -1520,20 +1552,20 @@ function validateEdge(
 
 ### 5.9 Implementation Priority for Edges
 
-| Priority | Task | Files Changed | Teaching Impact |
-|---|---|---|---|
-| **P0** | **Engine reads `protocol`**: TCP retransmits on packet loss, UDP drops. ~15 lines in `engine.ts:enqueueEdgeTransfer`. | `engine.ts` | Makes TCP vs UDP instantly teachable. The single most impactful edge change. |
-| **P0** | **Engine reads `pathType`**: Use path-type-specific latency defaults when user hasn't configured explicit latency. | `engine.ts` | Makes same-rack vs internet latency visible. Teaches CDN value proposition. |
-| **P1** | **Protocol dropdown filtering**: Filter EdgePropertiesPanel protocol options based on source/target node types. | `EdgePropertiesPanel.tsx`, new `edgeConstraints.ts` | Prevents nonsensical configurations. Teaches protocol-layer alignment. |
-| **P1** | **Edge validation warnings**: Warn on invalid protocol/mode combinations during serialization. | `useTopologySerializer.ts` | Provides educational feedback on edge configuration errors. |
-| **P1** | **Context-aware edge defaults**: `inferEdgeDefaults(source, target)` replaces global `EDGE_DEFAULTS`. | `useTopologySerializer.ts` | Realistic defaults make drag-and-drop topologies more accurate. |
-| **P2** | **Engine reads `maxConcurrentRequests`**: Enforce connection limits on edges. Excess requests get `connection_refused`. | `engine.ts` | Teaches connection pooling and database connection limits. |
-| **P2** | **Engine reads `bandwidth`**: Delay requests when bandwidth is saturated. | `engine.ts` | Teaches bandwidth constraints and link saturation. |
-| **P2** | **TLS handshake overhead**: First request on HTTPS edge incurs handshake latency. | `engine.ts` or `HttpsEdgeTrait` | Teaches TLS cost and connection reuse. |
-| **P3** | **gRPC multiplexing**: Multiple concurrent requests on gRPC don't block each other. | `GrpcEdgeTrait` | Teaches HTTP/2 head-of-line blocking elimination. |
-| **P3** | **Kafka batching**: Messages on Kafka edges are batched for throughput. | `KafkaEdgeTrait` | Teaches Kafka's throughput model. |
-| **P3** | **WebSocket persistent connections**: Upgrade handshake then persistent bidirectional flow. | `WebSocketEdgeTrait` | Teaches real-time communication patterns. |
-| **P3** | **AMQP acknowledgement**: Protocol-level message reliability. | `AmqpEdgeTrait` | Teaches message delivery guarantees. |
+| Priority | Task | Files Changed | Teaching Impact | Status |
+|---|---|---|---|---|
+| **P0** | **Engine reads `protocol`**: TCP retransmits on packet loss, UDP drops. ~15 lines in `engine.ts:enqueueEdgeTransfer`. | `engine.ts` | Makes TCP vs UDP instantly teachable. The single most impactful edge change. | Done |
+| **P0** | **Engine reads `pathType`**: Use path-type-specific latency defaults when user hasn't configured explicit latency. | `engine.ts` | Makes same-rack vs internet latency visible. Teaches CDN value proposition. | Done |
+| **P1** | **Protocol dropdown filtering**: Filter EdgePropertiesPanel protocol options based on source/target node types. | `EdgePropertiesPanel.tsx`, new `edgeConstraints.ts` | Prevents nonsensical configurations. Teaches protocol-layer alignment. | Done (`edgeConstraints.ts`) |
+| **P1** | **Edge validation warnings**: Warn on invalid protocol/mode combinations during serialization. | `useTopologySerializer.ts` | Provides educational feedback on edge configuration errors. | Done |
+| **P1** | **Context-aware edge defaults**: `inferEdgeDefaults(source, target)` replaces global `EDGE_DEFAULTS`. | `useTopologySerializer.ts` | Realistic defaults make drag-and-drop topologies more accurate. | Done (`inferEdgeDefaults`) |
+| **P2** | **Engine reads `maxConcurrentRequests`**: Enforce connection limits on edges. Excess requests get `connection_refused`. | `engine.ts` | Teaches connection pooling and database connection limits. | Done (cap fixed in wave 2: a rejection no longer frees another transfer's slot) |
+| **P2** | **Engine reads `bandwidth`**: Delay requests when bandwidth is saturated. | `engine.ts` | Teaches bandwidth constraints and link saturation. | Done (transmission delay plus FIFO link queueing, request direction only) |
+| **P2** | **TLS handshake overhead**: First request on HTTPS edge incurs handshake latency. | `engine.ts` or `HttpsEdgeTrait` | Teaches TLS cost and connection reuse. | Done, opt-in (`edge.connection`: TCP/TLS handshakes, keep-alive, resumption) |
+| **P3** | **gRPC multiplexing**: Multiple concurrent requests on gRPC don't block each other. | `GrpcEdgeTrait` | Teaches HTTP/2 head-of-line blocking elimination. | Done, opt-in (`maxStreamsPerConnection`, gRPC default 100) |
+| **P3** | **Kafka batching**: Messages on Kafka edges are batched for throughput. | `KafkaEdgeTrait` | Teaches Kafka's throughput model. | Done, opt-in (`edge.batching` on Kafka edges) |
+| **P3** | **WebSocket persistent connections**: Upgrade handshake then persistent bidirectional flow. | `WebSocketEdgeTrait` | Teaches real-time communication patterns. | Done, opt-in (`reuse: persistent`, upgrade = 1 round trip) |
+| **P3** | **AMQP acknowledgement**: Protocol-level message reliability. | `AmqpEdgeTrait` | Teaches message delivery guarantees. | Not on the edge (delivery guarantees live on the broker nodes) |
 
 #### Relationship to Node Traits (Section 8)
 

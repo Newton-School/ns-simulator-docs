@@ -268,6 +268,15 @@ A `rubric` check's `kind` is inferred from the metric prefix
 `retries.attempts` · `retries.budgetExhausted` (retry-backoff callers) ·
 `rateLimit.breaches` · `rateLimit.admitted` · `rateLimit.rejected` ·
 `rateLimit.keyless` (rate-limiter - an over-admit is `rateLimit.breaches > 0`).
+Read consistency (replicated relational-db / nosql-db with `sim.consistencyModel`, October
+2026): `consistency.reads` · `consistency.writes` · `consistency.staleReads` ·
+`consistency.readYourWritesViolations` · `consistency.monotonicReadViolations` ·
+`consistency.catchUpWaits` · `consistency.catchUpWaitMs` · `consistency.sessionlessReads` ·
+`consistency.linearizabilityKeysChecked` · `consistency.linearizabilityViolations` ·
+`consistency.linearizabilityOpsChecked` · `consistency.linearizabilityOpsNotChecked` ·
+`consistency.linearizableVerified` (1 only when nothing was left unchecked; the check is
+bounded at 100 operations per key and 200 keys). Read-your-writes and monotonic-read checks
+need client sessions: set `workload.sessions.count` on the source.
 These are `kind: "simulation"` checks. Any single trait counter is also reachable
 per node as `perNode.<nodeId>.traitCounters.<counter>`, but prefer the run-wide
 aggregate so the check does not depend on a node id the student can rename.

@@ -1,5 +1,9 @@
 # UI Architecture Review - NS-Simulator
 
+> **Status (October 2026).** The app is web-only: the Electron desktop build was removed
+> (systems-simulator PR #283). References to Electron, IPC, `electron.vite.config.ts` and
+> the main process below describe the codebase at the time of this review.
+
 > A comprehensive review of the current renderer codebase: what's working, what the component hierarchy looks like, and the design decisions that should be locked in before the rebuild.
 
 ---

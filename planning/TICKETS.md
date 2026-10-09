@@ -2438,7 +2438,14 @@ Only show the most commonly used types by default (~30). Show a "Show all (113)"
 
 ## Phase 11 - CLI
 
-### T-040: Build CLI runner (`dsds` command)
+> **Status (October 2026).** T-040 to T-042 are built as the sim cli (systems-simulator
+> issues #83-#85): `sim run` (with `--live`, `--json`, `--verdict`), `validate`, `lint`,
+> `cost`, `compare`, plus `sim shell`. Differences from these tickets: `show` and
+> `inspect` are not built (`sim shell <file> --exec "show topology"` covers them),
+> `sim validate` and `sim lint` exit 2 (not 1) on a failed check, and `sim cost` has no
+> `--provider` switch because there is one built-in price catalog.
+
+### T-040: Build CLI runner (`sim` command, the sim cli)
 
 | Field | Value |
 |-------|-------|
@@ -2446,7 +2453,7 @@ Only show the most commonly used types by default (~30). Show a "Show all (113)"
 | **Files** | `src/cli/index.ts`, `src/cli/commands/run.ts`, `src/cli/commands/show.ts`, `src/cli/commands/validate.ts`, `src/cli/commands/inspect.ts`, `src/cli/formatters/table.ts`, `src/cli/formatters/topology.ts` |
 | **Size** | L |
 
-**Context**: The simulation engine is pure TypeScript with no DOM dependencies. It can run directly in Node.js via a CLI tool called `dsds`. This gives developers a terminal-based workflow for running simulations, validating topologies, and inspecting results without needing the UI.
+**Context**: The simulation engine is pure TypeScript with no DOM dependencies. It can run directly in Node.js via a CLI tool called `sim` (the sim cli). This gives developers a terminal-based workflow for running simulations, validating topologies, and inspecting results without needing the UI.
 
 Refer to `ui.md` Section 4 for the full CLI specification including output formats.
 
@@ -2454,7 +2461,7 @@ Refer to `ui.md` Section 4 for the full CLI specification including output forma
 
 Use a CLI framework (e.g., `commander`, `yargs`, or `citty`) to implement these commands:
 
-#### `dsds run <file>`
+#### `sim run <file>`
 
 1. Read and parse the topology JSON file.
 2. Validate with `validateTopology()` - print errors and exit 1 if invalid.
@@ -2472,7 +2479,7 @@ Use a CLI framework (e.g., `commander`, `yargs`, or `citty`) to implement these 
 - `--json` - output raw `SimulationOutput` as JSON (for piping to `jq`)
 - `--live` - show live-updating table during simulation (uses ANSI escape codes to overwrite lines)
 
-#### `dsds validate <file>`
+#### `sim validate <file>`
 
 1. Parse the JSON file.
 2. Run `validateTopology()`.
@@ -2481,7 +2488,7 @@ Use a CLI framework (e.g., `commander`, `yargs`, or `citty`) to implement these 
 5. Run `detectAntiPatterns()` and print any findings.
 6. Exit 0 if valid, exit 1 if errors.
 
-#### `dsds show <file>`
+#### `sim show <file>`
 
 Print a text-based visualization of the topology graph (see `ui.md` Section 4.2).
 - Show nodes as boxes with label, type, and worker/queue counts.
@@ -2504,7 +2511,7 @@ Edges:
 
 Full ASCII box rendering is a stretch goal.
 
-#### `dsds inspect <file> --node <id>` / `--edge <id>`
+#### `sim inspect <file> --node <id>` / `--edge <id>`
 
 Print detailed configuration for a single node or edge (see `ui.md` Section 4.2 for format).
 
@@ -2516,13 +2523,13 @@ Create reusable formatter functions:
 - `formatProgressBar(percent: number, width: number): string`
 
 **AC**:
-- [ ] `dsds run topology.json` produces formatted output matching `ui.md` Section 4.1
-- [ ] `dsds run --json` outputs valid JSON parseable by `jq`
-- [ ] `dsds run --seed "test"` overrides the seed and produces deterministic output
-- [ ] `dsds validate` prints path-specific errors for an invalid topology
-- [ ] `dsds validate` exits 0 for valid, 1 for invalid
-- [ ] `dsds show` prints a readable topology listing
-- [ ] `dsds inspect --node "db"` prints detailed node config
+- [ ] `sim run topology.json` produces formatted output matching `ui.md` Section 4.1
+- [ ] `sim run --json` outputs valid JSON parseable by `jq`
+- [ ] `sim run --seed "test"` overrides the seed and produces deterministic output
+- [ ] `sim validate` prints path-specific errors for an invalid topology
+- [ ] `sim validate` exits 0 for valid, 1 for invalid
+- [ ] `sim show` prints a readable topology listing
+- [ ] `sim inspect --node "db"` prints detailed node config
 - [ ] Progress bar shows during simulation run
 - [ ] SLO breaches are flagged in the output
 - [ ] Handles file-not-found and JSON parse errors gracefully
@@ -2544,7 +2551,7 @@ Refer to `ui.md` Section 4.3 for the exact format.
 
 **What to build**:
 
-When `dsds run topology.json --live` is used:
+When `sim run topology.json --live` is used:
 
 1. Use ANSI escape codes (`\x1b[2J` clear screen, `\x1b[H` cursor home) to overwrite the terminal output on each snapshot.
 2. Subscribe to the engine's `onSnapshot` callback.
@@ -2575,7 +2582,7 @@ API → DB      4.1ms       500/s
 - `q` to stop the simulation early
 - `p` to pause/resume
 
-After the simulation completes, clear the live display and print the normal final output (same as `dsds run` without `--live`).
+After the simulation completes, clear the live display and print the normal final output (same as `sim run` without `--live`).
 
 **AC**:
 - [ ] Live display updates every snapshot interval
@@ -2588,7 +2595,7 @@ After the simulation completes, clear the live display and print the normal fina
 
 ---
 
-### T-042: Add `dsds compare` and `dsds cost` and `dsds lint` commands
+### T-042: Add `sim compare` and `sim cost` and `sim lint` commands
 
 | Field | Value |
 |-------|-------|
@@ -2600,7 +2607,7 @@ After the simulation completes, clear the live display and print the normal fina
 
 **What to build**:
 
-#### `dsds compare <a.json> <b.json>`
+#### `sim compare <a.json> <b.json>`
 
 1. Run both simulations (sequentially, same seed unless overridden).
 2. Call `compareDesigns(outputA, outputB)` from T-032.
@@ -2616,13 +2623,13 @@ Error Rate      2.07%       0.12%       -94%       B ✓
 
 4. Print the summary sentence from `DesignComparison.summary`.
 
-#### `dsds cost <file> --provider <aws|gcp|azure>`
+#### `sim cost <file> --provider <aws|gcp|azure>`
 
 1. Parse the topology (no simulation needed).
 2. Call `calculateCost(topology, provider)` from T-031.
 3. Print cost table (same format as `ui.md` Section 3.4 Cost tab).
 
-#### `dsds lint <file>`
+#### `sim lint <file>`
 
 1. Parse the topology.
 2. Call `detectAntiPatterns(topology)` from T-030.
@@ -2630,11 +2637,11 @@ Error Rate      2.07%       0.12%       -94%       B ✓
 4. Exit 0 if no critical issues, exit 1 if any critical anti-patterns found.
 
 **AC**:
-- [ ] `dsds compare` runs both simulations and prints a diff table
-- [ ] `dsds cost` prints per-node and total cost without running a simulation
-- [ ] `dsds cost --provider gcp` uses GCP pricing
-- [ ] `dsds lint` prints anti-pattern warnings
-- [ ] `dsds lint` exits 1 if critical anti-patterns found
+- [ ] `sim compare` runs both simulations and prints a diff table
+- [ ] `sim cost` prints per-node and total cost without running a simulation
+- [ ] `sim cost --provider gcp` uses GCP pricing
+- [ ] `sim lint` prints anti-pattern warnings
+- [ ] `sim lint` exits 1 if critical anti-patterns found
 - [ ] All commands handle file-not-found gracefully
 
 ---
@@ -3109,4 +3116,4 @@ T-011 + T-020 + T-003 ──► T-040 (base CLI)
 | **Scenarios** (chaos engineering) | T-022, T-023, T-024 | Experiment runner, presets, composer |
 | **UI State & Hooks** (glue) | T-025, T-026, T-027, T-028, T-043, T-045 | Web Worker, React hooks, serializer, topology store, deserializer |
 | **UI Components** (React) | T-033, T-034, T-035, T-036, T-037, T-038, T-039, T-044, T-046 | Inspector, Scenario Bar, Results Tray, Palette, JSON Viewer, Import/Export |
-| **CLI** (terminal) | T-040, T-041, T-042 | `dsds` command runner |
+| **CLI** (terminal) | T-040, T-041, T-042 | `sim` command runner (sim cli) |

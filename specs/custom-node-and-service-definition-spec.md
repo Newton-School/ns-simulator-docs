@@ -815,9 +815,14 @@ and submission flow.
 
 ## 15. Question Policy
 
-> **Status: NOT IMPLEMENTED.** The `BuilderPolicy` below is the target design. Today
-> there is **no builder-specific gating**. See §15.1 for how grading and authoring
-> actually behave against created nodes right now.
+> **Status: IMPLEMENTED (most fields).** `QuestionPackage.builderPolicy` ships in
+> `src/engine/analysis/builderPolicy.ts`. Implemented: `allowServiceBuilder`,
+> `allowMyServices`, `allowCustomNodeBuilder`, `allowedNodeClasses`,
+> `allowedRuntimeTemplates`, `allowedTraitPacks`, `maxDefinitions`,
+> `maxOperationsPerService`, `lockDefinitionsAfterFirstRun`. Not implemented:
+> `allowMyNodes` (there is no My Nodes library) and `requireContracts` (contracts are
+> documentation-only). The schema is strict, so writing either is a validation error,
+> not a silent no-op. See §15.1 for how enforcement and grading work.
 
 Question authors need explicit control.
 
@@ -837,7 +842,10 @@ interface BuilderPolicy {
 }
 ```
 
-Recommended defaults (once `BuilderPolicy` ships):
+Every field is optional; an absent policy (or an absent field) means today's open
+behaviour: both builders on, every runtime / class / trait allowed, no cap, no lock.
+
+Recommended defaults:
 
 - Open build: allow Service Builder, My Services, Custom Node Builder, and My Nodes.
 - Graded assignment: opt in per question.
@@ -846,8 +854,8 @@ Recommended defaults (once `BuilderPolicy` ships):
 
 ### 15.1 Grading and authoring against created nodes (current reality)
 
-This is how creation interacts with evaluation **today**, and what test-case authors
-must do until `BuilderPolicy` exists.
+This is how creation interacts with evaluation, and how `BuilderPolicy` sits beside
+componentType grading.
 
 **Creation is transparent to the grader.** Every grading criterion
 (`placement`, `guardedPath`, `fanout`, `storageFit`, `forbidUnjustified`,
@@ -878,10 +886,37 @@ it with no change.
 4. **Label-independence is a feature.** A `microservice` mislabeled "Redis Cache"
    still fails cache criteria; authors need not defend against naming.
 
-**Current limitation.** Because `BuilderPolicy` is unimplemented, you can only gate at
-the **componentType** level. You cannot yet author "service builder allowed, but only
-the long-running runtime" or "custom-node creation forbidden while service creation is
-allowed." That finer control requires shipping §15's `BuilderPolicy`.
+**Builder policy (implemented).** `builderPolicy` adds the finer control that
+componentType gates cannot express, e.g. "service builder allowed, but only the
+long-running runtime" or "custom-node creation forbidden while service creation is
+allowed." How it works:
+
+- **Grading.** A restrictive policy adds one constraint row, `builder-policy`, beside
+  (never replacing) the componentType checks. It reads `config.customDefinition` only
+  to decide *how a node was created*; every other criterion still matches on
+  `componentType`. A failure lists each finding with its fix (for example "made with
+  the Custom Node builder, which this question does not allow. Fix: delete it and use
+  a palette component"). No policy means no row, so existing questions grade the same.
+- **What counts.** A "definition" is a node carrying a `customDefinition` (each
+  placement forks its own copy). Scaffold nodes are the author's and are exempt.
+- **Enforcement in the app.** Palette builder tiles are disabled with the reason
+  shown; the builders offer only allowed runtimes / classes and lock disallowed trait
+  packs; `maxDefinitions` and `maxOperationsPerService` are enforced in the builder,
+  My Services, paste, and the store's `addNode`; the contextual-add picker never offers
+  builders. Trait-backed fields of a disallowed trait pack are read-only on created
+  nodes in the properties panel, the store and the in-app terminal `config set`.
+- **Lock.** `lockDefinitionsAfterFirstRun` makes the definition and its trait-backed
+  fields read-only once the attempt has a graded test run or a simulation run has
+  started for the question in the session, and disables creating new definitions.
+- **Imported / loaded designs** that break the policy are kept as-is: the TopologyJSON
+  import dialog, the question panel and the run warnings list each finding with its
+  fix; grading fails the `builder-policy` row.
+- **Authoring.** Question Studio has a Builder policy editor (Learner start stage); the
+  policy round-trips through the question project file, the compiled package, the
+  export bundle and the Django `SIMULATOR_CONFIG` row. The authoring validator warns
+  when settings cancel each other out (no runtime left for an allowed builder, a
+  runtime whose class is excluded, `maxDefinitions: 0` with a builder on, or an
+  `allowedNodeTypes` allow-list that hides the builder tiles).
 
 ## 16. Builder UX Requirements
 

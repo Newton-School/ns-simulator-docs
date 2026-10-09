@@ -1,5 +1,9 @@
 # NS-Simulator - UI Layer Issues
 
+> **Status (October 2026).** The app is web-only: the Electron desktop build was removed
+> (systems-simulator PR #283). References to Electron, IPC, `electron.vite.config.ts` and
+> the main process below describe the codebase at the time of this review.
+
 > Synthesized from `adr-critical-problems.md` and `adr-state-management.md`. Each issue is self-contained with context, the exact problem, and acceptance criteria. Issues are ordered by dependency - fix earlier ones first.
 
 ---

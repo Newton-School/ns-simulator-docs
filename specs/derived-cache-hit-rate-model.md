@@ -13,6 +13,19 @@
 > fed by Zipf-drawn keys; `declared-rate` remains the default. Remaining: flip the
 > default after a dual-topology grading validation (§6).
 >
+> **October 2026 changes.** (1) The derived LRU now **fills a key when its backing-store
+> fetch succeeds**, not when the miss arrives. Before, a cold hot key was "filled" by its first
+> miss, so a stampede could never happen; now every miss that arrives before the first fetch
+> lands also misses (the thundering herd). This changes derived-LRU results with collapsing off
+> too; no question or solution file uses derived-LRU. (2) **Request collapsing** (single-flight)
+> is opt-in per cache node (`sim.requestCollapsing`): concurrent misses for a key park behind one
+> in-flight leader fetch and share its outcome, with counters `collapseLeaders`,
+> `collapsedMisses`, `collapsedFollowersServed`, `collapsedFollowersFailed` and `collapseNoKey`.
+> It needs keyed requests and does not apply in the fluid tier. (3) The chaos `cache-flush`
+> fault empties a derived LRU (it re-warms from traffic) or makes a declared-rate cache miss
+> every arrival for its window. Still not modelled: TTL expiry, per-key waiter caps,
+> stale-while-revalidate.
+>
 > **Provenance.** Distilled from a session tracing how the engine actually models
 > traffic distribution across Load Balancer / API Gateway / Distributed Cache /
 > Pub/Sub / API Server. The cache was the one component whose "distribution"

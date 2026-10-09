@@ -22,9 +22,15 @@ tags: [moc]
 ## Compute
 - [[concepts/compute/effective-concurrency-determines-service-capacity|Effective concurrency determines service capacity]]
 - cpu-bound vs io-bound · vCPU · service time - see [[m06-execution-profiles|M06]]
+- [[concepts/compute/pending-pods-add-no-capacity|Pending pods add no capacity]]
 
 ## Network
 - latency · bandwidth · path types · concurrent connections - see [[m07-edges|M07]]
+- [[concepts/network/bandwidth-adds-transmission-and-link-queueing-delay|Edge bandwidth adds transmission time and link queueing]]
+- [[concepts/network/tls-1-3-saves-a-round-trip-on-a-new-connection|TLS 1.3 saves a round trip on every new connection]]
+- [[concepts/network/http2-multiplexing-removes-head-of-line-waits-at-the-pool|HTTP/2 multiplexing removes head-of-line waits at the connection pool]]
+- [[concepts/network/producer-batching-trades-latency-for-throughput|Producer batching trades latency for throughput]]
+- [[concepts/network/held-connections-cost-ram-and-cpu-while-idle|Held connections cost RAM and CPU even when idle]]
 
 ## Cost
 - compute cost · egress · budget constraints - see [[m09-cost-model|M09]]

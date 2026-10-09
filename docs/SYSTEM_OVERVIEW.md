@@ -612,30 +612,26 @@ The import/export controls sit in the scenario bar (always visible):
 | **Copy JSON** | Copies topology JSON to clipboard |
 | **Paste JSON** | Reads clipboard, validates, loads into store + canvas |
 
-When importing, if the JSON has node positions, they are used. If not (e.g., hand-written JSON), an auto-layout algorithm (dagre) positions the nodes automatically.
+When importing, if the JSON has node positions, they are used. If not (e.g., hand-written JSON), the importer lays the nodes out (a layered layout, sources first, inside each Region / AZ / Subnet container) and says so.
 
-A **confirmation dialog** appears before replacing an existing topology: "This will replace your current topology. Continue?"
+Loading another design asks before discarding unsaved changes. Since October 2026 the header's **JSON** menu (Import JSON, Download / Copy TopologyJSON, Show JSON viewer) does this; a well-formed design that would not run yet still imports, with a "fix these before running" list. See `guides/topology-json-import-export.md` in the docs repo.
 
 The **validation badge** (✓ Valid / ✗ 3 errors / ⚠ 2 warnings) is always visible in the scenario bar and updates in real-time as the topology changes.
 
 ### 3.7 Execution Modes and Playback Speed
 
-The simulation engine always runs as fast as possible - it is event-driven and jumps from one event to the next with no wall-clock synchronization. **Playback speed** controls the presentation layer: how quickly the worker emits snapshots to the UI.
+The simulation engine is event-driven and jumps from one event to the next. **Playback speed** decides *when* the worker processes events, never *which* events or their outcome, so a paced run produces the same output as a Max run (implemented October 2026, see `src/engine/worker/protocols.ts`).
 
-| Mode | Speed value | Behavior |
+| Option | Speed value | Behavior |
 |------|-------------|----------|
-| **Batch** (default) | `0` | Engine runs at full speed. Snapshots are emitted as fast as possible. Best for getting results quickly - the UI shows a progress bar but no live node animation. |
-| **Real-time** | `1` | Snapshots are throttled so 1 simulated second ≈ 1 wall-clock second. Nodes animate at a watchable pace. |
-| **5× accelerated** | `5` | 1 simulated second ≈ 200ms wall-clock. Faster but still watchable. |
-| **10× accelerated** | `10` | 1 simulated second ≈ 100ms wall-clock. Quick overview of the simulation's progression. |
-
-**How it works internally**: The worker inserts a `setTimeout(snapshotInterval / playbackSpeed)` delay between snapshot emissions when `playbackSpeed > 0`. At `playbackSpeed = 0` (batch), no delay is inserted and snapshots are posted immediately.
+| **Max** (default) | `'max'` | The engine runs as fast as possible in chunks, as before speed control existed. |
+| **0.5x, 1x, 2x, 5x, 10x** | a number | Simulated milliseconds per wall-clock millisecond: 1x runs simulated time in real time, 2x twice as fast. The worker paces its chunks against simulated time. |
 
 **User interaction**:
-- Speed defaults to **Max** (batch) - users who just want results don't need to wait.
-- Speed can be changed mid-run without restarting the simulation - clicking a different speed button sends a `SET_SPEED` command to the worker.
-- The speed selector is a segmented button group: `[1×] [5×] [10×] [Max]`. The active speed is highlighted.
-- The speed selector only appears when the simulation is running or paused.
+- Speed defaults to **Max**, so users who just want results don't wait.
+- Speed is a dropdown next to the Run controls and can be changed mid-run, also while paused (`set-speed` to the worker). The chosen speed is not saved across reloads.
+- During a paced run the canvas shows live node colour, queue fill, an "rps / % busy" readout and edge width / colour, all from time-weighted 5 s windows and refreshed once per simulated second (network edges only, not Practice-mode connectors; no per-node p99).
+- The analytic (fluid) tier has no event loop, so speed does not apply to it.
 
 **Additional execution controls** (already defined):
 
@@ -643,8 +639,8 @@ The simulation engine always runs as fast as possible - it is event-driven and j
 |---------|-------------|
 | **Pause** | Halts the engine loop. No new events are processed. |
 | **Resume** | Continues from where the engine paused. |
-| **Step** | Advances the engine by N events (default 100), then pauses. Useful for debugging. |
-| **Stop** | Terminates the simulation and returns partial results. |
+| **Step** | While paused, advances the paused run by a small batch of events. Useful for debugging. |
+| **Stop** | Ends the run early and keeps partial results, measured over the simulated time the run covered (not the full configured duration). |
 
 ### 3.8 Feature Summary: What the User Can Do
 
@@ -682,14 +678,14 @@ The simulation engine always runs as fast as possible - it is event-driven and j
 
 ## 4. CLI Representation
 
-The simulation engine is pure TypeScript with no DOM dependencies. It can run in Node.js for a terminal-based workflow.
+The simulation engine is pure TypeScript with no DOM dependencies. It runs in Node.js through the **sim cli** (executable `sim`, `bin/sim.mjs`; `npm run sim -- <command>` from a checkout). The output mock-ups in 4.1-4.3 are the original design sketches; `sim <command> --help` prints the real options, and `guides/sim-cli.md` in the docs repo is the user guide.
 
 ### 4.1 How the Simulation Shows in the Terminal
 
 #### Running a simulation
 
 ```bash
-$ dsds run topology.json --seed "abc123" --duration 60000
+$ sim run topology.json --seed "abc123" --duration 60000
 
   HLD Simulator v1.0.0
   Topology: My E-Commerce System (4 nodes, 3 edges)
@@ -742,7 +738,7 @@ $ dsds run topology.json --seed "abc123" --duration 60000
 Show the system as a text graph:
 
 ```bash
-$ dsds show topology.json
+$ sim show topology.json
 
    ┌──────────┐       ┌──────────┐       ┌──────────┐
    │  Users   │──────►│ Gateway  │──────►│   API    │
@@ -763,7 +759,7 @@ $ dsds show topology.json
 Show node details:
 
 ```bash
-$ dsds inspect topology.json --node "db"
+$ sim inspect topology.json --node "db"
 
    Node: DB
    Type: relational-db (storage)
@@ -789,7 +785,7 @@ $ dsds inspect topology.json --node "db"
 For terminals that support ANSI, show a live-updating view:
 
 ```bash
-$ dsds run topology.json --live
+$ sim run topology.json --live
 
    t=15.2s  ████████████████░░░░░░░░░░  25%
 
@@ -811,28 +807,29 @@ Status indicators: `●` OK (<60%), `◐` WARM (60-85%), `◉` HOT (85-95%), `�
 
 ### 4.4 CLI Commands
 
-| Command | Purpose |
-|---------|---------|
-| `dsds run <file>` | Run simulation, print results |
-| `dsds run <file> --live` | Run with live-updating terminal display |
-| `dsds run <file> --json` | Output raw `SimulationOutput` as JSON (for piping) |
-| `dsds run <file> --seed <s>` | Override the seed |
-| `dsds run <file> --duration <ms>` | Override duration |
-| `dsds show <file>` | Print the topology as a text graph |
-| `dsds inspect <file> --node <id>` | Show detailed config for one node |
-| `dsds inspect <file> --edge <id>` | Show detailed config for one edge |
-| `dsds validate <file>` | Validate the topology JSON, print errors/warnings |
-| `dsds compare <a.json> <b.json>` | Run both, print side-by-side comparison |
-| `dsds cost <file> --provider aws` | Estimate cloud cost without running simulation |
-| `dsds lint <file>` | Detect anti-patterns in the topology |
-| `dsds chaos <file> --scenario cache-stampede` | Run a preset chaos experiment |
-| `dsds replay <file> --seed <s>` | Replay a previous simulation with the same seed |
-| `dsds export <file> --format svg` | Export topology as SVG (stretch goal) |
+| Command | Purpose | Status (October 2026) |
+|---------|---------|-------|
+| `sim run <file>` | Run simulation, print results | Built |
+| `sim run <file> --live` | Live per-node table while the engine runs (q stops, p pauses) | Built |
+| `sim run <file> --json` / `--verdict` | Output raw `SimulationOutput` / the `SimulationVerdict` as JSON | Built |
+| `sim run <file> --seed <s>` | Override the seed | Built |
+| `sim run <file> --duration-ms <ms>` | Override duration | Built |
+| `sim validate <file>` | Validate the topology JSON, print errors/warnings | Built (exit 2 on errors) |
+| `sim lint <file>` | Detect anti-patterns in the topology | Built (exit 2 on a critical finding) |
+| `sim cost <file> [--run]` | Per-component $/hr; `--run` prices consumption and egress from a run | Built; one built-in price catalog, so there is no `--provider` switch |
+| `sim compare <a.json> <b.json>` | Run both with the same seed, print a metric diff | Built |
+| `sim shell <file> [--exec "..."]` | The in-app terminal's commands over a topology file | Built |
+| `sim evaluate ...` / `sim grade <question> <topology>` | Headless suites, scenario batches, question grading | Built |
+| `sim show <file>` | Print the topology as a text graph | Not built (use `sim shell <file> --exec "show topology"`) |
+| `sim inspect <file> --node <id>` | Show detailed config for one node | Not built (use `sim shell <file> --exec "show config running <id>"`) |
+| `sim chaos <file> --scenario ...` | Run a preset chaos experiment | Not built; chaos experiments run in the app's Run dialog |
+| `sim replay <file> --seed <s>` | Replay with the same seed | Not a separate command: `sim run --seed` is deterministic |
+| `sim export <file> --format svg` | Export topology as SVG | Not built |
 
 ### 4.5 JSON Output (for Piping)
 
 ```bash
-$ dsds run topology.json --json | jq '.summary.latency'
+$ sim run topology.json --json | jq '.summary.latency'
 {
   "p50": 45,
   "p90": 120,
@@ -840,7 +837,7 @@ $ dsds run topology.json --json | jq '.summary.latency'
   "p99": 890
 }
 
-$ dsds run topology.json --json | jq '.perNode | to_entries[] | select(.value.utilization > 0.9) | .key'
+$ sim run topology.json --json | jq '.perNode | to_entries[] | select(.value.utilization > 0.9) | .key'
 "db"
 ```
 
@@ -1000,8 +997,8 @@ After these 16 tickets, you have: **a working simulation that runs from the canv
 
 | Feature | Ticket(s) | Can start after |
 |---------|-----------|-----------------|
-| Base CLI (`dsds run/validate/show/inspect`) | T-040 | T-011, T-020, T-003 |
-| Live mode (`dsds run --live`) | T-041 | T-040, T-019 |
+| Base CLI (`sim run/validate`; `show`/`inspect` not built) | T-040 | T-011, T-020, T-003 |
+| Live mode (`sim run --live`) | T-041 | T-040, T-019 |
 | Compare, cost, lint commands | T-042 | T-040, T-030, T-031, T-032 |
 
 #### Nice-to-Have (after core works)

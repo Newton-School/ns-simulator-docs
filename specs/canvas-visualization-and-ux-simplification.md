@@ -391,7 +391,7 @@ Implementation implication:
 - Packet loss and edge error should not create successful moving dots.
 - Packet count should be based on successful edge throughput: `attemptedRps * observedSuccessRatio`.
 - Failure should be visible as compact pulses and labels like `3.2% fail`, not as permanent glow or noisy edge styling.
-- Edge `bandwidth` and `maxConcurrentRequests` are currently not enforced by the engine, so they should not yet affect packet count unless those features are implemented later.
+- Edge `bandwidth` and `maxConcurrentRequests` are enforced by the engine now (October 2026). They affect packet count only through what they change in the run: refused transfers (`connection_refused`) are failures, and link queueing shows up as latency, not as extra dots. During a live run, network edges (not Practice-mode connectors) also take width and colour from time-weighted 5 s windows.
 
 ### Input 3: Workload Profile
 

@@ -108,9 +108,9 @@ export interface Request {
 The `Request` is the fundamental unit of work in the simulator. Every event in the system operates on a request. Key observations:
 
 - `type` is a bare `string`. No enum, no union, no registry. The JSDoc says `"GET"`, `"POST"`, `"DB_QUERY"` - these are examples, not constraints.
-- `sizeBytes` is a number assigned at creation time from `requestDistribution[].sizeBytes`. It is consumed by edge bandwidth calculations (conceptually - the engine does not currently throttle by bandwidth) and by the tracer.
+- `sizeBytes` is a number assigned at creation time from `requestDistribution[].sizeBytes`. It is consumed by edge bandwidth (transmission time `sizeBytes / (bandwidth x 125)` ms plus FIFO link queueing, enforced since October 2026), by Kafka producer batching (`maxBatchBytes`), and by the tracer.
 - `priority` is a number where 0 = high, 1 = normal, 2 = low. Assigned randomly at creation time: `this.rng.boolean(0.1) ? 0 : 1` (10% high, 90% normal, never low). Consumed by priority queue discipline in `GGcKNode` when `discipline === 'priority'`.
-- `metadata` is an untyped escape hatch. The engine uses it internally for terminal status tracking (`__terminal`). No user-facing metadata is defined.
+- `metadata` is an untyped escape hatch. The engine uses it internally for terminal status tracking (`__terminal`). Some user-facing metadata is now stamped at the source: a copy of the request type's own `metadata` object, the keyspace field and the canonical entity key `__key` (used by caches, request collapsing and the consistency model), and `sessionId` when `workload.sessions.count` is set.
 
 **Request distribution (`src/engine/core/types.ts:404-412`)**
 
@@ -183,7 +183,7 @@ The `Request` interface is the most-touched type in the engine: every event hand
 | --- | --- | --- | --- | --- |
 | `id` | `WorkloadGenerator.createRequest` | Request creation | Everything - primary key for maps, traces, metrics, events | No |
 | `type` | `WorkloadGenerator.pickRequestDistributionEntry` | Request creation | `RoutingTable.matchesCondition` for conditional routing | No |
-| `sizeBytes` | `WorkloadGenerator.pickRequestDistributionEntry` | Request creation | Edge bandwidth calculations (conceptual - not yet implemented) | No |
+| `sizeBytes` | `WorkloadGenerator.pickRequestDistributionEntry` | Request creation | Edge bandwidth: transmission time and link queueing; Kafka batch size | No |
 | `priority` | `WorkloadGenerator.createRequest` (random) | Request creation | `GGcKNode.dequeue` when discipline is `priority` | No |
 | `createdAt` | `WorkloadGenerator.createRequest` | Request creation | Latency calculation: `totalLatency = clock - createdAt` | No |
 | `deadline` | `WorkloadGenerator.createRequest` | Request creation | Timeout scheduling: `request.deadline <= arrivalTime` triggers timeout | No |
