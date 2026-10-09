@@ -41,8 +41,16 @@ The brief has five parts. Read them in this order:
 
 1. Click **Run**. The Workload popover shows the **Source** (must be your Client),
    pattern, and base RPS.
-2. Click **Start Simulation**. Watch traffic flow along the edges.
-3. Open the **Run Inspector** (right panel) to see per-node metrics.
+2. Click **Start Simulation**. Watch traffic flow along the edges. The **Speed** control
+   next to Run paces the run (0.5x to 10x of simulated time, or Max, the default); speed never
+   changes the results.
+3. Open the **Run Inspector** (right panel) to see per-node metrics, and the Results tray
+   for the run as a whole.
+
+To see what happened to one request, open **Traces > Debug request**, or search the
+**Event Log** tab (see [Request debugger and Event Log](request-debugger-and-event-log.md)). To
+ask the same questions by typing, open the terminal with Ctrl+\` (see
+[The in-app terminal](in-app-terminal.md)).
 
 ## 4. Read the bottlenecks
 
@@ -97,10 +105,12 @@ These are real friction points a student may hit. Where a fix ships in V1 it's m
    the ratio in the brief, not the number in your Run popover.
 
 3. **"I connected my Client straight to the database and nothing warned me."**
-   V1 does not lint design smells at connect time. It *will* surface hard structural
-   errors when you Run (missing config, no source, disconnected nodes) as readable
-   messages. Treat the brief's functional requirements as your checklist. *V2 will add
-   live design hints.*
+   Drawing refuses only connections that can never work (traffic into a source, out of a
+   sink, a second connection between the same pair) and says why. The **Design checks** chip
+   in the header lists architectural anti-patterns in your current design (single points of
+   failure, missing load balancers, shared databases, ...). Hard structural errors still
+   surface when you Run, as readable messages. Treat the brief's functional requirements as
+   your checklist.
 
 4. **"p99 shows ~1000 ms no matter how bad my design is."**
    Under heavy saturation the measured p99 plateaus near the request timeout. If your
@@ -114,7 +124,9 @@ These are real friction points a student may hit. Where a fix ships in V1 it's m
 
 6. **"I want to compare my design to a known-good one."**
    In standalone/local mode you can load a question and then **Open** a topology from
-   the top bar without losing the question - build and test side by side.
+   the top bar without losing the question - build and test side by side. Outside a graded
+   attempt you can also export both as TopologyJSON and run `sim compare a.json b.json` on the
+   same seed (see [The sim cli](sim-cli.md)).
 
 ### What to fix *now* so V1 is workable
 - Always begin with a **Client** source (prevents the #1 zero-traffic confusion).

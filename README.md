@@ -26,6 +26,7 @@ hld-simulator-docs/
 ├── canonical-catalogue/
 │   ├── *.csv                        # 17 reference catalogue files
 │   └── README.md                    # Catalogue documentation
+├── guides/                          # User guides (student, teacher, sim cli, terminal, chaos, debugger, TopologyJSON, builder policy)
 ├── planning/                        # Implementation roadmap
 │   ├── IMPLEMENTATION_PLAN.md       # Phased build plan (10 phases)
 │   └── TICKETS.md                   # 46 engineering tickets
@@ -41,6 +42,19 @@ hld-simulator-docs/
 The repo-local, executable onboarding path for question authors. It points to
 the canonical question-bank trios and the validation command that works from
 this checkout alone.
+
+### User guides
+
+How to use the simulator's tools (each guide describes what the code does today, including
+what it does not model):
+
+- [Student Guide](guides/student-guide.md) and [Teacher Manual](guides/teacher-manual.md) - the build, run, read, iterate loop
+- [The sim cli](guides/sim-cli.md) - `sim run`, `validate`, `lint`, `cost`, `compare`, `shell` and headless grading
+- [The in-app terminal](guides/in-app-terminal.md) - the command line in the bottom dock (Ctrl+\`)
+- [Chaos experiments](guides/chaos-experiments.md) - steady state, presets, Region / AZ / Subnet outages
+- [Request debugger and Event Log](guides/request-debugger-and-event-log.md) - one request step by step, and the event stream with its query filter
+- [TopologyJSON import and export](guides/topology-json-import-export.md) - the design as a JSON document and the JSON viewer
+- [Builder policy for question authors](guides/builder-policy-for-question-authors.md) - gating the Service and Custom Node builders per question
 
 ### [System Overview](docs/SYSTEM_OVERVIEW.md)
 

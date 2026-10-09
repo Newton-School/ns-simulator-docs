@@ -95,9 +95,9 @@ Match the discriminator to the threshold:
 | **Written justification grading** | partial: graph-bound deterministic checks only | fairness-reviewed evaluation model |
 | Request **body / endpoint / status codes** | ❌ (type/size/path only) | first-class payload model |
 | Editable read/write mix on canvas | ❌ (question-owned JSON) | on-canvas mix + auto-derivation |
-| Connect-time design lint (Client→DB) | ❌ (errors surface on Run) | live design-smell hints |
+| Connect-time design lint (Client→DB) | partial: invalid connections are refused while drawing; a Design checks chip lists anti-patterns | hints for specific smells such as Client→DB |
 | Server-side grading | ❌ (client-only via iframe) | optional server re-grade |
-| Advanced/long-tail node behaviors, composite fault domains | partial | deeper modeling |
+| Advanced/long-tail node behaviors, composite fault domains | partial: Region / AZ / Subnet outages and chaos experiments ship (see `guides/chaos-experiments.md`) | deeper modeling |
 
 **Teaching note for V1:** grade and discuss **architecture and measured behavior**.
 Correctness properties the physics can't measure (exactly-once, no-double-booking,
