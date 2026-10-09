@@ -1,5 +1,13 @@
 # Event Debugger - Data Model & Schema Changes
 
+> **Status (October 2026): implemented differently in places.** The debugger shipped (see
+> the status note in [`event-debugger-prototypes.md`](./event-debugger-prototypes.md)). It is
+> built from the tracer's per-request record: for sampled requests (default 1%, set by
+> `global.traceSampleRate`) the tracer now keeps one admission record per node visit. The
+> Event Log reads the canonical event stream, of which a normal run keeps the first 25,000
+> events and says so in a coverage line. `src/engine/core/debugTypes.ts` from this schema is
+> currently unused.
+
 This document specifies the data model, type additions, and schema changes required to implement the event debugger features described in [`event-debugger-prototypes.md`](./event-debugger-prototypes.md). It is organized by layer - engine core, worker protocol, renderer state - and explains what each new type represents, why it exists, where it lives, and how it connects to existing types.
 
 ---

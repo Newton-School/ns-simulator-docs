@@ -29,9 +29,9 @@ flowchart TB
     SIM_CONTROLS["Simulation Controls<br/>Run / Pause / Resume / Stop<br/><i>useSimulation.ts</i>"]:::built
     SCENARIO_BAR["Scenario Bar<br/>duration, warmup, seed,<br/>timeout, source node,<br/>workload overrides<br/><i>ScenarioState in ui.ts</i>"]:::built
     RESULTS["Results Tray<br/>summary, per-node metrics,<br/>health checks, SLO breaches<br/><i>components/simulation</i>"]:::built
-    DEBUGGER_UI["Event Debugger UI<br/>event log, request inspector,<br/>waterfall, step-through,<br/>canvas overlay, sequence diagram<br/><i>13 features specced</i>"]:::planned
-    TERMINAL["In-App Terminal<br/>Cisco IOS-style CLI,<br/>context modes, show/set commands,<br/>port-level state<br/><i>11 features specced</i>"]:::planned
-    DSDS["Design System (DSDS)<br/>atoms, molecules, templates,<br/>pages - unified component library<br/><i>stitch_simulation_output_analysis</i>"]:::planned
+    DEBUGGER_UI["Request Debugger + Event Log<br/>event log views + query filter,<br/>step-through lifecycle views,<br/>intake lens, path diff,<br/>canvas overlay<br/><i>components/debugger</i>"]:::built
+    TERMINAL["In-App Terminal<br/>IOS-style context modes,<br/>show/select/set commands,<br/>shared with sim shell<br/><i>src/shared/commands</i>"]:::built
+    DESIGN_SYSTEM["Design System<br/>atoms, molecules, templates,<br/>pages - unified component library<br/><i>stitch_simulation_output_analysis</i>"]:::planned
 
     CANVAS --> STORE
     CATALOG_UI --> CANVAS
@@ -41,8 +41,8 @@ flowchart TB
     SIM_CONTROLS --> RESULTS
     DEBUGGER_UI -.-> STORE
     TERMINAL -.-> STORE
-    DSDS -.-> RESULTS
-    DSDS -.-> DEBUGGER_UI
+    DESIGN_SYSTEM -.-> RESULTS
+    DESIGN_SYSTEM -.-> DEBUGGER_UI
   end
 
   subgraph SERIALIZATION ["The Bridge - Canvas to Engine"]
@@ -65,7 +65,7 @@ flowchart TB
     direction TB
     WORKER_THREAD["simulation.worker.ts<br/>receives TopologyJSON,<br/>constructs engine,<br/>streams progress/snapshots,<br/>returns SimulationOutput"]:::built
     WORKER_PROTO["Worker Protocol<br/>Inbound: run, pause, resume, stop, step<br/>Outbound: progress, snapshot, complete, error<br/><i>protocols.ts</i>"]:::built
-    WORKER_DEBUG["Debug Messages<br/>EventBatchMessage,<br/>DebugSnapshotMessage,<br/>DebugRequestMessage<br/><i>specced in event-debugger-schema</i>"]:::planned
+    WORKER_DEBUG["Debug Messages<br/>EventBatchMessage,<br/>DebugSnapshotMessage,<br/>DebugRequestMessage<br/><i>not built: the debugger reads<br/>the per-request trace record</i>"]:::planned
 
     WORKER_PROTO --> WORKER_THREAD
     WORKER_DEBUG -.-> WORKER_THREAD
@@ -244,26 +244,26 @@ flowchart TB
 
   subgraph CLI_SYS ["CLI - Headless execution"]
     direction LR
-    CLI["CLI Runner<br/>tsx src/cli/index.ts<br/>reads topology JSON file,<br/>validates, runs engine,<br/>streams progress bar,<br/>prints results or --json<br/><i>cli/index.ts</i>"]:::built
+    CLI["sim cli<br/>run (--live), validate, lint,<br/>cost, compare, shell, evaluate<br/><i>bin/sim.mjs, src/cli</i>"]:::built
   end
 
   TOPO_JSON --> CLI
 
-  subgraph RESILIENCE ["Resilience Patterns (modeled, partially wired)"]
+  subgraph RESILIENCE ["Resilience Patterns (simulated as traits)"]
     direction TB
-    CIRCUIT_BREAKER["Circuit Breaker<br/>failureThreshold, recoveryTimeout,<br/>halfOpenRequests<br/><i>type exists, events defined,<br/>not fully simulated</i>"]:::planned
-    RETRY["Retry<br/>maxAttempts, baseDelay,<br/>maxDelay, multiplier, jitter<br/><i>type exists, not simulated</i>"]:::planned
-    RATE_LIMITER["Rate Limiter<br/>maxTokens, refillRate<br/><i>type exists, not simulated</i>"]:::planned
-    BULKHEAD["Bulkhead<br/>maxConcurrent<br/><i>type exists, not simulated</i>"]:::planned
+    CIRCUIT_BREAKER["Circuit Breaker<br/>failureThreshold, recoveryTimeout,<br/>halfOpenRequests<br/><i>circuitBreaker trait</i>"]:::built
+    RETRY["Retry<br/>maxAttempts, baseDelay,<br/>maxDelay, multiplier, jitter<br/><i>retryBackoff trait</i>"]:::built
+    RATE_LIMITER["Rate Limiter<br/>maxTokens, refillRate<br/><i>rateLimiter trait</i>"]:::built
+    BULKHEAD["Bulkhead + Load Shedding<br/>per-compartment caps,<br/>queue-depth / delay shedding<br/><i>bulkhead, loadShedding traits</i>"]:::built
   end
 
   COMP_NODES -.-> RESILIENCE
 
-  subgraph SCALING ["Scaling & Failures (modeled, partially wired)"]
+  subgraph SCALING ["Scaling & Failures"]
     direction TB
-    AUTOSCALING["Auto-scaling<br/>horizontal/vertical,<br/>scale-up/down thresholds,<br/>cooldown, cold start penalty<br/><i>type exists, events defined</i>"]:::planned
+    AUTOSCALING["Auto-scaling<br/>horizontal/vertical,<br/>scale-up/down thresholds,<br/>cooldown, cold start penalty<br/><i>autoscaler + coldStart traits</i>"]:::built
     FAILURE_MODES["Failure Modes<br/>severity, mtbf, mttr,<br/>trigger conditions<br/><i>type exists, node-failure<br/>event is handled</i>"]:::built
-    FAULT_INJECTION["Fault Injection<br/>FaultSpec targeting nodes/edges,<br/>deterministic/probabilistic/conditional<br/><i>type exists, not orchestrated</i>"]:::planned
+    FAULT_INJECTION["Fault Injection + Chaos Experiments<br/>scheduled faults on nodes and<br/>Region / AZ / Subnet containers,<br/>cache-flush, experiment presets<br/><i>engine/scenarios</i>"]:::built
   end
 
   ENGINE_CORE --> FAILURE_MODES

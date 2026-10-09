@@ -1,5 +1,14 @@
 # Event Debugger & Log System - Prototype Feature Specification
 
+> **Status (October 2026): built.** The request debugger (Traces tab, Debug request: Rail,
+> Sequence, Stack Trace, State Machine and Filmstrip views, the Node Intake Lens, Path Diff,
+> canvas overlay and mini-map; issues #156-#158) and the Event Log tab (Table, Requests,
+> Nodes, Incidents and Waterfall views with a query filter; issue #78) ship in the
+> integration branch. The debugger reads the per-request trace record, not the canonical
+> event stream, and shows values the run did not record as "not recorded". User guide:
+> `guides/request-debugger-and-event-log.md` in the docs repo. The prototype descriptions
+> below are kept as the design record.
+
 This document describes the features explored across five HTML prototypes for the NS Simulator's event debugging and request lifecycle inspection system. It is written from a feature perspective: what each capability does, why it exists, how it works internally, what engine data it consumes, and what components it requires to be built.
 
 The prototypes were generated as static HTML mockups to explore different approaches to the same core problem: the simulator currently runs to completion and produces aggregate results (`SimulationOutput`), but users have no way to inspect **individual events** as they happen, trace a **single request** through its lifecycle, or understand **why** a specific node rejected or timed out a request. The event debugger fills that gap.

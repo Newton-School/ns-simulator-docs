@@ -1306,8 +1306,10 @@ absent — it grades *quality of reasoning about the real graph*, it does not in
 parallel prose channel.
 
 The LLM layer is **provider-agnostic** (Gemini / Claude / OpenAI, selected by env), runs
-in the Electron main process so the API key never reaches the renderer, and **falls back
-to the deterministic grader** on any failure or missing key. Grading is therefore never
+in the local dev server's grading proxy (keys come from `.env.local`) so the API key never
+reaches the browser, and **falls back to the deterministic grader** on any failure, missing
+key, or production build. (It ran in the Electron main process until the app became
+web-only in October 2026.) Grading is therefore never
 blocked by the network. See `specs/llm-backed-justification-grading.md`.
 
 *Source: `structural.ts`, `semanticCriteria.ts`, `rubric.ts`, `justification.ts`,
@@ -1625,8 +1627,8 @@ the single most useful thing to memorize.
 |---|---|---|---|---|---|
 | **F1** | **Compute & capacity** | reads/work overwhelm a node; sync tier blocks on a slow downstream | cache in front; queue + workers to decouple | ✅ **Physics** (cache trait, ackAndRelease, derived concurrency saturate & relieve) | **Σ** p99/throughput (+ T placement) |
 | **F2** | **Storage & state** | wrong store for the access pattern; fan-out; write saturation | pick the fitting store; broker 1→N; wide-column for writes | 🟡 **Structural/semantic** (stores are physically similar until `storageProfile`; broker doesn't truly broadcast yet) | **S** `storageFit` / `fanout` |
-| **F3** | **Network & edge** | connection/port exhaustion; bandwidth; geo-latency | multiplexers, CDN, multi-region | ❌ **Deferred (V2)** (edges have latency/bandwidth, but pool/geo traits unbuilt) | **T** + edge props (partial) |
-| **F4** | **Resilience & chaos** | cascading failure; retry storms; DC failover | circuit breaker, rate limiter, DR steering | 🟡 **Partial** (traits exist, fault-injection not fully wired) | **T** + **J** (justify) |
+| **F3** | **Network & edge** | connection/port exhaustion; bandwidth; geo-latency | multiplexers, CDN, multi-region | 🟡 **Physics shipped, no questions yet** (edge bandwidth and in-flight caps enforced, opt-in connection model with TLS / keep-alive / HTTP/2 streams, Kafka batching, `geoLatency`; October 2026) | **T** + edge props (partial) |
+| **F4** | **Resilience & chaos** | cascading failure; retry storms; DC failover | circuit breaker, rate limiter, DR steering | 🟡 **Partial** (traits, fault injection, Region / AZ / Subnet outages and chaos experiment presets are wired; DR steering is graded by topology) | **T** + **J** (justify) |
 | **F5** | **Correctness** | double-booking; exactly-once; ordering | distributed lock; idempotency key store; ledger; reservation store; replication | 🟡/✅ **Topology + justification + runtime evidence** (contention, dedup, quorum, and oversell are now modeled — grade `reservations.oversells` / `locks.contentions` / `rateLimit.breaches` or a `stateTransition`; only exactly-once *coordination* & ordering stay §16-deferred) | **T** `guardedPath` + **Σ** capability counters + **J** |
 | **F6** | **Cost / meta** | solve within a budget; brute force vs. elegance | one cache beats ten replicas | 🟡/❌ (live cost chip works; graded budget axis is v1 heuristic) | **$** budget |
 

@@ -34,18 +34,26 @@ providers. Each provider is a thin adapter that only knows how to call its API
 and pull the model's text out of the response envelope; the shared core builds
 the prompt, parses the JSON, and maps it into the engine's result type.
 
-Adding a provider is one entry in the `PROVIDERS` registry - the IPC handler,
+Adding a provider is one entry in the `PROVIDERS` registry - the grading proxy,
 renderer, prompt, and result mapping are untouched.
 
 ## 3. Architecture
 
+> **Changed in October 2026.** The app is web-only now (the Electron desktop build was
+> removed, PR #283), so there is no IPC channel or Electron main process any more. The
+> same design runs through a local development proxy instead.
+
 ```
-Renderer  →  IPC (llm:gradeJustification)  →  Main process  →  <selected provider> API
+Browser  →  POST /api/llm/grade-justification  →  Vite dev server (Node)  →  <selected provider> API
 ```
 
-- The renderer builds an `LlmGradeRequest` and invokes the IPC channel.
-- The **main process** resolves the provider + key and makes the outbound HTTPS
-  call.
+- The renderer builds an `LlmGradeRequest` and POSTs it to the local grading proxy
+  (`llmDevelopmentProxyPlugin` in `vite.config.mts`). `GET /api/llm/grading-status`
+  reports whether a provider is configured (used by Settings, LLM grading).
+- The **dev server process** resolves the provider + key and makes the outbound HTTPS
+  call. The proxy is registered through `configureServer`, so it exists only under
+  `npm run dev`; a production web build has no proxy and always uses the deterministic
+  grader.
 - The renderer **never sees the key** and never knows which provider ran.
 - Any failure - no provider configured, network error, non-2xx, unparseable
   body - returns an `{ error }` object. The caller falls back to the
@@ -53,15 +61,17 @@ Renderer  →  IPC (llm:gradeJustification)  →  Main process  →  <selected p
 
 ### 3.1 Privacy / secret boundary
 
-Keys live only in the main process (`src/main/index.ts`, via
-`resolveProviderConfig(process.env)`). They are never forwarded to the renderer,
-never logged, and never serialized into a grading result. Only the student
-answer, decision text, the actual placed component type, and the question's
-scale numbers cross the IPC boundary outward.
+Keys live only in the Node dev server process. `vite.config.mts` reads them with
+`loadEnv` from `.env.local` (and the process environment) and passes them to
+`resolveProviderConfig`; nothing is injected into the browser bundle. They are never
+forwarded to the renderer, never logged, and never serialized into a grading result.
+Only the student answer, decision text, the actual placed component type, and the
+question's scale numbers are sent. The in-app API-key form was Electron-only and was
+removed with it.
 
 ## 4. Configuration
 
-Selection happens at app-ready from the environment:
+Selection happens when the dev server starts, from `.env.local` or the environment:
 
 | Variable | Purpose |
 | --- | --- |
@@ -142,9 +152,10 @@ are interchangeable.
 
 - Deterministic grades render immediately.
 - After a 1.5s debounce, answers longer than 10 characters are sent to the LLM
-  via IPC; the result replaces the deterministic grade.
-- Answers ≤10 chars, IPC unavailability, or any error keep the deterministic
-  grade. Grading availability never depends on network reachability or a key.
+  through the local grading proxy (dev builds only); the result replaces the
+  deterministic grade.
+- Answers ≤10 chars, a production build (no proxy), or any error keep the
+  deterministic grade. Grading availability never depends on network reachability or a key.
 
 ## 8. What this does not do
 
@@ -165,11 +176,11 @@ are interchangeable.
     `resolveProviderConfig`, `callLlmGradeAPI`)
 - Deterministic grader it complements / falls back to:
   - `src/engine/analysis/justification.ts`
-- IPC handler + provider/key resolution (main process only):
-  - `src/main/index.ts` (`llm:gradeJustification`)
-- Renderer bridge:
-  - `src/preload/index.ts`, `src/preload/index.d.ts`, `src/renderer/src/env.d.ts`
-    (`gradeJustification`)
+- Local grading proxy + provider/key resolution (Node dev server only):
+  - `vite.config.mts` (`llmDevelopmentProxyPlugin`, `/api/llm/grade-justification`,
+    `/api/llm/grading-status`)
+- Settings status:
+  - `src/renderer/src/components/layout/settings/LlmGradingTab.tsx`
 - Renderer consumption / fallback / debounce:
   - `src/renderer/src/components/question/QuestionPanel.tsx`
 - Analysis barrel export:

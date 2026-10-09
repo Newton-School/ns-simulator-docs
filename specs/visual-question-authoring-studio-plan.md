@@ -511,7 +511,7 @@ a third source of truth.
 | Field validation                   | local/derived                  | Immediate feedback                                                                |
 | Package diagnostics                | compiler                       | Schema + authoring validator + support ledger                                     |
 | Verification runs                  | authoring worker orchestration | Production-parity auto-routing; persist versioned proof digest and resolved modes |
-| Exported files                     | file service                   | Web and Electron targets                                                          |
+| Exported files                     | file service                   | Web target (the Electron build was removed in October 2026)                      |
 
 For V1, reusing the global topology store is acceptable if the editor explicitly
 snapshots the active topology before changing scaffold/reference/gamed tabs. If the
@@ -959,7 +959,7 @@ mutating the reviewed question.
 3. Import Django rows → reconstruct package → preview learner experience.
 4. Partial scaffold → lock nodes/edges → confirm ASSIGNMENT preview cannot edit them.
 5. Invalid metric/support promise → navigate from diagnostic to corrective control.
-6. Save project in web and Electron → reopen with identical compiled output.
+6. Save project in the web app → reopen with identical compiled output. (An Electron target existed when this plan was written; the app is web-only now.)
 7. High-load suite → verification resolves analytic mode and records it in proof.
 8. Per-request-only obligation under analytic routing → publish proof blocks with an
    actionable evidence explanation.
