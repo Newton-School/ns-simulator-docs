@@ -290,8 +290,8 @@ authoring catalog the simulator currently reasons about.
 | **Storage & State** | Broadcast / fan-out exhaustion | pub-sub fanout; fanout-on-write; hybrid celebrity fallback | **true multi-family candidate** | 🟡 structural today |
 | **Storage & State** | Scan vs lookup penalty | search index; geo index; keyed lookup store | single family with store/index variants | 🟡 semantic today |
 | **Storage & State** | Storage tiering & cost | object-storage + metadata DB; hot/cold tier split | true multi-family candidate later | ❌ deferred |
-| **Network & Edge** | Connection-pool / port exhaustion | connection multiplexer; scale-out NAT/gateway tier | true multi-family candidate later | ❌ deferred |
-| **Network & Edge** | Bandwidth / pipe saturation | CDN; edge cache; compression/transcoding edge | true multi-family candidate later | ❌ deferred |
+| **Network & Edge** | Connection-pool / port exhaustion | connection multiplexer; scale-out NAT/gateway tier | true multi-family candidate later | 🟡 engine physics shipped (edge connection model, connection tier); no question yet |
+| **Network & Edge** | Bandwidth / pipe saturation | CDN; edge cache; compression/transcoding edge | true multi-family candidate later | 🟡 engine physics shipped (edge bandwidth enforced); no question yet |
 | **Network & Edge** | Geo-latency / routing | multi-region routing; geo-sharding; read-local replicas | true multi-family candidate later | ❌ deferred |
 | **Resilience & Chaos** | Cascading failure / retry storms | circuit breaker + deadlines; bulkhead + queue isolation; throttling / load-shedding | true multi-family candidate later | 🟡 partial |
 | **Resilience & Chaos** | Data-center failover | active-passive failover; active-active regional routing | true multi-family candidate later | 🟡 partial |

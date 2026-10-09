@@ -143,7 +143,7 @@ const EDGE_DEFAULTS = {
 
 Applied during `serializeEdge` (lines 180-223). Unlike node defaults, these are only applied in the renderer serializer - the engine has no edge defaults. A programmatically created `EdgeDefinition` without these values would get `0` for packetLoss and errorRate (from Zod defaults in the schema), but no latency distribution default.
 
-**Gap:** `bandwidth`, `maxConcurrentRequests`, and `pathType` have no runtime effect. They're serialized into the `EdgeDefinition` but never consumed by the engine.
+**Gap (closed, October 2026):** `bandwidth`, `maxConcurrentRequests`, and `pathType` used to have no runtime effect. All three are consumed now: bandwidth adds transmission time and FIFO link queueing, `maxConcurrentRequests` caps in-flight transfers (`connection_refused`), and `pathType` selects the latency profile when the latency is derived from it. See `edge-properties-and-defaults.md`, "Current engine behaviour".
 
 ### Scenario state defaults
 

@@ -8,6 +8,7 @@ This spec consolidates the `EdgeDefinition` type, the `EDGE_DEFAULTS` constant i
 
 ## Table of Contents
 
+0. [Current engine behaviour (October 2026)](#current-engine-behaviour-october-2026)
 1. [Feature/Architecture Ideation](#featurearchitecture-ideation)
 2. [Problem Context](#problem-context)
 3. [Feature 1: Edge Property Schema](#feature-1-edge-property-schema)
@@ -18,6 +19,87 @@ This spec consolidates the `EdgeDefinition` type, the `EDGE_DEFAULTS` constant i
 8. [Integration Requirements](#integration-requirements)
 9. [Source-to-Feature Map](#source-to-feature-map)
 10. [Assumptions and Unresolved Questions](#assumptions-and-unresolved-questions)
+
+---
+
+## Current engine behaviour (October 2026)
+
+> This section is the up-to-date reference. The feature sections below were written when
+> most edge properties had no runtime effect; where they disagree with this section, this
+> section wins. Source: `src/engine/engine.ts` (`sampleEdgeTransit`, `reserveEdgeLink`,
+> edge transfer), `src/engine/defaults/edgeDefaults.ts`, `src/engine/network/linkTransmission.ts`,
+> `src/engine/network/connectionPool.ts`, `src/engine/network/edgeBatching.ts`, and the
+> `network.edge` row of the support ledger (`src/engine/analysis/supportLedger.ts`).
+
+### What every edge does
+
+| Property | Runtime effect now |
+| --- | --- |
+| `protocol` | Adds a fixed per-request overhead (https 0.5 ms, grpc 0.2 ms, websocket 0.1 ms, amqp 1 ms, kafka 2 ms, tcp 0, udp 0; a quarter of that on `streaming` edges). Decides what a lost packet means: every protocol except `udp` retransmits (the payload crosses the link twice and the transit is doubled), `udp` drops the request and it times out at its deadline. `udp` edges also ignore `maxConcurrentRequests`. |
+| `protocolOverheadMs` (optional) | Replaces the protocol's default overhead for this edge. Practice (connector) mode sets it to 0, so a connector edge adds no latency while keeping its protocol for routing and grading. |
+| `latency.pathType` | When `latency.derivedFromPathType` is set (the canvas sets it when the edge has no explicit latency), the transit is sampled from the path-type profile: log-normal mu/sigma of same-dc 0.0/0.4, cross-zone 0.7/0.4, cross-region 4.1/0.3, internet 4.6/0.8, same-rack -1.2/0.3. An explicit latency distribution always wins. |
+| `bandwidth` (Mbps) | Enforced in the request direction. A transfer of S bytes holds the edge's link for `S / (bandwidth x 125)` ms, and the link is one FIFO pipe: a transfer that arrives while an earlier payload is still serializing waits its turn (store-and-forward). That wait is reported as **link queue** in the per-edge latency breakdown, so the bytes leaving an edge never exceed its bandwidth. Path-type defaults: same-rack 10,000, same-dc 5,000, cross-zone 2,500, cross-region 1,000, internet 100. |
+| `maxConcurrentRequests` | Caps transfers in flight on the edge. An arrival over the cap is refused with `connection_refused`. Utilization of the cap also stretches propagation by `1 / (1 - u)` (u capped at 0.98, so at most 50x), the edge congestion model. Defaults are inferred per target: databases 50, caches 500, messaging and streams 1,000, internet paths 200, otherwise 100. A wave 2 fix: a rejection used to free another transfer's slot, so a cap of 5 at 100 ms let about 737 requests/s through; it now holds at about 50/s. |
+| `packetLossRate`, `errorRate` | As in Feature 3, with the protocol-dependent loss handling above. |
+
+**Per-edge latency breakdown.** Every transfer records its parts: propagation, congestion,
+transmission, link queue, protocol overhead, retransmission, connection wait, handshake and
+batch wait. The edge inspector shows the mean of each over the run.
+
+**Known limits of the edge congestion model** (left unchanged on purpose and listed in the
+integration PR): a saturated small cap collapses rather than plateaus (an unbatched Kafka edge
+at its cap gets about 19 records/s, not about 714/s), and some `lingerMs` values are
+non-monotonic. Treat a run that sits at an edge cap as "this cap is the bottleneck", not as a
+precise goodput figure.
+
+### Connection model (opt-in, `edge.connection`)
+
+Without `edge.connection` the engine keeps its old assumption: every request finds a warm,
+already-open connection and pays no setup cost. With it, the source keeps a pool of real
+connections to the target.
+
+| Field | Meaning |
+| --- | --- |
+| `reuse` | `per-request` (a new connection every time), `keep-alive` (reuse warm connections until idle for `idleTimeoutMs`, default 60 s), `persistent` (open once, never idles out). In the edge panel, "Off" means no connection model. |
+| `tls` | `none`, `1.2` or `1.3`. Default per protocol: TLS 1.3 on https, grpc and websocket; none on tcp, amqp and kafka. |
+| `tlsSessionResumption` | After one full handshake with a pool's server, later connections resume (TLS 1.2: 1 round trip; TLS 1.3: 0-RTT). |
+| `maxConnections` | Most connections one pool opens. When every connection is busy and the pool is full, the request waits FIFO for a stream (HTTP/1.1 head-of-line blocking at the pool), reported as **connection wait**; a waiter whose deadline passes times out. |
+| `maxStreamsPerConnection` | Concurrent requests per connection. Defaults: https and tcp 1, grpc 100 (HTTP/2 multiplexing), kafka 5 (max in-flight requests per connection), websocket and amqp unlimited. A synchronous request holds its stream until its response returns; WebSocket, AMQP and Kafka messages hold it until delivery. |
+
+Handshake cost is counted in round trips, and one round trip is one sample of the edge's
+latency: TCP 1, then TLS (1.2: 2, 1.3: 1), then any application handshake (WebSocket upgrade 1,
+AMQP connection and channel open 4, Kafka ApiVersions 1). UDP has no connection. A request that
+joins a connection still handshaking waits until it is ready. Pools are per edge for
+service-to-service traffic; on an edge leaving the workload source they are per client
+(session id, client IP or workload key; a request with none counts as a new client). The run
+counts connections opened, resumed, reused, waited and closed idle per edge.
+
+**Not modelled:** TLS CPU cost, certificate chain size and session-ticket expiry; per-replica
+pools (a service edge has one pool shared by its instances); database-specific connection
+startup (authentication, backend process spawn); slow start, windowing and segmentation.
+
+### Kafka producer batching (opt-in, `edge.batching`)
+
+Only on `protocol: 'kafka'` edges. Records join the edge's open batch, which is sent when it
+reaches `maxBatchBytes` (Kafka `batch.size`, default 16,384 bytes) or `lingerMs` (Kafka
+`linger.ms`) after its first record, whichever is first. A sent batch is one transfer: one
+propagation sample, one protocol overhead, one slot of `maxConcurrentRequests`, and its total
+bytes on the link once. So under the same in-flight cap a batched edge carries records an
+unbatched one refuses, and every record pays a measured **batch wait**. The run reports batches,
+records and bytes sent per edge.
+
+**Not modelled:** compression, producer `acks` levels, `buffer.memory` back-pressure (a batch
+that finds the cap full is refused like any transfer), per-partition batches (one accumulator
+per edge).
+
+### Where none of this applies
+
+- **Practice (connector) mode** strips edge physics on export: zero latency and protocol
+  overhead, unlimited bandwidth and concurrency, no loss or errors, no connection model and no
+  batching. The JSON viewer and export show edges as set, not the zeroed copy the run uses.
+- **The heavy-load fluid (analytic) tier** ignores bandwidth, the connection model and
+  batching; they apply in discrete-event runs only.
+- **Responses do not cross edges** in the engine, so response payload bandwidth is not modelled.
 
 ---
 
@@ -43,8 +125,8 @@ Edge Properties & Defaults is the subsystem that models the network transport be
 | ---- | --------------- | --------------- | ----------- |
 | Edge defaults are renderer-only | Engine developers, CLI users | `EDGE_DEFAULTS` is defined in `src/renderer/src/hooks/useTopologySerializer.ts:28-36` - a renderer concern | Topology JSON created outside the renderer (CLI, tests, API) must specify all edge properties explicitly or rely on the engine's Zod defaults |
 | Path type is cosmetic | Users | `latency.pathType` is set on each edge but the engine does not adjust latency based on it | `same-rack` and `cross-region` edges can have identical latency distributions, misleading users who expect path type to matter |
-| Bandwidth is not enforced | Users | `EdgeDefinition.bandwidth` is a required field set to 1000 Mbps by default, but the engine never throttles or queues based on it | Bandwidth appears in the config but has no runtime effect |
-| maxConcurrentRequests is not enforced | Users | `EdgeDefinition.maxConcurrentRequests` is required and defaulted to 100, but the engine never tracks or limits concurrent in-flight requests per edge | Concurrency limits appear in the config but have no runtime effect |
+| Bandwidth is not enforced (fixed: now enforced, see [Current engine behaviour](#current-engine-behaviour-october-2026)) | Users | `EdgeDefinition.bandwidth` is a required field set to 1000 Mbps by default, but the engine never throttles or queues based on it | Bandwidth appears in the config but has no runtime effect |
+| maxConcurrentRequests is not enforced (fixed: now enforced) | Users | `EdgeDefinition.maxConcurrentRequests` is required and defaulted to 100, but the engine never tracks or limits concurrent in-flight requests per edge | Concurrency limits appear in the config but have no runtime effect |
 | Error rate and packet loss rate are percentages in the renderer, ratios in the engine | Developers | `useTopologySerializer` converts percent → ratio via `normalizePercentToRatio`; the `EdgeDefinition` stores ratios (0.0-1.0) | Confusion over whether a value is a percentage or ratio; the serializer silently clamps and converts |
 | No edge-level metrics | Users | The engine does not track per-edge throughput, latency percentiles, loss count, or error count | Cannot answer "how much traffic flows through edge X?" or "what is the P99 latency on this link?" |
 
@@ -69,9 +151,9 @@ Edge Properties & Defaults is the subsystem that models the network transport be
 | Default value system documentation | Yes | Defaults are scattered across renderer and validator; need a single reference |
 | Edge transfer mechanics documentation | Yes | The loss → error → latency → deadline pipeline is the core of edge behaviour |
 | Path type latency profiles | Maybe | Would make path type meaningful at runtime; can be deferred |
-| Bandwidth enforcement | Deferred | Requires queuing model per edge; significant engine change |
-| Concurrency enforcement | Deferred | Requires in-flight tracking per edge; moderate engine change |
-| Per-edge metrics | Deferred | Requires MetricsCollector extension |
+| Bandwidth enforcement | Done | Transmission delay plus a FIFO link queue per edge |
+| Concurrency enforcement | Done | In-flight counter per edge; `connection_refused` over the cap |
+| Per-edge metrics | Done | Per-edge bytes, in-flight peak, rejections, latency breakdown, connection and batch counts |
 
 ---
 
@@ -166,9 +248,9 @@ The sampled value is clamped to a minimum of 0 ms. The distribution config can b
 | Gap | Impact | Technical cause |
 | --- | --- | --- |
 | Path type has no runtime effect | Users expect `cross-region` to be slower than `same-rack` | Engine ignores `pathType`; latency comes only from the distribution |
-| Bandwidth not enforced | `bandwidth: 1000` Mbps appears in config but requests are never throttled | No per-edge queuing or rate limiting in the engine |
-| Concurrency not enforced | `maxConcurrentRequests: 100` appears but is never checked | No in-flight counter per edge |
-| Protocol has no runtime effect | `https` and `grpc` produce identical behaviour | Protocol is informational only; no overhead, framing, or connection semantics |
+| Bandwidth not enforced (fixed) | `bandwidth: 1000` Mbps appears in config but requests are never throttled | No per-edge queuing or rate limiting in the engine |
+| Concurrency not enforced (fixed) | `maxConcurrentRequests: 100` appears but is never checked | No in-flight counter per edge |
+| Protocol has no runtime effect (fixed: overhead, loss handling, opt-in connection model) | `https` and `grpc` produce identical behaviour | Protocol is informational only; no overhead, framing, or connection semantics |
 | Edge defaults are not accessible outside the renderer | CLI-created topologies must hardcode all values | `EDGE_DEFAULTS` is in `useTopologySerializer.ts` |
 | No per-edge metrics | Cannot measure edge utilization, loss events, or latency distribution | `MetricsCollector` has no edge dimension |
 | Percent-to-ratio conversion is implicit | Developers must know the serializer converts percents | `normalizePercentToRatio` is called silently in `serializeEdge` |
@@ -200,11 +282,14 @@ Defines every property on `EdgeDefinition`, its type, its valid range, its defau
 | `target` | `string` | Yes | From canvas edge | Edge destination node - where requests arrive | Must reference existing node |
 | `label` | `string?` | No | `undefined` | Display only - shown on canvas edge | Any string |
 | `mode` | Literal union | Yes | Inferred from target's `asyncBoundary` | Routing: async = fan-out, sync = compete | `synchronous\|asynchronous\|streaming\|conditional` |
-| `protocol` | Literal union | Yes | Inferred from target component type | **None** - informational only | `https\|grpc\|tcp\|udp\|websocket\|amqp\|kafka` |
+| `protocol` | Literal union | Yes | Inferred from target component type | Per-request overhead, retransmit vs drop on loss, connection profile (see Current engine behaviour) | `https\|grpc\|tcp\|udp\|websocket\|amqp\|kafka` |
+| `protocolOverheadMs` | `number?` | No | `undefined` (protocol default); `0` in connector mode | Replaces the protocol's per-request overhead | `>= 0` |
 | `latency.distribution` | `DistributionConfig` | Yes | `{ type: 'log-normal', mu: 2.3, sigma: 0.5 }` | Sampled for each transit; determines arrival time | Any valid distribution config |
-| `latency.pathType` | Literal union | Yes | `'same-dc'` | **None** - informational only | `same-rack\|same-dc\|cross-zone\|cross-region\|internet` |
-| `bandwidth` | `number` | Yes | `1000` (Mbps) | **None** - not enforced | Positive number |
-| `maxConcurrentRequests` | `number` | Yes | `100` | **None** - not enforced | Positive integer |
+| `latency.pathType` | Literal union | Yes | `'same-dc'` | Selects the path-type latency profile when `derivedFromPathType` is set | `same-rack\|same-dc\|cross-zone\|cross-region\|internet` |
+| `bandwidth` | `number` | Yes | `1000` (Mbps) | Transmission time plus FIFO link queueing (request direction) | Positive number |
+| `maxConcurrentRequests` | `number` | Yes | `100` | In-flight cap; `connection_refused` over it; drives the congestion multiplier | Positive integer |
+| `connection` | `EdgeConnectionConfig?` | No | `undefined` (warm connections, no setup cost) | Opt-in connection pool: handshakes, reuse, TLS resumption, pool limit, streams per connection | See Current engine behaviour |
+| `batching` | `EdgeBatchingConfig?` | No | `undefined` | Opt-in Kafka producer batching (`lingerMs`, `maxBatchBytes`); kafka edges only | See Current engine behaviour |
 | `packetLossRate` | `number` | Yes | `0.0` (from 0%) | Probability of silent drop → request-timeout | `[0.0, 1.0]` |
 | `errorRate` | `number` | Yes | `0.001` (from 0.1%) | Probability of explicit failure → request-rejected (edge_error_rate) | `[0.0, 1.0]` |
 | `weight` | `number?` | No | `undefined` (treated as 1 in weighted selection) | Routing: weighted random selection probability | Positive number or undefined |
@@ -213,13 +298,13 @@ Defines every property on `EdgeDefinition`, its type, its valid range, its defau
 | `targetHandle` | `string?` | No | From canvas | React Flow metadata - no engine effect | Any string |
 | `animated` | `boolean?` | No | `undefined` | React Flow metadata - no engine effect | boolean |
 
-**Properties with runtime effect**: `mode`, `latency.distribution`, `packetLossRate`, `errorRate`, `weight`, `condition`.
+**Properties with runtime effect**: `mode`, `protocol`, `protocolOverheadMs`, `latency.distribution`, `latency.pathType` (when derived), `bandwidth`, `maxConcurrentRequests`, `connection`, `batching`, `packetLossRate`, `errorRate`, `weight`, `condition`.
 
-**Properties without runtime effect**: `protocol`, `latency.pathType`, `bandwidth`, `maxConcurrentRequests`, `label`, `sourceHandle`, `targetHandle`, `animated`.
+**Properties without runtime effect**: `label`, `sourceHandle`, `targetHandle`, `animated`, `presentation`.
 
 ### What components it requires
 
-- **Engine-side**: No changes for documenting existing properties. For enforcing bandwidth and concurrency, see deferred capabilities.
+- **Engine-side**: Bandwidth and concurrency are enforced (see Current engine behaviour).
 - **Shared layer**: Property documentation should be reflected in updated JSDoc on `EdgeDefinition`.
 - **Renderer/frontend-side**: Edge configuration panels already expose most properties.
 
@@ -465,7 +550,7 @@ The request arrives at the target node at the sampled arrival time. The edge met
 
 ### What components it requires
 
-- **Engine-side**: Fully implemented. For bandwidth enforcement (deferred), the transfer would need a per-edge token bucket or queue. For concurrency enforcement (deferred), the transfer would check an in-flight counter and reject or queue if at limit.
+- **Engine-side**: Fully implemented, and extended since this was written: the in-flight cap is checked first (`connection_refused`), bandwidth adds transmission time and FIFO link queueing, reliable protocols retransmit on loss instead of dropping, and the opt-in connection model and Kafka batching add handshake, connection-wait and batch-wait time (see Current engine behaviour).
 - **Shared layer**: No changes.
 - **Renderer/frontend-side**: Edge inspector could show the transfer pipeline step-by-step for debugged requests (via `DebugEvent` with `edgeId`).
 
@@ -497,7 +582,7 @@ The 7 supported protocols (`https`, `grpc`, `tcp`, `udp`, `websocket`, `amqp`, `
 
 In a real system, protocol affects overhead (HTTP/2 framing vs gRPC binary encoding), connection behavior (persistent vs per-request), and failure modes (TCP RST vs HTTP 503). None of this is modeled.
 
-**Proposed protocol effects** (deferred):
+**Proposed protocol effects** (implemented as fixed per-request overheads; https is 0.5 ms with no connection model, and its handshake cost comes from the opt-in connection model instead; udp loss drops the request rather than raising the loss rate; amqp and kafka keep 1 ms and 2 ms; websocket is 0.1 ms):
 
 | Protocol | Proposed effect | Why |
 | --- | --- | --- |
@@ -554,7 +639,7 @@ This only applies when the user has not set an explicit distribution. If they ha
 | Adjacent spec | What this spec provides | What this spec consumes | Shared data |
 | --- | --- | --- | --- |
 | **Environment Definition & Configuration Model** | Edge property schema, default values, path type profiles | `EnvironmentEdgeDefaults`, per-edge overrides | `EdgeDefinition`, `EnvironmentEdgeConfig` |
-| **Request Pattern Configuration** | - | Request `sizeBytes` consumed by bandwidth calculations (deferred) | `Request.sizeBytes` |
+| **Request Pattern Configuration** | - | Request `sizeBytes` consumed by bandwidth (transmission time and link queueing) | `Request.sizeBytes` |
 | **Request Flow Direction & Topology Rules** | Edge properties consumed during transfer after route selection | Route selection results (which edges) | `ResolveRoute.edge` → `enqueueEdgeTransfer` |
 | **Request Type Model** | - | `request.sizeBytes` per type for bandwidth modeling | `Request.sizeBytes` |
 | **Throughput Calculation** | Edge-level throughput (requests/sec per edge, deferred) | - | Per-edge metrics |
@@ -594,8 +679,8 @@ This only applies when the user has not set an explicit distribution. If they ha
 
 | # | Assumption / Question | Status | Impact if wrong |
 | --- | --- | --- | --- |
-| 1 | Bandwidth enforcement (per-edge queuing/throttling) is deferred to a later version | Assumption | Users expecting bandwidth to limit throughput will get inaccurate results |
-| 2 | Concurrency enforcement is deferred | Assumption | Same: `maxConcurrentRequests` is cosmetic |
+| 1 | Bandwidth enforcement (per-edge queuing/throttling) is deferred to a later version | Resolved: enforced in the request direction (responses do not cross edges) | - |
+| 2 | Concurrency enforcement is deferred | Resolved: enforced; a saturated small cap collapses under the 1/(1-u) congestion model | Goodput at a saturated cap is pessimistic |
 | 3 | Path-type-aware latency defaults should only apply when no explicit distribution is configured | Design decision | If always applied (as a modifier on top of explicit distributions), it changes the meaning of user-configured latency |
 | 4 | Protocol effects should be additive latency modifiers, not multiplicative | Design decision | Multiplicative would scale with the base distribution; additive is constant overhead |
 | 5 | The packet loss → error rate → latency → deadline order in the transfer pipeline is intentional and should not change | Observation | Reordering (e.g., latency before loss) would change which events are produced for the same configuration |

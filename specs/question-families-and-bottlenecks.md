@@ -146,17 +146,18 @@ its domain(s) and the criterion that grades it. This is the lesson-level view: r
 | **Storage tiering & cost** - petabytes on SSD is expensive | Blobs → `object-storage`, metadata → DB | Needs `tieredRetrieval` + a real budget model | ❌ Deferred (V2) | Google Drive / Dropbox |
 
 ### Family 3 - Network & Edge (connection-bottlenecks)
-*Nodes are fine; the pipes and connections choke.* **Entirely deferred - no edge physics yet.**
+*Nodes are fine; the pipes and connections choke.* **Status (October 2026): the edge physics now exists** - edge bandwidth (transmission time plus FIFO link queueing), per-edge in-flight caps, an opt-in connection model (handshakes, keep-alive, pool limits, HTTP/2 streams), node-level connection capacity on the Connection Server node, and the `geoLatency` trait. The Status column below is from when the family was entirely deferred; questions in this family can now be authored, but none ship in the bank yet.
 
 | Bottleneck | The fix | Needs trait | Status | Real-world questions |
 |------------|---------|-------------|--------|----------------------|
-| **Connection-pool / port exhaustion** | Multiplexer, scale NATs | `connectionPool`, `capacityLimit` | ❌ Deferred (V2) | Multiplayer gaming, WebRTC signaling |
-| **Bandwidth / pipe saturation** | `cdn` / edge caching | `capacityLimit` + traffic-weighted edges | ❌ Deferred (V2) | Global CDN, Netflix delivery |
-| **Speed-of-light (geo-latency)** | Multi-region routing / geo-sharding | `geoLatency` | ❌ Deferred (V2) | Spanner, Active-active finance |
+| **Connection-pool / port exhaustion** | Multiplexer, scale NATs | `connectionPool`, `capacityLimit` | 🟡 Engine support shipped (edge `connection.maxConnections`, `capacityLimit`, connection tier); no question yet | Multiplayer gaming, WebRTC signaling |
+| **Bandwidth / pipe saturation** | `cdn` / edge caching | `capacityLimit` + traffic-weighted edges | 🟡 Engine support shipped (edge bandwidth is enforced); no question yet | Global CDN, Netflix delivery |
+| **Speed-of-light (geo-latency)** | Multi-region routing / geo-sharding | `geoLatency` | 🟡 Engine support shipped (`geoLatency`, path-type latency); no question yet | Spanner, Active-active finance |
 
-> This is exactly why edge config is being **locked** for V1 (Part 2 §2): the physics a
-> student would reason about here doesn't exist yet, so exposing `bandwidth` /
-> `maxConcurrentRequests` only invites brute-forcing.
+> This is why edge config was **locked** for V1 (Part 2 §2): the physics a student would
+> reason about here did not exist yet, so exposing `bandwidth` / `maxConcurrentRequests`
+> only invited brute-forcing. The physics exists now; whether to unlock edge config for a
+> question is an authoring decision (Practice / connector mode still strips it).
 
 ### Family 4 - Resilience & Chaos (fault-bottlenecks)
 
