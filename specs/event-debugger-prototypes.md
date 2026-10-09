@@ -2,7 +2,7 @@
 
 > **Status (October 2026): built.** The request debugger (Traces tab, Debug request: Rail,
 > Sequence, Stack Trace, State Machine and Filmstrip views, the Node Intake Lens, Path Diff,
-> canvas overlay and mini-map; issues #156-#158) and the Event Log tab (Table, Requests,
+> canvas overlay and mini-map; issues #156, #157 and #158) and the Event Log tab (Table, Requests,
 > Nodes, Incidents and Waterfall views with a query filter; issue #78) ship in the
 > integration branch. The debugger reads the per-request trace record, not the canonical
 > event stream, and shows values the run did not record as "not recorded". User guide:
