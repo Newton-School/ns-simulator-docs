@@ -9,6 +9,7 @@ tags: [moc]
 - [[concepts/queueing/queue-depth-is-a-leading-indicator-of-latency|Queue depth is a leading indicator of latency]]
 - [[concepts/metrics/utilization-is-a-time-weighted-integral|Utilization is a time-weighted integral]]
 - [[concepts/metrics/utilization-display-bug|The utilization-display bug]]
+- [[concepts/metrics/telemetry-sinks-drop-events-instead-of-failing-requests|Telemetry sinks drop events instead of failing requests]]
 ## Modules
 - [[m03-queueing-model|M03]] · [[m10-metrics-honesty|M10]]
 ## Problems

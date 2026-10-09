@@ -72,7 +72,7 @@ where their prerequisites are met.
 **Go deeper:** [[m03-queueing-model|M03]] · [[queue-depth-calculation]] · [[ggck-models-finite-capacity-queues]] · [[queue-saturation-precedes-cpu-saturation]] · [[queue-depth-is-a-leading-indicator-of-latency]]
 
 ### Chapter 6. Component types and service time
-- **Component type:** one of 148 types in 14 families, each with default behaviour: compute (12), network (17), storage (19), messaging (7), orchestration (13), security (11), observability (9), devops (7), data-infrastructure (5), real-time (6), integration (5), consensus (4), DNS, and auxiliary (13).
+- **Component type:** one of 131 types in 14 families, each with default behaviour: compute (12), network (17), storage (19), messaging (7), orchestration (13), security (11), observability (9), devops (7), data-infrastructure (5), real-time (6), integration (5), consensus (4), DNS, and auxiliary (13).
 - **Service time:** how long one request takes to process at a node. It's drawn from the node's distribution and can be overridden per request (for example different read and write latencies).
 - **Storage profile:** service-time curves specific to each kind of data store and operation, so choosing the right store changes the run itself.
 
@@ -109,14 +109,20 @@ where their prerequisites are met.
 - **Edge model:** `network` (edges carry real latency, bandwidth, loss and cost) or `connector` (plain wires with none of these).
 - **Path type:** the distance an edge covers: same-rack, same-dc, cross-zone, cross-region or internet. It sets the default latency and bandwidth and is inferred from where the two nodes sit.
 - **Edge latency, bandwidth, packet loss, error rate:** how long a trip takes, how much data fits through per second, and the chance the trip is lost or fails.
-- **Edge concurrency limit (`maxConcurrentRequests`):** the most requests one edge can carry at once, like a connection limit.
+- **Edge concurrency limit (`maxConcurrentRequests`):** the most requests one edge can carry at once, like a connection limit. Over it, a transfer is refused (`connection_refused`).
+- **Link queueing:** an edge is one pipe of `bandwidth` Mbps. A payload holds it for its transmission time, and a transfer that arrives while it is busy waits its turn, so an edge never carries more bytes per second than its bandwidth.
+- **Protocol overhead and retransmission:** each protocol adds a fixed cost per request (https 0.5 ms, kafka 2 ms, ...). On a lost packet every protocol except UDP resends (slower, not lost); UDP drops the request.
+- **Connection model (opt-in):** an edge can keep a real pool of connections: new ones pay handshake round trips (TCP 1, TLS 1.2 two more or TLS 1.3 one more), keep-alive and persistent connections are reused, TLS resumption shortens later handshakes, and a full pool makes requests wait.
+- **HTTP/2 multiplexing:** a gRPC connection carries up to 100 requests at once; an HTTPS (HTTP/1.1) connection carries one, so a full HTTPS pool makes requests queue for a connection.
+- **Producer batching (opt-in, Kafka edges):** records wait up to `lingerMs` or until `maxBatchBytes`, then travel as one transfer, buying throughput with a measured batch wait.
+- **Per-edge latency breakdown:** each edge reports how its transit splits into propagation, congestion, transmission, link queue, protocol overhead, retransmission, connection wait, handshake and batch wait.
 - **Synchronous blocking:** a caller waiting on a slow downstream keeps its worker or connection tied up, which can exhaust connection pools.
 - **Location / region:** where a node sits, from an offline location catalogue.
 - **Region / AZ / subnet boxes:** grouping boxes on the canvas that nest (subnet in AZ in region). A node inside a box takes its location, and an edge's path type is derived from the boxes its two ends share: same subnet is same-rack, same AZ is same-dc, same region is cross-zone, different regions is cross-region. A path type set on the edge still wins.
 - **Geo latency:** extra delay that CDNs, global traffic managers and edge routers add for the distance to the serving region.
 - **Protocol session:** connection open and close, HTTP acknowledgement mode, L4 vs L7 behaviour, WebSocket flow control.
 
-**Go deeper:** [[m07-edges|M07]] · [[edge-properties-and-defaults]] · [[latency-is-dominated-by-path-type]] · [[edge-concurrency-caps-inflight-requests]] · [[synchronous-blocking-exhausts-connection-pools]] · [[connector-edges-carry-no-physics]]
+**Go deeper:** [[m07-edges|M07]] · [[edge-properties-and-defaults]] · [[latency-is-dominated-by-path-type]] · [[edge-concurrency-caps-inflight-requests]] · [[synchronous-blocking-exhausts-connection-pools]] · [[connector-edges-carry-no-physics]] · [[bandwidth-adds-transmission-and-link-queueing-delay]] · [[tls-1-3-saves-a-round-trip-on-a-new-connection]] · [[http2-multiplexing-removes-head-of-line-waits-at-the-pool]] · [[producer-batching-trades-latency-for-throughput]]
 
 ### Chapter 11. Routing and traffic distribution
 - **Load-balancing strategy:** how a node picks which target gets each request: round-robin, least-connections, least-response-time, power of two choices (`p2c`), weighted, sticky, IP hash, passthrough, random.
@@ -137,6 +143,7 @@ where their prerequisites are met.
 - **Request mix:** the weighted blend of request types and sizes.
 - **Keyspace and skew:** the set of keys requests touch; a Zipf skew makes a few keys very hot.
 - **Headers / metadata:** extra request attributes that routing can match on.
+- **Client sessions:** `sessions.count` on the source stamps each request with one of N client session ids, so one client's reads and writes share an identity (read-your-writes and monotonic reads need it; sticky routing hashes it).
 - **Burst:** a short period where arrivals far exceed the service rate, causing temporary queue instability.
 
 **Go deeper:** [[m11-workload-scale|M11]] · [[request-pattern-configuration]] · [[request-type-model]] · [[burst-traffic-creates-transient-instability]]
@@ -161,7 +168,8 @@ where their prerequisites are met.
 - **Declared hit rate:** a hit probability you type in (the default).
 - **Derived LRU:** a real, size-limited LRU cache on each request's key, so the hit rate comes from the traffic.
 - **Cache stampede:** a hot key expires and every concurrent miss hits the store at once.
-- **Request collapsing:** only the first miss for a key goes to the store; the others wait for its answer.
+- **Request collapsing (single-flight, opt-in):** only the first miss for a key goes to the store; the others wait at the cache for its answer and share its outcome. It needs keyed requests (a keyspace on the source) and runs in discrete-event runs only.
+- **Cache flush:** a chaos fault that empties a cache (a derived LRU loses its contents and re-warms; a declared-rate cache misses everything for the window).
 
 **Go deeper:** [[derived-cache-hit-rate-model]] · [[cache-aside-is-bernoulli-thinning]] · [[cache-stampede-is-a-thundering-herd]] · [[request-collapsing-dedups-inflight-misses]]
 
@@ -171,6 +179,9 @@ where their prerequisites are met.
 - **Replication:** a write waits for its acknowledgement point, replicas can be slightly out of date (bounded staleness), and traffic is rejected while a failover is in progress.
 - **Quorum write:** acknowledged after a majority of replicas confirm, slower but more durable.
 - **Replica cluster state machine:** each replica moves between leader, follower and failed.
+- **Consistency model (opt-in):** on a replicated database, `eventual`, `monotonic-reads`, `read-your-writes` or `strong`. Followers apply each write after the replication lag; a follower read waits for catch-up as its model requires, and that wait is measured latency.
+- **Stale read / session anomalies:** counted from real data versions: `consistency.staleReads`, `consistency.readYourWritesViolations`, `consistency.monotonicReadViolations`.
+- **Linearizability check:** a bounded single-key check (100 operations per key, 200 keys) over the recorded history; anything beyond the bound is reported as not checked, never as passed.
 - **Row lock:** writes to the same key run one at a time, so effective concurrency for that key is 1.
 - **Lock lease:** a time-limited lock on a key, with rejection when taken, expiry, and an optional fencing token that stops a stale holder from writing.
 - **CQRS:** separate read and write paths, so heavy writes don't hurt read latency.
@@ -180,7 +191,7 @@ where their prerequisites are met.
 - **Sharding:** splitting data across shard nodes by key.
 - **ID allocation:** block allocation (pre-reserved ranges) vs per-request allocation, each with a different service-time cost.
 
-**Go deeper:** [[replication-quorum-state-machine-walkthrough]] · [[id-sequence-generator-node]] · [[replication-scales-reads-not-writes]] · [[quorum-writes-trade-latency-for-durability]] · [[row-locks-serialize-writes]] · [[cqrs-splits-read-and-write-paths]]
+**Go deeper:** [[replication-quorum-state-machine-walkthrough]] · [[id-sequence-generator-node]] · [[replication-scales-reads-not-writes]] · [[quorum-writes-trade-latency-for-durability]] · [[row-locks-serialize-writes]] · [[cqrs-splits-read-and-write-paths]] · [[read-your-writes-costs-a-catch-up-wait-on-replica-reads]] · [[eventual-consistency-makes-stale-reads-countable]]
 
 ### Chapter 17. Messaging and streams
 - **Ack-and-release:** a queue acknowledges the producer as soon as it stores the message; the consumer processes it separately.
@@ -190,8 +201,9 @@ where their prerequisites are met.
 - **Consumer lag:** a backlog that builds when consumers drain slower than messages arrive.
 - **Windowing:** fixed back-to-back time windows (tumbling windows), each producing one combined result.
 - **Batching:** processing N items together spreads a fixed per-batch cost across them, at the price of waiting for the batch to fill.
+- **Change-stream ordering (opt-in):** changes are numbered per entity; a consumer that applies an older change after a newer one is counted as an ordering violation. `per-partition` or `per-key` consumers remove violations at a measured throughput cost.
 
-**Go deeper:** [[consumer-groups-deliver-once-per-group]] · [[fanout-on-write-vs-on-read]] · [[celebrity-workload-breaks-fanout-on-write]]
+**Go deeper:** [[consumer-groups-deliver-once-per-group]] · [[fanout-on-write-vs-on-read]] · [[celebrity-workload-breaks-fanout-on-write]] · [[per-entity-order-needs-keyed-ordered-consumers]]
 
 ### Chapter 18. Latency-cost behaviours
 - **External latency:** a call to a third-party provider takes time the caller can't control.
@@ -200,9 +212,10 @@ where their prerequisites are met.
 - **Inspection cost:** a WAF or policy check adds latency to every request and blocks a fraction of them.
 - **Capacity limit:** a rolling ops-per-second ceiling on a link or device (IOPS, NAT ports, line rate); anything above it is rejected.
 - **Cold start:** extra latency the first time a scaled-to-zero serverless function runs.
-- **Connection capacity:** a connection server's limit on open connections, with refused overflow.
+- **Connection capacity:** a connection server's limit on open connections, with refused overflow. Held connections pin RAM, heartbeats take CPU from request work, and a push writes one message to every connected recipient.
+- **Telemetry sink (opt-in):** a log, metric or trace collector that drops events past an ingest ceiling or a full buffer, counted and never failing the caller; head sampling keeps unexported events away.
 
-**Go deeper:** [[node-capability-matrix]] · [[connection-tier-capacity]]
+**Go deeper:** [[node-capability-matrix]] · [[connection-tier-capacity]] · [[held-connections-cost-ram-and-cpu-while-idle]] · [[telemetry-sinks-drop-events-instead-of-failing-requests]]
 
 ### Chapter 19. Admission control and correctness guards
 - **Rate limiter:** a per-key request limit using token-bucket (the default), fixed-window (which deliberately allows up to twice the limit across a window boundary) or sliding-window.
@@ -215,6 +228,11 @@ where their prerequisites are met.
 ### Chapter 20. Failure and resilience
 - **Failure mode:** how a failed node behaves: `reject` (refuses instantly), `blackhole` (requests vanish; the client waits out its timeout), `hang` (fills its queue, then requests vanish) or `degraded` (still serves, slower).
 - **Chaos:** failures deliberately injected into a run.
+- **Chaos experiment:** a steady state that must hold first, then inject / restore / traffic-spike / verify steps with checks over time windows, then a final check. Presets: cache stampede, database failover, traffic spike, AZ outage; several can be composed with offsets. Verdict: passed, failed, not stable (the steady state never held) or inconclusive (the analytic model ran).
+- **Fault domain:** a fault on a Region, AZ or Subnet box fails every component inside it for the window. The traffic source is never failed.
+- **Bulkhead:** a cap on how many requests of one compartment (a request type or a tenant key) a node holds at once; over it is a fast `bulkhead_full` rejection.
+- **Load shedding:** rejecting new arrivals fast (`load_shed`) while the queue or its estimated delay is over a threshold, so admitted requests stay fast.
+- **Cluster scheduling:** on a Kubernetes Cluster node, workload replicas are pods placed on finite machines; a pod that fits nowhere stays pending and adds no capacity, and a failed machine's pods come back only after detection and eviction.
 - **Retry with backoff:** the caller retries, waiting longer each time, with optional random jitter. Retries use real capacity, so they can cause retry storms.
 - **Circuit breaker:** closed → open → half-open; stops calling a failing downstream so the failure doesn't spread.
 - **Health prober:** a health-check manager that watches nodes and marks them unhealthy.
@@ -222,7 +240,7 @@ where their prerequisites are met.
 - **Autoscaler:** a control loop on the repeating timer that resizes concurrency to hit a utilization target, reacting with a delay after each cooldown.
 - **Single point of failure (SPOF):** a node whose loss cuts the traffic source off from part of the system, found from the topology alone.
 
-**Go deeper:** [[request-rejection-behaviour]] · [[state-machines-make-behavior-gradeable]]
+**Go deeper:** [[request-rejection-behaviour]] · [[state-machines-make-behavior-gradeable]] · [[chaos-experiments-need-a-steady-state-first]] · [[a-fault-domain-fails-everything-inside-it]] · [[pending-pods-add-no-capacity]]
 
 ## Part VI - Measuring
 
@@ -234,7 +252,8 @@ where their prerequisites are met.
 - **Latency percentiles (p50, p95, p99):** from histograms. Per-hop p99s can't be added to get the end-to-end p99.
 - **Per-node metrics:** arrived, processed, rejected, timed-out and reset counts (each also after warmup); average and peak queue length; service time, queue wait, time in system; throughput, error rate, availability.
 - **Post-warmup:** counts that exclude the warmup period.
-- **Trace / tracer:** the recorded path each request took, which the canvas can play back.
+- **Trace / tracer:** the recorded path each request took, which the canvas can play back. For sampled requests (1% by default) it also keeps one admission record per node visit.
+- **Event log:** the stream of engine events. A normal run keeps the first 25,000 and says when the log is partial.
 
 **Go deeper:** [[m10-metrics-honesty|M10]] · [[throughput-calculation]] · [[utilization-is-a-time-weighted-integral]] · [[percentiles-do-not-sum-across-hops]]
 
@@ -273,6 +292,7 @@ where their prerequisites are met.
 ### Chapter 25. Authoring tools
 - **Question Studio:** a visual editor for building and checking questions.
 - **Service Builder / custom node:** learner-built components. They're graded by their underlying component type, and only fields that actually affect the simulation count.
+- **Builder policy:** a question can allow or forbid the builders, limit runtimes, node classes and trait packs, cap the number of definitions and lock them after the first run. Breaking it never blocks a run; it fails a `builder-policy` grading row.
 
 **Go deeper:** [[m15-newton-integration|M15]] · [[visual-question-authoring-studio-plan]] · [[custom-node-and-service-definition-spec]] · [[capstone|Capstone]]
 
@@ -287,6 +307,11 @@ where their prerequisites are met.
 - **Results tray:** run metrics, grade and SPOF warnings.
 - **Scenario bar:** switching between scenarios.
 - **Budget meter:** spend so far against the budget.
+- **Playback speed:** 0.5x to 10x of simulated time, or Max (the default). Speed changes pacing only, never results.
+- **Request debugger:** steps through one traced request in five views (Rail, Sequence, Stack Trace, State Machine, Filmstrip), plus the Node Intake Lens (the real admission order) and Path Diff (actual vs expected path).
+- **Event Log tab:** Table, Requests, Nodes, Incidents and Waterfall views with a query filter (`node:`, `status:`, `reason:`, AND / OR / NOT).
+- **In-app terminal:** a command line in the bottom dock (Ctrl+\`) with IOS-style modes; the same commands run headless as `sim shell`.
+- **TopologyJSON import / export:** the design as a validated JSON document, with a viewer that edits it in place.
 
 **Go deeper:** [[m14-frontend|M14]] · [[canvas-visualization-and-ux-simplification]] · [[traffic-animation-taxonomy]]
 
@@ -299,4 +324,4 @@ where their prerequisites are met.
 ---
 
 > [!note] Known gaps (checked against the code)
-> - Not covered, because it is planned rather than implemented: per-question builder policy. Failing a whole AZ or region at once is not modelled either. The 148 component types are covered by family, not one by one.
+> - Builder policy and Region / AZ / Subnet outages are implemented now (October 2026) and listed above. Still not modelled: a zone that is slow or lossy rather than down, partitions between zones that are both up, multi-key transactions, TTL expiry in the derived cache, and CDC capture lag. The 131 component types are covered by family, not one by one.
